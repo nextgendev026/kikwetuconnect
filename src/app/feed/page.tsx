@@ -94,7 +94,7 @@ export default function FeedPage() {
     if (!profile) return
 
     try {
-      const { data: existingVote } = await supabase
+      const { data: existingVote, error } = await supabase
         .from('votes')
         .select('*')
         .eq('user_id', profile.id)
@@ -102,18 +102,18 @@ export default function FeedPage() {
         .eq('target_type', 'post')
         .single()
 
-      if (existingVote) {
+      if (!error && existingVote) {
         await supabase
           .from('votes')
           .delete()
-          .eq('id', existingVote.id)
+          .eq('id', (existingVote as any).id)
       } else {
         await supabase.from('votes').insert({
           user_id: profile.id,
           target_id: postId,
           target_type: 'post',
           vote_type: 1,
-        })
+        } as any)
       }
 
       // Refresh posts

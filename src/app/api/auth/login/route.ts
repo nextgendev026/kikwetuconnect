@@ -15,8 +15,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerClient()
 
-    // Sign in user
-    const { data, error } = await supabase.auth.admin.getUserByEmail(email)
+    // Sign in user using signInWithPassword
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
 
     if (error || !data.user) {
       return NextResponse.json(
@@ -25,10 +28,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Note: In production, you'd use client-side auth or implement proper session management
-    // For now, return the user data (client should handle session)
+    // Return user data and session
     return NextResponse.json({
       user: data.user,
+      session: data.session,
       message: 'Login successful',
     })
   } catch (error) {

@@ -265,7 +265,7 @@ body {
   background-color: var(--surface);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-lg);
-  transition-all;
+  transition: all var(--duration-base) var(--easing);
 }
 
 .card:hover {
@@ -320,7 +320,7 @@ p {
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition-all;
+  transition: all var(--duration-base) var(--easing);
   position: relative;
   overflow: hidden;
 }
@@ -387,7 +387,7 @@ p {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 14px;
   border-radius: var(--radius-md);
-  transition-all;
+  transition: all var(--duration-base) var(--easing);
 }
 
 .input:focus {
@@ -417,7 +417,7 @@ p {
   text-decoration: none;
   font-weight: 500;
   border-radius: var(--radius-md);
-  transition-all;
+  transition: all var(--duration-base) var(--easing);
 }
 
 .nav-item:hover {
