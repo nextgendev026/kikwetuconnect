@@ -1,0 +1,21 @@
+<svg viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle for context -->
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6DB876;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#438854;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- K Shape - Left vertical bar -->
+  <path d="M 80 40 L 80 220 L 110 220 L 110 40 Z" fill="url(#logoGradient)" />
+  
+  <!-- K Shape - Top diagonal -->
+  <path d="M 110 120 L 160 40 L 190 40 L 130 130 Z" fill="url(#logoGradient)" />
+  
+  <!-- K Shape - Bottom diagonal -->
+  <path d="M 130 130 L 190 220 L 160 220 L 110 130 Z" fill="url(#logoGradient)" />
+  
+  <!-- Accent bar - Gold accent -->
+  <path d="M 140 80 L 200 60 L 210 90 L 150 110 Z" fill="#C6A860" opacity="0.9" />
+</svg>
