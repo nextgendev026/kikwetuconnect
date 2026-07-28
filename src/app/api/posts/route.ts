@@ -1,12 +1,9 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
-import type { Database } from '@/lib/supabase'
+import { createApiClient } from '@/lib/server-supabase'
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(request: Request) {
-  const supabase = createServerComponentClient<Database>({ cookies })
+export async function GET(request: NextRequest) {
+  const supabase = createApiClient(request)
   const { searchParams } = new URL(request.url)
-  
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '20')
   const type = searchParams.get('type')
@@ -42,7 +39,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Transform posts to include user vote
   const transformedPosts = (posts as any[])?.map(post => ({
     ...post,
     user_vote: post.votes?.[0]?.vote_type || null,
@@ -52,8 +48,8 @@ export async function GET(request: Request) {
   return NextResponse.json({ posts: transformedPosts })
 }
 
-export async function POST(request: Request) {
-  const supabase = createServerComponentClient<Database>({ cookies })
+export async function POST(request: NextRequest) {
+  const supabase = createApiClient(request)
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {
@@ -75,13 +71,12 @@ export async function POST(request: Request) {
       bounty_tokens: bounty_tokens || 0,
     } as any)
     .select()
-    .single<Database['public']['Tables']['posts']['Row']>()
+    .single()
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  // Add topic relationships
   if (topic_ids && topic_ids.length > 0) {
     await supabase.from('post_topics').insert(
       topic_ids.map((topic_id: string) => ({
@@ -91,7 +86,6 @@ export async function POST(request: Request) {
     )
   }
 
-  // Handle bounty tokens
   if (bounty_tokens && bounty_tokens > 0) {
     await supabase.from('tokens').insert({
       user_id: user.id,

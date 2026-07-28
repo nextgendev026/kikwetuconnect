@@ -86,7 +86,7 @@ export function PostCard({
                 {authorName}
               </Link>
               {isVerifiedExpert && (
-                <Shield className="w-4 h-4 text-green flex-shrink-0" title="Verified Expert" />
+                <Shield className="w-4 h-4 text-green flex-shrink-0" />
               )}
             </div>
             <div className="flex items-center gap-2 mt-0.5">

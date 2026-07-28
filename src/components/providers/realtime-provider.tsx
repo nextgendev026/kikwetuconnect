@@ -1,8 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import type { Database } from '@/lib/supabase'
+import { createBrowserClient } from '@supabase/auth-helpers-nextjs'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
 interface RealtimeContextType {
@@ -14,7 +13,10 @@ interface RealtimeContextType {
 const RealtimeContext = createContext<RealtimeContextType | null>(null)
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
-  const supabase = createClientComponentClient<Database>()
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
   const [channels, setChannels] = useState<RealtimeChannel[]>([])
 
   const subscribeToVotes = (postIds: string[], answerIds: string[], callback: (payload: any) => void) => {

@@ -73,7 +73,7 @@ export default function TopicsPage() {
 
       if (error) throw error
 
-      const ids = new Set((data || []).map((ut: any) => ut.topic_id))
+      const ids = new Set<string>((data || []).map((ut: any) => ut.topic_id))
       setFollowedTopics(ids)
     } catch (err) {
       console.error('Error fetching followed topics:', err)

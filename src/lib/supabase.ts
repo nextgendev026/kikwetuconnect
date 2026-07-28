@@ -1,6 +1,5 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createServerClient as createServerSupabaseClient } from '@supabase/auth-helpers-nextjs'
 
 export type Database = {
   public: {
@@ -396,14 +395,33 @@ export type Database = {
 }
 
 // Client-side Supabase client
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient as createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs'
 
 export const createBrowserClient = () =>
-  createClientComponentClient<Database>()
+  createBrowserSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
 // Server-side Supabase client
-export const createServerClient = () =>
-  createServerComponentClient<Database>({ cookies })
+export const createServerClient = () => {
+  const cookieStore = require('next/headers').cookies()
+  return createServerSupabaseClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll().map((c: any) => ({ name: c.name, value: c.value }))
+        },
+        setAll() {},
+      },
+    }
+  )
+}
 
 // Public client (for non-authenticated requests)
-export const supabase = createClientComponentClient<Database>()
+export const supabase = createBrowserSupabaseClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)

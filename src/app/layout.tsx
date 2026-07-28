@@ -1,53 +1,23 @@
 import type { Metadata } from 'next'
-import { Plus_Jakarta_Sans, IBM_Plex_Mono } from 'next/font/google'
+import { Plus_Jakarta_Sans, DM_Sans } from 'next/font/google'
 import './globals.css'
-import { SupabaseProvider } from '@/providers/supabase-provider'
-import { ToastProvider } from '@/providers/toast-provider'
+import { Providers, ShellRouter } from './providers'
 
-const plusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  variable: '--font-plus-jakarta',
-  weight: ['400', '500', '600', '700', '800'],
-  display: 'swap',
-})
-
-const ibmPlexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  variable: '--font-ibm-plex-mono',
-  weight: ['400', '500'],
-  display: 'swap',
-})
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--jakarta', weight: ['400', '500', '600', '700', '800'], display: 'swap' })
+const dm = DM_Sans({ subsets: ['latin'], variable: '--dm', weight: ['400', '500', '600', '700'], display: 'swap' })
 
 export const metadata: Metadata = {
-  title: 'KikwetuConnect | Your people. Your language. Your Baraza.',
-  description: 'Kenya\'s local knowledge network for trusted answers, regional conversations, and multilingual discovery.',
-  openGraph: {
-    title: 'KikwetuConnect | Your people. Your language. Your Baraza.',
-    description: 'Find trusted local answers, share knowledge, and join conversations that understand where you come from.',
-    type: 'website',
-    locale: 'en_KE',
-  },
-  twitter: {
-    card: 'summary_large_image',
-  },
+  title: 'KikwetuConnect | Tuko pamoja',
+  description: "Kenya's knowledge circle. Good questions deserve a home.",
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${plusJakartaSans.variable} ${ibmPlexMono.variable}`} suppressHydrationWarning>
-      <head>
-        <link rel="canonical" href="https://kikwetuconnect.example/" />
-      </head>
+    <html lang="en" className={`${jakarta.variable} ${dm.variable}`} suppressHydrationWarning>
       <body className="min-h-screen antialiased">
-        <SupabaseProvider>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </SupabaseProvider>
+        <Providers>
+          <ShellRouter>{children}</ShellRouter>
+        </Providers>
       </body>
     </html>
   )

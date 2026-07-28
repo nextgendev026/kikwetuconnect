@@ -1,13 +1,9 @@
-{
-  "db": {
-    "major_version": 15
-  },
-  "functions": {
-    "translate": {
-      "verify_jwt": false
-    },
-    "summarize": {
-      "verify_jwt": false
-    }
-  }
-}
+[db]
+major_version = 15
+
+[functions]
+[functions.translate]
+verify_jwt = false
+
+[functions.summarize]
+verify_jwt = false

@@ -124,7 +124,7 @@ export default function PostDetailPage() {
 
       if (!error && data) {
         const votes: Record<string, number> = {}
-        data.forEach(v => {
+        data.forEach((v: any) => {
           votes[v.target_id] = v.vote_type
         })
         setUserVotes(votes)
@@ -257,12 +257,12 @@ export default function PostDetailPage() {
             <div className="flex items-center gap-2">
               <p className="font-bold text-sm">{author?.full_name || 'Anonymous'}</p>
               {author?.is_verified_expert && (
-                <Shield className="w-4 h-4 text-green" title="Verified Expert" />
+                <Shield className="w-4 h-4 text-green" />
               )}
             </div>
             <p className="text-xs text-quiet">@{author?.username}</p>
-            {author?.heshima_rating > 0 && (
-              <p className="text-xs text-green font-medium">{author.heshima_rating} Heshima</p>
+            {(author?.heshima_rating ?? 0) > 0 && (
+              <p className="text-xs text-green font-medium">{author?.heshima_rating ?? 0} Heshima</p>
             )}
           </div>
           <p className="text-xs text-quiet flex-shrink-0">

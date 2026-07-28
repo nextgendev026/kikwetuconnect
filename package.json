@@ -10,16 +10,20 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@supabase/auth-helpers-nextjs": "^0.8.7",
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/auth-helpers-nextjs": "^0.15.0",
+    "@supabase/supabase-js": "^2.110.9",
     "@tanstack/react-query": "^5.17.0",
     "clsx": "^2.1.0",
     "date-fns": "^3.2.0",
     "dotenv": "^17.4.2",
+    "i18next": "^26.3.6",
+    "i18next-browser-languagedetector": "^8.2.1",
     "lucide-react": "^0.303.0",
     "next": "14.0.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.6.0",
+    "react-i18next": "^17.0.11",
     "tailwind-merge": "^2.2.0",
     "zod": "^3.22.4"
   },

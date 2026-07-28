@@ -1,10 +1,9 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createApiClient } from '@/lib/server-supabase'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerComponentClient({ cookies })
+    const supabase = createApiClient(request)
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
@@ -25,7 +24,6 @@ export async function POST(request: NextRequest) {
       topics = [],
     } = body
 
-    // Validate input
     if (!postType || !content) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -47,7 +45,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create post
     const { data: post, error: postError } = await supabase
       .from('posts')
       .insert({
@@ -69,13 +66,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Add topics if provided
     if (topics.length > 0 && post) {
       const postTopics = topics.map((topicId: string) => ({
         post_id: post.id,
         topic_id: topicId,
       }))
-
       await supabase.from('post_topics').insert(postTopics)
     }
 

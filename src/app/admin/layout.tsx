@@ -1,81 +1,34 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
-import { Shield, Home, Users, BarChart3, Settings } from 'lucide-react'
+'use client'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { clsx } from 'clsx'
+import { useUser } from '@/app/providers'
+import { useEffect } from 'react'
 
-const navItems = [
-  { href: '/admin/moderation', label: 'Moderation', icon: Shield },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
-]
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const { user, profile, loading } = useUser()
+  const router = useRouter()
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <div className="min-h-screen bg-bg">
-      <AdminSidebar />
-      <main className="lg:ml-64 min-h-screen">
-        <div className="p-6 lg:p-8">
-          {children}
-        </div>
-      </main>
-    </div>
-  )
-}
+  useEffect(() => {
+    if (!loading && (!user || profile?.role !== 'admin')) router.push('/feed')
+  }, [user, profile, loading, router])
 
-async function AdminSidebar() {
-  const supabase = createServerComponentClient({ cookies })
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const { data: profile } = user ? await supabase
-    .from('profiles')
-    .select('is_verified_expert, username')
-    .eq('id', user.id)
-    .single() : { data: null }
-
-  if (!profile?.is_verified_expert) {
-    return null
-  }
+  if (loading) return <div className="min-h-screen bg-night flex items-center justify-center"><div className="animate-spin w-8 h-8 border-2 border-gold border-t-transparent rounded-full" /></div>
+  if (!user || profile?.role !== 'admin') return null
 
   return (
-    <aside className="fixed lg:static inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-line-soft transform transition-transform duration-300 lg:translate-x-0">
-      <div className="flex flex-col h-full">
-        <div className="p-4 border-b border-line-soft">
-          <Link href="/admin/moderation" className="flex items-center gap-2">
-            <Shield className="w-6 h-6 text-green" />
-            <span className="font-bold text-lg">Admin Panel</span>
-          </Link>
-        </div>
-
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={clsx(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                'text-muted hover:text-text hover:bg-surface'
-              )}
-            >
-              <item.icon className="w-5 h-5" />
-              {item.label}
-            </Link>
-          ))}
+    <div className="min-h-screen bg-night text-cream">
+      <header className="h-[68px] px-[16px] flex items-center justify-between border-b border-[oklch(28%_.025_151)] bg-[oklch(14%_.025_151)]">
+        <Link href="/admin/dashboard" className="flex items-center gap-[10px]">
+          <div className="w-[36px] h-[36px] rounded-[12px] bg-gold grid place-items-center font-extrabold text-night -rotate-[8deg]">K</div>
+          <div><b className="text-cream">Admin</b><small className="block text-[9px] tracking-[.14em] uppercase text-gold">Dashboard</small></div>
+        </Link>
+        <nav className="flex gap-[15px] text-[12px]">
+          <Link href="/admin/dashboard" className="text-[oklch(65%_.028_151)] hover:text-cream">Overview</Link>
+          <Link href="/admin/moderation" className="text-[oklch(65%_.028_151)] hover:text-cream">Moderation</Link>
+          <Link href="/feed" className="text-[oklch(65%_.028_151)] hover:text-cream">← Back to App</Link>
         </nav>
-
-        <div className="p-4 border-t border-line-soft">
-          <Link href="/feed" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted hover:text-text hover:bg-surface transition-colors">
-            <Home className="w-5 h-5" />
-            Back to App
-          </Link>
-        </div>
-      </div>
-    </aside>
+      </header>
+      <div className="max-w-[1200px] mx-auto p-[24px]">{children}</div>
+    </div>
   )
 }

@@ -1,10 +1,10 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createApiClient } from '@/lib/server-supabase'
+
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
+  const supabase = createApiClient(request);
   try {
-    const supabase = createServerComponentClient({ cookies })
     const searchParams = request.nextUrl.searchParams
     const query = searchParams.get('q') || ''
     const type = searchParams.get('type') || 'all'

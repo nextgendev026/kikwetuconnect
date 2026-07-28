@@ -1,10 +1,10 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { createApiClient } from '@/lib/server-supabase'
+
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
+    const supabase = createApiClient(request);
   try {
-    const supabase = createServerComponentClient({ cookies })
 
     const body = await request.json()
     const {
