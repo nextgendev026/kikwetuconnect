@@ -190,7 +190,11 @@ export default function QuizzesPage() {
       total: questions.length,
     })
 
-    toast(`🎉 You scored ${correct}/${questions.length}! +${selectedQuiz.heshima_reward} Heshima`)
+    const { data: curr } = await supabase.from('profiles').select('heshima_rating').eq('id', user.id).maybeSingle()
+    const currentRating = curr?.heshima_rating ?? 0
+    const newRating = currentRating + (correct === questions.length ? selectedQuiz.heshima_reward : Math.round(selectedQuiz.heshima_reward * correct / questions.length))
+    await supabase.from('profiles').update({ heshima_rating: newRating }).eq('id', user.id)
+    toast(`You scored ${correct}/${questions.length}! +${correct === questions.length ? selectedQuiz.heshima_reward : Math.round(selectedQuiz.heshima_reward * correct / questions.length)} Heshima`)
     fetchProgress()
     fetchLeaderboard()
   }

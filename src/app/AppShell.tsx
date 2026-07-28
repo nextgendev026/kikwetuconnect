@@ -7,23 +7,45 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import CreateModal from '@/components/CreateModal'
 
-const LIVE_USERS = [
-  { i: 'AK', c: 'g', n: 'Agnes Kiplagat', s: 'Answering in #KilimoSmart' },
-  { i: 'JM', c: 'b', n: 'Joseph Mumo', s: 'Available for guidance' },
-  { i: 'WN', c: '', n: 'Wanjiku Njeri', s: 'Active in Legal Rights' },
-]
-
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { profile, loading } = useUser()
   const { theme, toggleTheme } = useTheme()
+  const supabase = useSupabase()
   const router = useRouter()
   const path = usePathname()
   const [chatOpen, setChatOpen] = useState(false)
   const [chatInput, setChatInput] = useState('')
+  const [onlineCount, setOnlineCount] = useState(0)
+  const [recentProfiles, setRecentProfiles] = useState<any[]>([])
+  const [trendingTopics, setTrendingTopics] = useState<any[]>([])
+  const [postCount, setPostCount] = useState(0)
+  const [userCount, setUserCount] = useState(0)
+  const [moderationCount, setModerationCount] = useState(0)
 
   useEffect(() => {
     if (!loading && !profile) router.push('/login')
   }, [loading, profile, router])
+
+  useEffect(() => {
+    if (!supabase) return
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count) setUserCount(count) })
+    supabase.from('profiles').select('id, username, full_name').limit(5).then(({ data }: { data: any }) => { if (data) setRecentProfiles(data) })
+    supabase.from('posts').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count) setPostCount(count) })
+    supabase.from('topics').select('name').order('follower_count', { ascending: false }).limit(3).then(({ data }: { data: any }) => { if (data) setTrendingTopics(data) })
+    supabase.from('moderation').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count) setModerationCount(count) })
+  }, [supabase])
+
+  useEffect(() => {
+    const channel = supabase.channel('online-presence')
+    channel.on('presence', { event: 'sync' }, () => {
+      setOnlineCount(Object.keys(channel.presenceState()).length)
+    }).subscribe(async (status: string) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({ user_id: profile?.id, online_at: new Date().toISOString() })
+      }
+    })
+    return () => { supabase.removeChannel(channel) }
+  }, [supabase, profile?.id])
 
   if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
     <div style={{ width: 30, height: 30, border: '3px solid var(--line)', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin .7s linear infinite' }} />
@@ -70,42 +92,45 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Right Panel */}
         <aside className="right-panel">
           <details className="side-section" open>
-            <summary>Live right now <span style={{ color: 'var(--green)', fontSize: 10, fontWeight: 400 }}>38 online</span></summary>
+            <summary>Community members <span style={{ color: 'var(--green)', fontSize: 10, fontWeight: 400 }}>{userCount} total</span></summary>
             <div className="side-body">
-              {LIVE_USERS.map((u, idx) => (
-                <div key={idx} className="list-row">
-                  <span className={`avatar ${u.c}`}>{u.i}</span>
-                  <div className="side-copy"><b>{u.n}</b><small>{u.s}</small></div>
-                  <button className="side-action" onClick={() => { setChatOpen(true); toast('Live chat opened with ' + u.n) }}>Chat</button>
+              {recentProfiles.length === 0 ? (
+                <small className="text-muted">No members yet</small>
+              ) : recentProfiles.map((p, idx) => (
+                <div key={p.id || idx} className="list-row">
+                  <span className="avatar g">{(p.full_name || p.username || '?').slice(0, 2).toUpperCase()}</span>
+                  <div className="side-copy"><b>{p.full_name || p.username}</b><small>Member</small></div>
                 </div>
               ))}
             </div>
           </details>
 
           <details className="side-section" open>
-            <summary>Trending near you</summary>
+            <summary>Trending topics</summary>
             <div className="side-body">
-              {[{ n: '#NairobiTechWeek', v: '2.4k' }, { n: 'Farming in Kitale', v: '892' }, { n: '#M-PesaForBusiness', v: '641' }].map((t, i) => (
-                <div key={i} className="metric-line"><b>{t.n}</b><span>{t.v}</span></div>
+              {trendingTopics.length === 0 ? (
+                <small className="text-muted">No topics yet</small>
+              ) : trendingTopics.map((t, i) => (
+                <div key={i} className="metric-line"><b>{t.name}</b><span>·</span></div>
               ))}
             </div>
           </details>
 
           <details className="side-section">
-            <summary>Community health</summary>
+            <summary>Activity</summary>
             <div className="side-body">
-              {[{ n: 'Reports resolved', v: '86%' }, { n: 'Translation coverage', v: '74%' }, { n: 'Realtime health', v: '99.98%' }].map((m, i) => (
-                <div key={i} className="metric-line"><b>{m.n}</b><span>{m.v}</span></div>
-              ))}
+              <div className="metric-line"><b>Posts</b><span>{postCount}</span></div>
+              <div className="metric-line"><b>Members</b><span>{userCount}</span></div>
+              <div className="metric-line"><b>Reports</b><span>{moderationCount}</span></div>
             </div>
           </details>
 
           <details className="side-section">
-            <summary>Wallet snapshot</summary>
+            <summary>Your Heshima</summary>
             <div className="side-body">
-              <small style={{ fontSize: 10, color: 'var(--muted)' }}>Available balance</small>
-              <strong style={{ display: 'block', fontWeight: 800, fontSize: 24, letterSpacing: '-.06em', fontFamily: 'var(--jakarta)', margin: '7px 0' }}>KSh 2,500</strong>
-              <Link href="/wallet" className="btn" style={{ background: 'var(--night)', color: 'var(--gold)', width: '100%', justifyContent: 'center' }}>Open wallet</Link>
+              <small style={{ fontSize: 10, color: 'var(--muted)' }}>Heshima rating</small>
+              <strong style={{ display: 'block', fontWeight: 800, fontSize: 24, letterSpacing: '-.06em', fontFamily: 'var(--jakarta)', margin: '7px 0' }}>{profile.heshima_rating ?? 0}</strong>
+              <Link href="/wallet" className="btn" style={{ background: 'var(--night)', color: 'var(--gold)', width: '100%', justifyContent: 'center' }}>View details</Link>
             </div>
           </details>
         </aside>
@@ -114,17 +139,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* Chat widget */}
       <div className={`chat${chatOpen ? ' open' : ''}`}>
         <div className="chat-head">
-          <span className="avatar g" style={{ width: 32, height: 32, fontSize: 10 }}>AK</span>
+          <span className="avatar g" style={{ width: 32, height: 32, fontSize: 10 }}>{initials}</span>
           <div className="chat-head-main">
-            <b>Agnes Kiplagat</b>
-            <small><span className="online" style={{ verticalAlign: -1, marginRight: 4 }} />Online now</small>
+            <b>Support Chat</b>
+            <small>Ask us anything</small>
           </div>
           <button className="chat-close" onClick={() => setChatOpen(false)}>×</button>
         </div>
         <div className="chat-list">
-          <div className="chat-msg"><div className="bubble">Hey Ink master, your soil checklist is ready. Want the Kiswahili version too?</div></div>
-          <div className="chat-msg me"><div className="bubble">Yes please, and add the cost range for Kitale.</div></div>
-          <div className="chat-msg"><div className="bubble">On it. I'll send it here in a minute.</div></div>
+          <div className="chat-msg"><div className="bubble">Welcome to KikwetuConnect! How can we help?</div></div>
         </div>
         <div className="chat-input">
           <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleChatSend()} placeholder="Write a message..." />

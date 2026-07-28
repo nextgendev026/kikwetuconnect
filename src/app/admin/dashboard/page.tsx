@@ -6,32 +6,35 @@ import { useRouter } from 'next/navigation'
 export default function AdminDashboard() {
   const supabase = useSupabase()
   const router = useRouter()
-  const [stats, setStats] = useState({ users: 0, posts: 0, answers: 0, pros: 0, sessions: 0, reports: 0, tips: 0, quizzes: 0 })
+  const [stats, setStats] = useState({ users: 0, posts: 0, answers: 0, pros: 0, sessions: 0, reports: 0, quizzes: 0, listings: 0, topics: 0 })
   const [modItems, setModItems] = useState<any[]>([])
+  const [propsedQuizzes, setPropsedQuizzes] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([
       supabase.from('profiles').select('*', { count: 'exact', head: true }),
       supabase.from('posts').select('*', { count: 'exact', head: true }),
-      supabase.from('answers').select('*', { count: 'exact', head: true }),
-      supabase.from('professionals').select('*', { count: 'exact', head: true }),
-      supabase.from('sessions').select('*', { count: 'exact', head: true }),
+      supabase.from('topics').select('*', { count: 'exact', head: true }),
+      supabase.from('marketplace_listings').select('*', { count: 'exact', head: true }),
       supabase.from('moderation').select('*', { count: 'exact', head: true }),
-      supabase.from('tips').select('*', { count: 'exact', head: true }),
       supabase.from('quizzes').select('*', { count: 'exact', head: true }),
+      supabase.from('quiz_results').select('*', { count: 'exact', head: true }),
+      supabase.from('quiz_questions').select('*', { count: 'exact', head: true }),
       supabase.from('moderation').select('id, target_type, reason, created_at, status').order('created_at', { ascending: false }).limit(5),
-    ]).then(([users, posts, answers, pros, sessions, mods, tips, quizes, modData]) => {
+    ]).then(([users, posts, topics, listings, mods, quizes, results, questions, modData]) => {
       setStats({
         users: users.count || 0,
         posts: posts.count || 0,
-        answers: answers.count || 0,
-        pros: pros.count || 0,
-        sessions: sessions.count || 0,
+        answers: 0,
+        pros: 0,
+        sessions: 0,
         reports: mods.count || 0,
-        tips: tips.count || 0,
         quizzes: quizes.count || 0,
+        listings: listings.count || 0,
+        topics: topics.count || 0,
       })
+      setPropsedQuizzes(results.count || 0)
       setModItems(modData.data || [])
       setLoading(false)
     }).catch(() => setLoading(false))
@@ -57,24 +60,24 @@ export default function AdminDashboard() {
       {/* KPI cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 18 }}>
         <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 15, padding: 17 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--muted)', fontSize: 10 }}>Active members <span style={{ color: 'var(--green)' }}>↗ {stats.users > 0 ? Math.round((stats.posts / stats.users) * 100) / 10 : 0}%</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--muted)', fontSize: 10 }}>Total members <span style={{ color: 'var(--green)' }}>registered</span></div>
           <strong style={{ display: 'block', fontWeight: 800, fontSize: 28, letterSpacing: '-.06em', margin: '11px 0 4px', color: 'var(--ink)' }}>{stats.users.toLocaleString()}</strong>
-          <small style={{ fontSize: 10, color: 'var(--green)' }}>vs previous period</small>
+          <small style={{ fontSize: 10, color: 'var(--muted)' }}>{stats.topics} topics, {stats.listings} listings</small>
         </div>
         <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 15, padding: 17 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--muted)', fontSize: 10 }}>Open reports <span style={{ color: 'var(--red)' }}>● urgent</span></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--muted)', fontSize: 10 }}>Open reports <span style={{ color: stats.reports > 0 ? 'var(--red)' : 'var(--green)' }}>● {stats.reports > 0 ? 'urgent' : 'clear'}</span></div>
           <strong style={{ display: 'block', fontWeight: 800, fontSize: 28, letterSpacing: '-.06em', margin: '11px 0 4px', color: 'var(--ink)' }}>{stats.reports}</strong>
-          <small style={{ fontSize: 10, color: 'var(--orange)' }}>{Math.min(stats.reports, 5)} need action today</small>
+          <small style={{ fontSize: 10, color: stats.reports > 0 ? 'var(--orange)' : 'var(--green)' }}>{stats.reports > 0 ? `${Math.min(stats.reports, 5)} need action` : 'No pending reports'}</small>
         </div>
         <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 15, padding: 17 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--muted)', fontSize: 10 }}>Professional queue <span style={{ color: 'var(--orange)' }}>pending</span></div>
-          <strong style={{ display: 'block', fontWeight: 800, fontSize: 28, letterSpacing: '-.06em', margin: '11px 0 4px', color: 'var(--ink)' }}>{stats.pros}</strong>
-          <small style={{ fontSize: 10, color: 'var(--orange)' }}>verification in progress</small>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--muted)', fontSize: 10 }}>Quizzes <span style={{ color: 'var(--gold)' }}>available</span></div>
+          <strong style={{ display: 'block', fontWeight: 800, fontSize: 28, letterSpacing: '-.06em', margin: '11px 0 4px', color: 'var(--ink)' }}>{stats.quizzes}</strong>
+          <small style={{ fontSize: 10, color: 'var(--gold)' }}>{propsedQuizzes} completed by members</small>
         </div>
         <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 15, padding: 17 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--muted)', fontSize: 10 }}>Platform health <span style={{ color: 'var(--green)' }}>● live</span></div>
-          <strong style={{ display: 'block', fontWeight: 800, fontSize: 28, letterSpacing: '-.06em', margin: '11px 0 4px', color: 'var(--ink)' }}>99.98%</strong>
-          <small style={{ fontSize: 10, color: 'var(--green)' }}>all systems normal</small>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--muted)', fontSize: 10 }}>Total posts <span style={{ color: 'var(--green)' }}>published</span></div>
+          <strong style={{ display: 'block', fontWeight: 800, fontSize: 28, letterSpacing: '-.06em', margin: '11px 0 4px', color: 'var(--ink)' }}>{stats.posts.toLocaleString()}</strong>
+          <small style={{ fontSize: 10, color: 'var(--muted)' }}>across all spaces</small>
         </div>
       </div>
 
@@ -172,15 +175,16 @@ export default function AdminDashboard() {
 
           <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: 17, marginBottom: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <h2 style={{ fontWeight: 800, fontSize: 14, letterSpacing: '-.03em', margin: 0, color: 'var(--ink)' }}>Live operations</h2>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 99, padding: '5px 8px', fontSize: 9, fontWeight: 700, background: 'var(--green-soft)', color: 'var(--green)' }}>● realtime</span>
+              <h2 style={{ fontWeight: 800, fontSize: 14, letterSpacing: '-.03em', margin: 0, color: 'var(--ink)' }}>Platform overview</h2>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 99, padding: '5px 8px', fontSize: 9, fontWeight: 700, background: 'var(--green-soft)', color: 'var(--green)' }}>● live</span>
             </div>
             {[
-              { label: 'Members online', value: '38' },
-              { label: 'Active conversations', value: '126' },
-              { label: 'Sessions happening', value: '12' },
+              { label: 'Total members', value: stats.users.toLocaleString() },
+              { label: 'Total posts', value: stats.posts.toLocaleString() },
+              { label: 'Open reports', value: stats.reports.toString() },
+              { label: 'Quizzes taken', value: propsedQuizzes.toString() },
             ].map((m, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: i < 2 ? '1px solid var(--line)' : 'none', fontSize: 11 }}>
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: i < 3 ? '1px solid var(--line)' : 'none', fontSize: 11 }}>
                 <span style={{ color: 'var(--muted)' }}>{m.label}</span>
                 <b style={{ color: 'var(--ink)' }}>{m.value}</b>
               </div>
@@ -189,14 +193,14 @@ export default function AdminDashboard() {
 
           <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: 17 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <h2 style={{ fontWeight: 800, fontSize: 14, letterSpacing: '-.03em', margin: 0, color: 'var(--ink)' }}>Recent admin activity</h2>
-              <button onClick={() => router.push('/admin/audit')} style={{ background: 'none', color: 'var(--gold)', fontSize: 10, border: 0, cursor: 'pointer' }}>View log</button>
+              <h2 style={{ fontWeight: 800, fontSize: 14, letterSpacing: '-.03em', margin: 0, color: 'var(--ink)' }}>System summary</h2>
+              <button onClick={() => router.push('/admin/analytics')} style={{ background: 'none', color: 'var(--gold)', fontSize: 10, border: 0, cursor: 'pointer' }}>Full report →</button>
             </div>
             <div style={{ display: 'grid', gap: 15 }}>
               {[
-                { label: 'Policy update published', detail: 'Ink master · 12 minutes ago', color: 'var(--gold)' },
-                { label: '3 professionals approved', detail: 'Moderator jury · 48 minutes ago', color: 'var(--green)' },
-                { label: 'Listing removed', detail: 'Safety bot · 1 hour ago', color: 'var(--red)' },
+                { label: 'Quiz questions available', detail: `${stats.quizzes} quizzes, ${propsedQuizzes} taken`, color: 'var(--gold)' },
+                { label: 'Topics created', detail: `${stats.topics} active topics`, color: 'var(--green)' },
+                { label: 'Market listings', detail: `${stats.listings} listings on platform`, color: 'var(--blue)' },
               ].map((a, i) => (
                 <div key={i} style={{ display: 'flex', gap: 10 }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: a.color, marginTop: 5, boxShadow: `0 0 0 4px color-mix(in srgb, ${a.color} 20%, transparent)` }} />
