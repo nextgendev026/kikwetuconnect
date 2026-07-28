@@ -5,6 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     const { email, password, fullName } = await request.json()
 
+    // Validate input
     if (!email || !password || !fullName) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!email.includes('@') || !email.includes('.')) {
+    if (!email.includes('@')) {
       return NextResponse.json(
         { error: 'Invalid email address' },
         { status: 400 }
@@ -28,16 +29,14 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerClient()
 
-    // Sign up user using standard signUp (not admin - anon key can't do admin)
-    const { data, error } = await supabase.auth.signUp({
+    // Sign up user
+    const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-        emailRedirectTo: `${new URL(request.url).origin}/auth/callback`,
+      user_metadata: {
+        full_name: fullName,
       },
+      email_confirm: false, // Require email verification
     })
 
     if (error) {

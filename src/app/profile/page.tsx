@@ -101,7 +101,7 @@ export default function ProfilePage() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    router.push('/')
+    router.push('/login')
   }
 
   if (userLoading) {

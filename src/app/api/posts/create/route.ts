@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         content,
         media_url: mediaUrl || null,
         county_tag: countyTag || null,
-         bounty_tokens: Math.max(0, bountyTokens || 0),
+        bounty_tokens: bountyTokens,
       })
       .select()
       .single()

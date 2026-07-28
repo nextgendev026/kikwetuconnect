@@ -151,11 +151,11 @@ export function useMessages(conversationId: string | null) {
     fetchMessages()
     if (!conversationId || !user) return
     const channel = supabase.channel(`messages:${conversationId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, (payload: { new: any }) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, (payload: any) => {
         const msg = payload.new as Message
         setMessages(prev => [...prev, msg])
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, (payload: { new: any }) => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, (payload: any) => {
         const msg = payload.new as Message
         setMessages(prev => prev.map(m => m.id === msg.id ? msg : m))
       })
