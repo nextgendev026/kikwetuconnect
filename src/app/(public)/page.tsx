@@ -138,9 +138,15 @@ export default function LandingPage() {
         <div className="mt-[32px] text-muted text-[12px]">KikwetuConnect community principle</div>
       </section>
 
-      <footer className="px-[clamp(18px,8vw,126px)] py-[35px] bg-night border-t border-[oklch(27%_.025_151)] flex justify-between gap-[20px] text-muted text-[11px]">
+      <footer className="px-[clamp(18px,8vw,126px)] py-[35px] bg-night border-t border-[oklch(27%_.025_151)] flex flex-wrap justify-between gap-[20px] text-muted text-[11px]">
         <div>© 2026 KikwetuConnect · Tuko pamoja</div>
-        <nav><a href="#" className="text-muted no-underline ml-[17px]">Community guidelines</a><a href="#" className="text-muted no-underline ml-[17px]">Privacy</a><a href="#" className="text-muted no-underline ml-[17px]">Support</a></nav>
+        <nav className="flex flex-wrap gap-x-[17px] gap-y-[4px]">
+          <a href="/legal/terms" className="text-muted no-underline hover:text-cream">Terms</a>
+          <a href="/legal/privacy" className="text-muted no-underline hover:text-cream">Privacy</a>
+          <a href="/legal/community-guidelines" className="text-muted no-underline hover:text-cream">Guidelines</a>
+          <a href="/legal/about" className="text-muted no-underline hover:text-cream">About</a>
+          <a href="/baraza" className="text-muted no-underline hover:text-cream">Barazas</a>
+        </nav>
       </footer>
     </div>
   )

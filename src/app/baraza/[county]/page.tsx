@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { ArrowLeft, MapPin, Users, TrendingUp } from 'lucide-react'
 import { PostCard } from '@/components/ui/post-card-component'
-import { useUser, useSupabase } from '@/providers/supabase-provider'
+import { useUser, useSupabase } from '@/app/providers'
 
 interface CountyStats {
   county: string

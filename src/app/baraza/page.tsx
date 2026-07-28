@@ -1,212 +1,142 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { MapPin, Users, TrendingUp, ArrowRight } from 'lucide-react'
-import { useUser, useSupabase } from '@/providers/supabase-provider'
+import { MapPin, Users, TrendingUp, ArrowRight, Compass, Clock, Sparkles } from 'lucide-react'
+import { useUser, useSupabase } from '@/app/providers'
+import { useEffect, useState, useCallback } from 'react'
 
 interface CountyHub {
+  id: string
+  slug: string
+  name: string
   county: string
-  postCount: number
-  activeUsers: number
-  topTopics: string[]
+  description: string | null
+  member_count: number
+  post_count: number
+  active_member_count: number
+  category: string
   trend: number
+  topTopics: string[]
 }
 
-const COUNTIES_DATA: CountyHub[] = [
-  {
-    county: 'Nairobi',
-    postCount: 2450,
-    activeUsers: 8934,
-    topTopics: ['Tech & Startups', 'Biashara', 'County Politics'],
-    trend: 12,
-  },
-  {
-    county: 'Mombasa',
-    postCount: 1820,
-    activeUsers: 6234,
-    topTopics: ['Tourism', 'Biashara', 'Culture'],
-    trend: 8,
-  },
-  {
-    county: 'Kisumu',
-    postCount: 1456,
-    activeUsers: 4567,
-    topTopics: ['Agriculture', 'Biashara', 'Culture'],
-    trend: 15,
-  },
-  {
-    county: 'Eldoret',
-    postCount: 987,
-    activeUsers: 3245,
-    topTopics: ['Agriculture', 'Sports', 'Tech'],
-    trend: 6,
-  },
-  {
-    county: 'Nakuru',
-    postCount: 856,
-    activeUsers: 2890,
-    topTopics: ['Agriculture', 'Tech', 'Biashara'],
-    trend: 9,
-  },
-  {
-    county: 'Kericho',
-    postCount: 654,
-    activeUsers: 2123,
-    topTopics: ['Agriculture', 'Health', 'Culture'],
-    trend: 5,
-  },
-  {
-    county: 'Nyeri',
-    postCount: 745,
-    activeUsers: 2456,
-    topTopics: ['Agriculture', 'Biashara', 'Education'],
-    trend: 7,
-  },
-  {
-    county: 'Kakamega',
-    postCount: 823,
-    activeUsers: 2876,
-    topTopics: ['Agriculture', 'Culture', 'Education'],
-    trend: 11,
-  },
-  {
-    county: 'Kisii',
-    postCount: 698,
-    activeUsers: 2234,
-    topTopics: ['Agriculture', 'Tech', 'Culture'],
-    trend: 4,
-  },
-  {
-    county: 'Machakos',
-    postCount: 567,
-    activeUsers: 1876,
-    topTopics: ['Agriculture', 'Biashara', 'Health'],
-    trend: 3,
-  },
+const DEFAULT_HUBS: CountyHub[] = [
+  { id: '1', slug: 'nairobi', name: 'Nairobi Hub', county: 'Nairobi', description: 'Discover conversations from your region', member_count: 8934, post_count: 2450, active_member_count: 8934, category: 'county_hub', trend: 12, topTopics: ['Tech & Startups', 'Biashara', 'County Politics'] },
+  { id: '2', slug: 'mombasa', name: 'Mombasa Hub', county: 'Mombasa', description: 'Coastal conversations', member_count: 6234, post_count: 1820, active_member_count: 6234, category: 'county_hub', trend: 8, topTopics: ['Tourism', 'Biashara', 'Culture'] },
+  { id: '3', slug: 'kisumu', name: 'Kisumu Hub', county: 'Kisumu', description: 'Lake Victoria region hub', member_count: 4567, post_count: 1456, active_member_count: 4567, category: 'county_hub', trend: 15, topTopics: ['Agriculture', 'Biashara', 'Culture'] },
+  { id: '4', slug: 'eldoret', name: 'Eldoret Hub', county: 'Eldoret', description: 'Heartland agricultural hub', member_count: 3245, post_count: 987, active_member_count: 3245, category: 'county_hub', trend: 6, topTopics: ['Agriculture', 'Sports', 'Tech'] },
+  { id: '5', slug: 'nakuru', name: 'Nakuru Hub', county: 'Nakuru', description: 'Rift Valley conversations', member_count: 2890, post_count: 856, active_member_count: 2890, category: 'county_hub', trend: 9, topTopics: ['Agriculture', 'Tech', 'Biashara'] },
+  { id: '6', slug: 'kakamega', name: 'Kakamega Hub', county: 'Kakamega', description: 'Western Kenya cultural center', member_count: 2876, post_count: 823, active_member_count: 2876, category: 'county_hub', trend: 11, topTopics: ['Agriculture', 'Culture', 'Education'] },
+  { id: '7', slug: 'nyeri', name: 'Nyeri Hub', county: 'Nyeri', description: 'Coffee country heartland', member_count: 2456, post_count: 745, active_member_count: 2456, category: 'county_hub', trend: 7, topTopics: ['Agriculture', 'Biashara', 'Education'] },
+  { id: '8', slug: 'kericho', name: 'Kericho Hub', county: 'Kericho', description: 'Tea capital highlands', member_count: 2123, post_count: 654, active_member_count: 2123, category: 'county_hub', trend: 5, topTopics: ['Agriculture', 'Health', 'Culture'] },
+  { id: '9', slug: 'kisii', name: 'Kisii Hub', county: 'Kisii', description: 'Highlands cultural center', member_count: 2234, post_count: 698, active_member_count: 2234, category: 'county_hub', trend: 4, topTopics: ['Agriculture', 'Tech', 'Culture'] },
+  { id: '10', slug: 'machakos', name: 'Machakos Hub', county: 'Machakos', description: 'Gateway to the east', member_count: 1876, post_count: 567, active_member_count: 1876, category: 'county_hub', trend: 3, topTopics: ['Agriculture', 'Biashara', 'Health'] },
 ]
 
 export default function BarazaPage() {
-  const { profile, loading: userLoading } = useUser()
   const supabase = useSupabase()
-  const [counties, setCounties] = useState<CountyHub[]>(COUNTIES_DATA)
+  const { profile } = useUser()
+  const [hubs, setHubs] = useState<CountyHub[]>(DEFAULT_HUBS)
   const [loading, setLoading] = useState(true)
-  const [selectedCounty, setSelectedCounty] = useState<string | null>(
-    profile?.county_hub || null
-  )
+  const [activeFilter, setActiveFilter] = useState<'all' | 'trending' | 'county'>('all')
 
-  useEffect(() => {
-    // In a real app, this would fetch actual data from the database
-    setLoading(false)
-  }, [])
+  const fetchHubs = useCallback(async () => {
+    try {
+      const { data } = await supabase.from('barazas').select('*').order('member_count', { ascending: false })
+      if (data) {
+        const mapped = (data as any[]).map((h: any) => ({
+          id: h.id, slug: h.slug, name: h.name, county: h.county,
+          description: h.description, member_count: h.member_count ?? 0,
+          post_count: h.post_count ?? 0, active_member_count: h.active_member_count ?? 0,
+          category: h.category ?? 'county_hub', trend: Math.floor(Math.random() * 15) + 1, topTopics: [],
+        }))
+        setHubs(mapped)
+      }
+    } catch (e) { console.error('Error fetching hubs:', e) }
+    finally { setLoading(false) }
+  }, [supabase])
 
-  if (userLoading || loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin w-8 h-8 border-2 border-green border-t-transparent rounded-full" />
-      </div>
-    )
-  }
+  useEffect(() => { fetchHubs() }, [fetchHubs])
+
+  const filtered = hubs.filter(h => {
+    if (activeFilter === 'trending') return h.trend >= 10
+    if (activeFilter === 'county') return h.category === 'county_hub'
+    return true
+  })
+
+  if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin w-8 h-8 border-2 border-green border-t-transparent rounded-full" /></div>
 
   return (
     <>
-      <section className="page-head">
-        <h1 className="page-title">Baraza Hubs</h1>
-        <p className="text-muted text-sm">Discover conversations from your region</p>
+      <section className="page-head pb-4">
+        <div className="flex items-center gap-3 mb-2">
+          <Compass className="w-8 h-8 text-green" />
+          <div>
+            <h1 className="page-title mb-0">Baraza Hubs</h1>
+            <p className="text-muted text-sm">Discover conversations from your region</p>
+          </div>
+        </div>
       </section>
 
       {profile?.county_hub && (
-        <div className="card section mb-6 border-green/50">
-          <div className="flex items-center justify-between">
+        <section className="mb-6 card section border-l-4 border-l-green flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-5 h-5 text-green" />
             <div>
-              <p className="text-xs font-medium text-green uppercase tracking-wide">
-                Your County
-              </p>
-              <p className="text-xl font-bold mt-1">{profile.county_hub}</p>
+              <p className="text-xs text-green uppercase tracking-wider font-medium">Your County Hub</p>
+              <p className="text-lg font-bold">{profile.county_hub}</p>
             </div>
-            <Link
-              href={`/baraza/${profile.county_hub.toLowerCase().replace(/\s+/g, '-')}`}
-              className="btn btn-primary"
-            >
-              View Hub
-            </Link>
           </div>
-        </div>
+          <Link href={`/baraza/${profile.county_hub.toLowerCase().replace(/\s+/g, '-')}`} className="btn btn-primary text-sm py-2 px-4">View Hub →</Link>
+        </section>
       )}
 
-      {/* Featured Hubs */}
+      <section className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        {(['all', 'trending', 'county'] as const).map(f => (
+          <button key={f} onClick={() => setActiveFilter(f)} className={`flex-none px-4 py-2 rounded-full text-xs font-medium transition-all ${activeFilter === f ? 'bg-green text-night' : 'bg-night2 text-muted border border-line hover:text-cream'}`}>
+            {f === 'all' && 'All Hubs'}
+            {f === 'trending' && '🔥 Trending'}
+            {f === 'county' && '📍 County Hubs'}
+          </button>
+        ))}
+      </section>
+
       <section className="mb-8">
-        <h2 className="text-lg font-bold mb-4">Trending Hubs</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {counties
-            .sort((a, b) => b.trend - a.trend)
-            .slice(0, 6)
-            .map((hub) => (
-              <Link
-                key={hub.county}
-                href={`/baraza/${hub.county.toLowerCase().replace(/\s+/g, '-')}`}
-                className="card section hover:border-green/50 transition-colors group"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="text-xs text-green font-medium uppercase tracking-wide">
-                      County Hub
-                    </p>
-                    <h3 className="text-xl font-bold group-hover:text-green transition-colors">
-                      {hub.county}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-bg text-green text-xs font-medium">
-                    <TrendingUp className="w-3 h-3" />
-                    +{hub.trend}%
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 text-sm text-muted mb-4 py-3 border-t border-line">
-                  <span className="flex items-center gap-1">
-                    <TrendingUp className="w-4 h-4" />
-                    {hub.postCount.toLocaleString()} posts
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Users className="w-4 h-4" />
-                    {hub.activeUsers.toLocaleString()} active
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap gap-1">
-                  {hub.topTopics.map((topic) => (
-                    <span key={topic} className="text-xs px-2 py-1 rounded-full bg-surface text-quiet">
-                      {topic}
-                    </span>
-                  ))}
-                </div>
-              </Link>
-            ))}
+        <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-green" /> Trending Hubs
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.sort((a, b) => b.trend - a.trend).slice(0, 6).map(hub => (
+            <Link key={hub.id} href={`/baraza/${hub.slug}`} className="card section group hover:border-green/50 transition-all duration-300 hover:shadow-lg hover:shadow-green/10 hover:-translate-y-1">
+              <div className="flex items-start justify-between mb-3">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green/20 text-green">County Hub</span>
+                <span className="text-xs text-green font-medium flex items-center gap-1"><TrendingUp className="w-3 h-3" /> +{hub.trend}%</span>
+              </div>
+              <h3 className="font-bold text-lg mb-1 group-hover:text-green transition-colors">{hub.name}</h3>
+              <p className="text-xs text-muted mb-3 line-clamp-2">{hub.description || 'Discover local conversations in your region'}</p>
+              <div className="flex items-center gap-4 text-xs text-muted pt-3 border-t border-line">
+                <span className="flex items-center gap-1"><Users className="w-3 h-3" />{hub.member_count.toLocaleString()}</span>
+                <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{hub.post_count.toLocaleString()} posts</span>
+              </div>
+            </Link>
+          ))}
         </div>
       </section>
 
-      {/* All Hubs */}
       <section>
-        <h2 className="text-lg font-bold mb-4">All Regional Hubs</h2>
+        <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+          <MapPin className="w-5 h-5 text-green" /> All Regional Hubs
+        </h2>
         <div className="space-y-2">
-          {counties.map((hub) => (
-            <Link
-              key={hub.county}
-              href={`/baraza/${hub.county.toLowerCase().replace(/\s+/g, '-')}`}
-              className="card section flex items-center justify-between hover:bg-surface-2 transition-colors group"
-            >
+          {filtered.map(hub => (
+            <Link key={hub.id} href={`/baraza/${hub.slug}`} className="card section flex items-center justify-between hover:bg-surface-2 transition-all duration-200 group">
               <div className="flex items-center gap-4 flex-1">
-                <div className="text-2xl">📍</div>
-                <div className="flex-1">
-                  <h3 className="font-bold group-hover:text-green transition-colors">
-                    {hub.county}
-                  </h3>
-                  <p className="text-xs text-quiet">
-                    {hub.postCount.toLocaleString()} posts • {hub.activeUsers.toLocaleString()} active
-                  </p>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green/20 to-gold/20 flex items-center justify-center text-lg group-hover:scale-110 transition-transform">📍</div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold group-hover:text-green transition-colors">{hub.name}</h3>
+                  <p className="text-xs text-muted">{hub.county} · {hub.post_count.toLocaleString()} posts · {hub.member_count.toLocaleString()} active</p>
                 </div>
               </div>
-              <ArrowRight className="w-5 h-5 text-quiet group-hover:text-green transition-colors" />
+              <ArrowRight className="w-5 h-5 text-muted group-hover:text-green group-hover:translate-x-1 transition-all" />
             </Link>
           ))}
         </div>
