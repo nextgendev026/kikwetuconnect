@@ -1,289 +1,145 @@
 # KikwetuConnect
 
-Kenya's local knowledge network. Your people. Your language. Your Baraza.
+**Kenya's local knowledge network. Your people. Your language. Your Baraza.**
 
-A Quora + Twitter + Instagram + LinkedIn hybrid platform built specifically for the Kenyan digital ecosystem. KikwetuConnect brings together community-driven knowledge sharing with localized context, multi-language support, and verified expertise.
+A Quora + Twitter + Instagram + LinkedIn hybrid platform built for the Kenyan digital ecosystem — community-driven knowledge sharing with localized context, multi-language support, and verified expertise.
 
-## 🌍 What is KikwetuConnect?
+## Features
 
-KikwetuConnect is a community knowledge platform that bridges the gap between casual local discourse and verified expert insights. It's designed for Kenya with:
+- **Authentication & Profiles** — Email/password auth, email verification, password reset, Heshima reputation ratings, county-based identity
+- **Content Creation** — Baraza posts, Q&A deep-dives, articles, polls, safety updates, Mtaa marketplace listings, token bounties, multi-media support
+- **Community Engagement** — Upvote/downvote, real-time notifications, bookmarks, topic following, personalized feed
+- **Regional Discovery** — 47 county-based hubs, trending conversations by region, national vs. local trends
+- **Trust & Safety** — Heshima reputation system, community jury moderation, admin dashboard, verified expert badges
+- **Real-Time** — Live notifications, active user presence, instant updates via Supabase Realtime
+- **Wallet & Tokens** — Token-based economy, tips, bounties, payouts
+- **Specialized Spaces** — Professionals directory, Nyumba Kumi safety alerts, student hub, quizzes, marketplace, community sessions
 
-- **Localized Content**: County-based hubs and region-specific discussions
-- **Multi-Language**: English, Kiswahili, Sheng, and regional languages
-- **Verified Expertise**: Community jury system and expert badges
-- **Community Reputation**: Heshima rating system based on contributions
-- **Knowledge Exchange**: Q&A, short-form posts, and deep discussions
-- **Real-Time Engagement**: Live notifications and updates
+## Tech Stack
 
-## ✨ Core Features
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 14 (App Router), React 18, TypeScript |
+| Styling | Tailwind CSS with OKLch color system (Savannah theme) |
+| Backend | Supabase (PostgreSQL, Auth, Realtime, Storage) |
+| Deployment | Vercel |
+| Package Manager | npm |
 
-### 1. Authentication & Profiles
-- Email/password signup and login
-- Email verification
-- Password reset
-- User profiles with Heshima ratings
-- County-based identity
-
-### 2. Content Creation
-- **Baraza Posts**: Short-form updates and quick thoughts
-- **Deep-Dive Inquiries**: Structured Q&A with expert answers
-- **Articles**: Long-form educational content
-- **Bounty System**: Attach tokens to urgent questions
-- **Multi-Media**: Support for text, images, video, audio
-
-### 3. Community Engagement
-- Upvote/downvote on posts and answers
-- Real-time notifications
-- Bookmarks for saving content
-- Follow topics to shape your feed
-- Search posts, people, and topics
-
-### 4. Regional Discovery
-- County-based hubs (47 Kenyan counties)
-- Trending conversations by region
-- National trends vs. local trending
-- Active members per hub
-
-### 5. Trust & Safety
-- Heshima reputation system
-- Community jury moderation
-- Report system for harmful content
-- Admin moderation dashboard
-- Verified expert badges
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 18+
-- npm or yarn
-- Supabase account
-
-### Installation
+## Quick Start
 
 ```bash
-# Clone the repository
-git clone https://github.com/nextgendev026/kiwetu.git
-cd kiwetu
+# Clone
+git clone https://github.com/nextgendev026/kikwetuconnect.git
+cd kikwetuconnect
 
-# Install dependencies
+# Install
 npm install
 
-# Set up environment variables
+# Environment (edit with your Supabase credentials)
 cp .env.example .env.local
-# Edit .env.local with your Supabase credentials
+
+# Develop
+npm run dev
+
+# Build
+npm run build && npm run start
 ```
 
-### Environment Setup
+## Project Structure
 
-Update `.env.local` with your Supabase credentials:
+```
+src/
+├── app/
+│   ├── (public)/          # Landing page
+│   ├── (app)/             # Authenticated layout shell
+│   ├── admin/             # Moderation dashboard
+│   ├── api/               # API routes (posts, votes, answers, etc.)
+│   ├── auth/              # Auth callback
+│   ├── baraza/            # Regional hub pages
+│   ├── bookmarks/         # Saved posts
+│   ├── create/            # Post creation
+│   ├── explore/           # Discovery feed
+│   ├── feed/              # Main personalized feed
+│   ├── login/             # Login page
+│   ├── market/            # Mtaa marketplace
+│   ├── messages/          # Direct messages
+│   ├── notifications/     # Notification center
+│   ├── nyumba/            # Nyumba Kumi safety alerts
+│   ├── onboarding/        # New user onboarding
+│   ├── posts/             # Post detail view
+│   ├── professionals/     # Professionals directory
+│   ├── profile/           # User profile
+│   ├── quizzes/           # Community quizzes
+│   ├── search/            # Search
+│   ├── sessions/          # Live sessions
+│   ├── settings/          # Account settings
+│   ├── spaces/            # Community spaces
+│   ├── students/          # Student hub
+│   ├── topics/            # Topic discovery
+│   ├── wallet/            # Token wallet
+│   ├── AppShell.tsx       # Main app layout (sidebar + right panel)
+│   ├── globals.css        # Global styles
+│   ├── layout.tsx         # Root layout
+│   └── providers.tsx      # App providers
+├── components/
+│   ├── layout/            # Layout components
+│   ├── providers/         # Supabase & Realtime providers
+│   ├── ui/                # Reusable UI components (PostCard, etc.)
+│   ├── Sidebar.tsx        # Desktop sidebar nav
+│   ├── MobileNav.tsx      # Mobile bottom nav
+│   └── CreateModal.tsx    # Global create post modal
+├── lib/
+│   ├── database.types.ts  # Full TypeScript types for all 28 tables
+│   ├── i18n.ts            # Internationalization utilities
+│   ├── server-supabase.ts # Server-side Supabase client (createApiClient)
+│   └── supabase.ts        # Browser Supabase client
+└── providers/
+    └── supabase-provider.tsx # Supabase context provider
+```
+
+## Database
+
+29 tables across the Supabase PostgreSQL schema:
+
+- **Core**: profiles, posts, answers, votes, topics, follows, saves
+- **Engagement**: notifications, messages, tips, tokens, badges, user_badges
+- **Specialized**: spaces, space_members, professionals, sessions, marketplace_listings, nyumba_kumi_alerts
+- **Learning**: quizzes, quiz_questions, quiz_results
+- **Moderation**: moderation, audit_logs, translations, parent_links, post_topics, user_topics
+
+Full schema with RLS policies in `database/schema.sql`. Seed data includes 8 default community spaces and 8 starter quizzes.
+
+## Environment Variables
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+NEXT_PUBLIC_SUPABASE_URL=           # Supabase project URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=      # Supabase anon/public key
+SUPABASE_SERVICE_ROLE_KEY=          # Supabase service_role key (admin operations)
+NEXT_PUBLIC_APP_URL=                # App URL (http://localhost:3000 or production)
+NEXT_PUBLIC_APP_NAME=KikwetuConnect
 ```
 
-### Run Development Server
+## Design System
 
-```bash
-npm run dev
-```
+- **Colors** — Savannah theme using OKLch: Night (14% .025 151), Gold (75% .14 84), Green (55% .13 151), Earth (48% .10 55)
+- **Typography** — Plus Jakarta Sans (display/body), IBM Plex Mono (metadata)
+- **Spacing** — 4pt rhythm (4, 8, 12, 16, 24, 32, 48, 64px)
+- **Layout** — Mobile-first with bottom nav, desktop sidebar + right panel + live users
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### Build for Production
-
-```bash
-npm run build
-npm run start
-```
-
-## 📁 Project Structure
-
-```
-kikwetuconnect/
-├── src/
-│   ├── app/
-│   │   ├── (public)/          # Public landing page
-│   │   ├── admin/             # Admin/moderation pages
-│   │   ├── api/               # API routes
-│   │   ├── auth/              # Authentication pages
-│   │   ├── baraza/            # Regional hubs
-│   │   ├── bookmarks/         # Saved posts
-│   │   ├── create/            # Post creation
-│   │   ├── feed/              # Main feed
-│   │   ├── login/             # Login page
-│   │   ├── notifications/     # Notifications
-│   │   ├── posts/             # Post detail page
-│   │   ├── profile/           # User profile
-│   │   ├── search/            # Search page
-│   │   ├── signup/            # Signup page
-│   │   ├── topics/            # Topics discovery
-│   │   └── layout.tsx         # Root layout
-│   ├── components/
-│   │   ├── layout/            # Layout components
-│   │   ├── ui/                # UI components
-│   │   └── providers/         # Context providers
-│   ├── lib/                   # Utility functions
-│   ├── providers/             # App providers
-│   └── app/globals.css        # Global styles
-├── database/
-│   └── schema.sql             # Database schema
-├── supabase/
-│   └── functions/             # Edge functions
-├── package.json
-├── tsconfig.json
-└── tailwind.config.js
-```
-
-## 🗄️ Database Schema
-
-The platform uses Supabase PostgreSQL with 13 tables:
-
-- **profiles**: User data, Heshima ratings, verification status
-- **posts**: Baraza posts, questions, articles
-- **answers**: Responses to questions
-- **votes**: Upvotes/downvotes on content
-- **topics**: Content categories
-- **post_topics**: Post-topic relationships
-- **user_topics**: User topic follows
-- **notifications**: Real-time alerts
-- **translations**: Content translations
-- **moderation**: Report queue
-- **tokens**: User wallet/ledger
-- **badges**: Achievement system
-- **user_badges**: User badge relationships
-
-See `database/schema.sql` for complete schema with RLS policies.
-
-## 🛠️ Tech Stack
-
-- **Frontend**: Next.js 14, React 18, TypeScript
-- **Styling**: Tailwind CSS with OKLch color system
-- **Backend**: Supabase (PostgreSQL, Auth, Real-time)
-- **Deployment**: Vercel
-- **Package Manager**: npm
-
-## 🎨 Design System
-
-### Colors
-- **Acacia Green** (`#438854`): Success, verified badges
-- **Savannah Gold** (`#C6A860`): Highlights, warnings
-- **Rich Earth Brown** (`#8B5E3C`): Secondary cards
-- **Ink/Obsidian** (`#121212`): Dark backgrounds
-
-### Typography
-- **Display**: Plus Jakarta Sans (800, 56-104px)
-- **Body**: Plus Jakarta Sans (400-600, 15-18px)
-- **Metadata**: IBM Plex Mono
-
-### Spacing
-- 4pt rhythm: 4, 8, 12, 16, 24, 32px increments
-
-## 🔐 Security
-
-- Row-level security (RLS) on all tables
-- Authentication via Supabase GoTrue
-- Input validation with Zod
-- Protected API routes
-- Admin access control
-- CSRF protection
-- Content sanitization
-
-## 📊 API Endpoints
-
-### Authentication
-- `POST /api/auth/signup` - User signup
-- `POST /api/auth/login` - User login
-- `GET /auth/callback` - OAuth callback
-
-### Content
-- `POST /api/posts/create` - Create post
-- `POST /api/answers/create` - Submit answer
-- `POST /api/votes/create` - Vote on content
-
-### Discovery
-- `GET /api/search` - Full-text search
-- `POST /api/topics/follow` - Follow topic
-- `GET /api/posts` - Fetch posts with filters
-
-### Notifications
-- `GET /api/notifications` - Fetch notifications
-- `POST /api/notifications/mark-read` - Mark as read
-
-## 🚀 Deployment
-
-### Deploy to Vercel
+## Deployment
 
 1. Push to GitHub
-2. Connect repository to Vercel
-3. Add environment variables
+2. Connect repo to Vercel
+3. Add environment variables in Vercel dashboard
 4. Deploy
 
-See `DEPLOYMENT.md` for detailed instructions.
-
-### Environment for Production
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-NEXT_PUBLIC_APP_URL=https://your-domain.com
-```
-
-## 📱 Supported Platforms
-
-- Desktop (Chrome, Firefox, Safari, Edge)
-- Mobile (iOS Safari, Chrome Android)
-- Tablet (iPad, Android tablets)
-
-## 🧪 Testing
-
 ```bash
-# Type checking
-npm run typecheck
-
-# Linting
-npm run lint
+# Set up Supabase
+npx supabase login
+npx supabase link --project-ref your-project-ref
+npx supabase db push
 ```
 
-## 📚 Documentation
+## License
 
-- [Deployment Guide](./DEPLOYMENT.md) - Production deployment
-- [Design System](./kikwetuconnect-design-system.html) - UI/UX guidelines
-- [Technical Spec](./kikwetuconnect-technical-handoff-deck.html) - Full technical specification
-
-## 🤝 Contributing
-
-Contributions welcome! To contribute:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see LICENSE file for details.
-
-## 🆘 Support
-
-For questions or issues:
-- **Email**: hello@kikwetuconnect.example
-- **Issues**: [GitHub Issues](https://github.com/nextgendev026/kiwetu/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/nextgendev026/kiwetu/discussions)
-
-## 🙏 Acknowledgments
-
-- Design system inspired by Kikwetu mockups
-- Supabase for backend infrastructure
-- Vercel for hosting and deployment
-- Kenya's tech community for inspiration
-
----
-
-**KikwetuConnect** - Building the first Baraza for Kenya's digital future.
-
-Made with ❤️ by the KikwetuConnect team
+MIT
