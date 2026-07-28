@@ -58,8 +58,12 @@ interface Post {
   post_type: string
   title: string | null
   content: string
-  media_url: string | null
-  media_type: string | null
+  media_urls: string[] | null
+  media_types: string[] | null
+  embed_url: string | null
+  embed_title: string | null
+  embed_description: string | null
+  embed_image: string | null
   county_tag: string | null
   bounty_tokens: number
   upvotes_count: number
@@ -225,17 +229,55 @@ function PostCardComponent({
       {/* Content */}
       <p className="text-cream text-[13px] leading-[1.6] mb-[12px] whitespace-pre-wrap break-words">{post.content}</p>
 
-      {/* Media */}
-      {post.media_url && (
-        <div className="mb-[12px] rounded-[12px] overflow-hidden bg-deep border border-[oklch(29%_.025_151)]">
-          {post.media_type?.startsWith('video/') ? (
-            <div className="h-[200px] flex items-center justify-center bg-deep">
-              <span className="text-[40px] opacity-50">🎥</span>
+      {/* Media - supports multiple images/videos */}
+      {post.media_urls?.length && (
+        <div className="mb-[12px]">
+          {post.media_urls?.length === 1 ? (
+            <div className="rounded-[12px] overflow-hidden bg-deep border border-[oklch(29%_.025_151)]">
+              {post.media_types?.[0] === 'video' ? (
+                <video src={post.media_urls[0]} muted loop playsInline className="w-full h-auto max-h-[300px] object-cover" />
+              ) : (
+                <img src={post.media_urls[0]} alt="" className="w-full h-auto max-h-[300px] object-cover" loading="lazy" />
+              )}
             </div>
           ) : (
-            <img src={post.media_url} alt="" className="w-full h-auto max-h-[300px] object-cover" loading="lazy" />
+            <div className="grid gap-2" style={{ 
+              gridTemplateColumns: post.media_urls?.length === 2 ? '1fr 1fr' : 'repeat(3, 1fr)' 
+            }}>
+              {post.media_urls.map((url, idx) => (
+                <div key={idx} className="rounded-[12px] overflow-hidden bg-deep border border-[oklch(29%_.025_151)] aspect-square relative">
+                  {post.media_types?.[idx] === 'video' ? (
+                    <>
+                      <video src={url} muted loop playsInline className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <span className="text-2xl">▶</span>
+                      </div>
+                    </>
+                  ) : (
+                    <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  )}
+                  {post.media_urls && post.media_urls.length > 3 && idx === 2 && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white font-bold text-xl">
+                      +{post.media_urls!.length - 3}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           )}
         </div>
+      )}
+      
+      {/* Admin embed link preview */}
+      {post.embed_url && post.embed_title && (
+        <a href={post.embed_url} target="_blank" rel="noopener noreferrer" className="mb-[12px] p-[12px] bg-night2 border border-[oklch(29%_.025_151)] rounded-[12px] flex gap-[12px] hover:border-gold/30 transition-colors">
+          {post.embed_image && <img src={post.embed_image} alt="" className="w-[80px] h-[80px] object-cover rounded-[8px] flex-shrink-0" />}
+          <div className="flex-1 min-w-0">
+            <p className="text-cream font-semibold text-sm truncate">{post.embed_title}</p>
+            {post.embed_description && <p className="text-[oklch(65%_.028_151)] text-xs truncate mt-1">{post.embed_description}</p>}
+            <p className="text-gold text-xs mt-2 font-medium">🔗 Open link</p>
+          </div>
+        </a>
       )}
 
       {/* County & Bounty */}

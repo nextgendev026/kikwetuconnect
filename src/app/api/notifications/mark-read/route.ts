@@ -32,11 +32,11 @@ export async function POST(request: NextRequest) {
         )
       }
     } else if (notificationId) {
-      // Mark specific notification as read
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
         .eq('id', notificationId)
+        .eq('user_id', user.id)
 
       if (error) {
         return NextResponse.json(

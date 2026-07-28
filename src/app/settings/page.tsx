@@ -123,7 +123,7 @@ export default function SettingsPage() {
   const handleSignOutAll = async () => {
     await supabase.auth.signOut({ scope: 'global' })
     localStorage.clear()
-    window.location.href = '/login'
+    window.location.href = '/'
   }
 
   const handleDeactivate = async () => {

@@ -1,5 +1,5 @@
 'use client'
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { createBrowserClient } from '@supabase/auth-helpers-nextjs'
 import { usePathname } from 'next/navigation'
 
@@ -8,6 +8,35 @@ type SupabaseClient = ReturnType<typeof createBrowserClient>
 const SupabaseCtx = createContext<SupabaseClient | undefined>(undefined)
 const UserCtx = createContext<{ user: any; profile: any; loading: boolean; refreshProfile: () => void }>({ user: null, profile: null, loading: true, refreshProfile: () => {} })
 const ThemeCtx = createContext<{ theme: string; toggleTheme: () => void }>({ theme: 'light', toggleTheme: () => {} })
+
+// Notification context
+interface Notification {
+  id: string
+  type: string
+  title: string
+  body: string
+  data: Record<string, any>
+  is_read: boolean
+  created_at: string
+}
+
+const NotifCtx = createContext<{
+  notifications: Notification[]
+  unreadCount: number
+  fetchNotifications: () => Promise<void>
+  markAsRead: (id: string) => Promise<void>
+  markAllAsRead: () => Promise<void>
+  subscribe: () => void
+  unsubscribe: () => void
+}>({
+  notifications: [],
+  unreadCount: 0,
+  fetchNotifications: async () => {},
+  markAsRead: async () => {},
+  markAllAsRead: async () => {},
+  subscribe: () => {},
+  unsubscribe: () => {},
+})
 
 export function toast(msg: string) {
   if (typeof window !== 'undefined') {
@@ -38,6 +67,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [theme, setTheme] = useState('light')
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const notifChannelRef = useRef<any>(null)
 
   useEffect(() => {
     const saved = localStorage.getItem('kikwetu-theme') || 'light'
@@ -65,6 +97,60 @@ export function Providers({ children }: { children: React.ReactNode }) {
     if (u) { setUser(u); await fetchProfile(u.id) }
   }, [supabase, fetchProfile])
 
+  // Notifications
+  const fetchNotifications = useCallback(async () => {
+    if (!user) return
+    const { data } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(50)
+    if (data) {
+      setNotifications(data as Notification[])
+      setUnreadCount(data.filter((n: Notification) => !n.is_read).length)
+    }
+  }, [supabase, user])
+
+  const markAsRead = useCallback(async (id: string) => {
+    await supabase.from('notifications').update({ is_read: true }).eq('id', id)
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
+    setUnreadCount(prev => Math.max(0, prev - 1))
+  }, [supabase])
+
+  const markAllAsRead = useCallback(async () => {
+    if (!user) return
+    await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false)
+    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+    setUnreadCount(0)
+  }, [supabase, user])
+
+  const subscribeToNotifications = useCallback(() => {
+    if (!user || notifChannelRef.current) return
+    const channel = supabase.channel('notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
+        const notif = payload.new as Notification
+        setNotifications(prev => [notif, ...prev])
+        setUnreadCount(prev => prev + 1)
+        if (notif.type === 'message') toast(`New message from ${notif.data?.sender_name || 'someone'}`)
+        else toast(notif.title)
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
+        const notif = payload.new as Notification
+        setNotifications(prev => prev.map(n => n.id === notif.id ? notif : n))
+        setUnreadCount(prev => Math.max(0, prev - (notif.is_read ? 1 : 0)))
+      })
+      .subscribe()
+    notifChannelRef.current = channel
+  }, [supabase, user])
+
+  const unsubscribeFromNotifications = useCallback(() => {
+    if (notifChannelRef.current) {
+      supabase.removeChannel(notifChannelRef.current)
+      notifChannelRef.current = null
+    }
+  }, [supabase])
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user: u } }) => {
       setUser(u)
@@ -80,12 +166,32 @@ export function Providers({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [supabase, fetchProfile])
 
+  useEffect(() => {
+    if (user) { fetchNotifications(); subscribeToNotifications() }
+    else { setNotifications([]); setUnreadCount(0); unsubscribeFromNotifications() }
+    return () => unsubscribeFromNotifications()
+  }, [user, fetchNotifications, subscribeToNotifications, unsubscribeFromNotifications])
+
+  // Admin activity logging helper
+  const logAdminActivity = useCallback(async (action: string, targetType?: string, targetId?: string, details?: Record<string, any>) => {
+    if (!user) return
+    await supabase.from('admin_activity').insert({
+      admin_id: user.id,
+      action,
+      target_type: targetType,
+      target_id: targetId,
+      details: details || {},
+    })
+  }, [supabase, user])
+
   return (
     <SupabaseCtx.Provider value={supabase}>
       <ThemeCtx.Provider value={{ theme, toggleTheme }}>
         <UserCtx.Provider value={{ user, profile, loading, refreshProfile }}>
-          {children}
-          {/* Toast element rendered once at root level */}
+          <NotifCtx.Provider value={{ notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead, subscribe: subscribeToNotifications, unsubscribe: unsubscribeFromNotifications }}>
+            {children}
+            <div className="toast" id="global-toast"></div>
+          </NotifCtx.Provider>
         </UserCtx.Provider>
       </ThemeCtx.Provider>
     </SupabaseCtx.Provider>
@@ -95,3 +201,5 @@ export function Providers({ children }: { children: React.ReactNode }) {
 export const useSupabase = () => { const c = useContext(SupabaseCtx); if (!c) throw new Error('Missing SupabaseProvider'); return c }
 export const useUser = () => useContext(UserCtx)
 export const useTheme = () => useContext(ThemeCtx)
+export const useNotifications = () => useContext(NotifCtx)
+export const useAdminActivity = () => ({ logAdminActivity: () => {} }) // placeholder, use inside components with supabase

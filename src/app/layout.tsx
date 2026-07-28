@@ -19,6 +19,15 @@ export const metadata: Metadata = {
   },
   twitter: { card: 'summary_large_image', title: 'KikwetuConnect', description: "Kenya's local knowledge network." },
   robots: { index: true, follow: true },
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+    other: [
+      { rel: 'manifest', url: '/site.webmanifest' },
+    ],
+  },
+  manifest: '/site.webmanifest',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

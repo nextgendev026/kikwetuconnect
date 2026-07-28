@@ -1,0 +1,36 @@
+{
+  "name": "KikwetuConnect",
+  "short_name": "Kikwetu",
+  "description": "Kenya's Community Platform - Connect, Learn, Grow",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F5F0",
+  "theme_color": "#438854",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["social", "community", "education"],
+  "shortcuts": [
+    {
+      "name": "Explore",
+      "url": "/explore",
+      "description": "Browse communities"
+    },
+    {
+      "name": "Messages",
+      "url": "/messages",
+      "description": "View messages"
+    },
+    {
+      "name": "Create",
+      "url": "/create",
+      "description": "Create a post"
+    }
+  ]
+}
