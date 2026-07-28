@@ -1,4 +1,14 @@
 import Link from 'next/link'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'KikwetuConnect | Tuko pamoja',
+  description: "Kenya's local knowledge network. Come with what you know. 47 counties, multilingual by design.",
+  openGraph: {
+    title: 'KikwetuConnect | Kenya\'s Knowledge Circle',
+    description: "Find useful people, ask better questions, and turn local context into real progress.",
+  },
+}
 
 export default function LandingPage() {
   return (

@@ -1,181 +1,92 @@
 'use client'
-
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Button, Input } from '@/components/ui/form'
-import { Lock, Eye, EyeOff } from 'lucide-react'
-import { useSupabase } from '@/providers/supabase-provider'
+import { useSupabase } from '@/app/providers'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
   const supabase = useSupabase()
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirm, setShowConfirm] = useState(false)
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sessionReady, setSessionReady] = useState(false)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    // Check if we have a valid session (reset link was used)
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        setSessionReady(true)
-      } else {
-        setError('Invalid or expired reset link. Please try again.')
-      }
-    }
-
-    checkSession()
+    supabase.auth.getSession().then(({ data: { session } }: { data: { session: any } }) => {
+      setReady(!!session)
+      if (!session) setError('Invalid or expired reset link.')
+    })
   }, [supabase])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters')
-      return
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match')
-      return
-    }
-
+    if (password.length < 8) { setError('Password must be at least 8 characters'); return }
+    if (password !== confirm) { setError('Passwords do not match'); return }
     setLoading(true)
-
     try {
-      const { error: updateError } = await supabase.auth.updateUser({
-        password,
-      })
-
-      if (updateError) {
-        setError(updateError.message)
-      } else {
-        router.push('/login?message=password-reset')
-      }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (!sessionReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="w-full max-w-md text-center">
-          {error ? (
-            <>
-              <h1 className="text-2xl font-bold mb-4">Invalid link</h1>
-              <p className="text-muted mb-6">{error}</p>
-              <Link href="/forgot-password" className="btn btn-primary">
-                Request new link
-              </Link>
-            </>
-          ) : (
-            <div className="animate-spin w-8 h-8 border-2 border-green border-t-transparent rounded-full mx-auto" />
-          )}
-        </div>
-      </div>
-    )
+      const { error: updateError } = await supabase.auth.updateUser({ password })
+      if (updateError) setError(updateError.message)
+      else router.push('/signup?mode=login')
+    } catch (err: any) { setError(err.message || 'An error occurred') } finally { setLoading(false) }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-green-bg flex items-center justify-center">
-              <span className="text-green font-bold">K</span>
-            </div>
-            <span className="font-bold text-xl">
-              Kikwetu<b>Connect</b>
-            </span>
+    <div style={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: 'minmax(300px,.78fr) minmax(520px,1.22fr)' }}>
+      <aside style={{ background: 'oklch(16% .035 151)', color: 'oklch(95% .012 91)', padding: 'clamp(28px,6vw,80px)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 15% 18%,oklch(43% .08 151),transparent 33%),radial-gradient(circle at 85% 27%,oklch(38% .08 84),transparent 28%)', opacity: .62 }} />
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 12, background: 'oklch(72% .15 84)', color: 'oklch(16% .035 151)', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 19, transform: 'rotate(-8deg)' }}>K</div>
+            <div><b style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-.05em' }}>KikwetuConnect</b></div>
           </div>
-          <h1 className="text-2xl font-bold mb-2">Create new password</h1>
-          <p className="text-muted">Make sure it's secure and easy for you to remember.</p>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <h1 style={{ fontWeight: 800, fontSize: 'clamp(2.5rem,4vw,4rem)', lineHeight: .95, letterSpacing: '-.08em', margin: 0, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Create new password.</h1>
+            <p style={{ color: 'oklch(77% .025 151)', fontSize: 15, lineHeight: 1.65, marginTop: 16 }}>Make sure it&apos;s secure and easy for you to remember.</p>
+          </div>
         </div>
-
-        {error && (
-          <div className="mb-4 p-3 rounded-xl bg-red-bg/20 border border-red/30 text-red text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="relative">
-            <Input
-              label="New password"
-              type={showPassword ? 'text' : 'password'}
-              placeholder="At least 8 characters"
-              icon={Lock}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-9 text-quiet hover:text-muted disabled:opacity-50"
-              disabled={loading}
-            >
-              {showPassword ? (
-                <EyeOff className="w-4 h-4" />
+      </aside>
+      <main style={{ padding: 'clamp(20px,4vw,70px)', display: 'grid', placeItems: 'center', background: 'oklch(96% .025 91)' }}>
+        <div style={{ width: 'min(480px,100%)' }}>
+          {!ready ? (
+            <div style={{ textAlign: 'center' }}>
+              {error ? (
+                <>
+                  <h2 style={{ fontWeight: 800, fontSize: 24, letterSpacing: '-.06em', margin: '0 0 10px' }}>Invalid link</h2>
+                  <p style={{ color: 'oklch(52% .035 151)', fontSize: 13, marginBottom: 20 }}>{error}</p>
+                  <Link href="/forgot-password" style={{ display: 'inline-flex', alignItems: 'center', height: 46, padding: '0 20px', borderRadius: 11, background: 'oklch(72% .15 84)', color: 'oklch(16% .035 151)', fontWeight: 700, fontSize: 12, textDecoration: 'none' }}>Request new link</Link>
+                </>
               ) : (
-                <Eye className="w-4 h-4" />
+                <div style={{ width: 32, height: 32, border: '3px solid oklch(52% .14 151)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin .6s linear infinite', margin: '0 auto' }} />
               )}
-            </button>
-          </div>
-
-          <div className="relative">
-            <Input
-              label="Confirm password"
-              type={showConfirm ? 'text' : 'password'}
-              placeholder="Repeat your password"
-              icon={Lock}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={loading}
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirm(!showConfirm)}
-              className="absolute right-3 top-9 text-quiet hover:text-muted disabled:opacity-50"
-              disabled={loading}
-            >
-              {showConfirm ? (
-                <EyeOff className="w-4 h-4" />
-              ) : (
-                <Eye className="w-4 h-4" />
-              )}
-            </button>
-          </div>
-
-          <Button
-            type="submit"
-            variant="primary"
-            className="w-full"
-            loading={loading}
-            disabled={loading}
-          >
-            Reset password
-          </Button>
-        </form>
-
-        <p className="text-center text-sm text-quiet mt-6">
-          Remember your password?{' '}
-          <Link href="/login" className="text-green font-semibold hover:underline">
-            Sign in
-          </Link>
-        </p>
-      </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit}>
+              {error && <div style={{ padding: '12px 15px', borderRadius: 11, background: 'oklch(90% .16 28)', color: 'oklch(56% .16 28)', fontSize: 11, fontWeight: 700, marginBottom: 15 }}>{error}</div>}
+              <div style={{ display: 'grid', gap: 7, marginBottom: 14 }}>
+                <label style={{ fontSize: 11, color: 'oklch(52% .035 151)', fontWeight: 600 }}>New password</label>
+                <input type="password" placeholder="At least 8 characters" value={password} onChange={e => setPassword(e.target.value)}
+                  style={{ height: 46, width: '100%', background: 'oklch(99% .008 91)', border: '1px solid oklch(85% .035 91)', borderRadius: 11, padding: '0 12px', fontSize: 12 }} />
+              </div>
+              <div style={{ display: 'grid', gap: 7, marginBottom: 14 }}>
+                <label style={{ fontSize: 11, color: 'oklch(52% .035 151)', fontWeight: 600 }}>Confirm password</label>
+                <input type="password" placeholder="Repeat your password" value={confirm} onChange={e => setConfirm(e.target.value)}
+                  style={{ height: 46, width: '100%', background: 'oklch(99% .008 91)', border: '1px solid oklch(85% .035 91)', borderRadius: 11, padding: '0 12px', fontSize: 12 }} />
+              </div>
+              <button type="submit" disabled={loading} style={{ width: '100%', height: 46, borderRadius: 11, background: 'oklch(72% .15 84)', color: 'oklch(16% .035 151)', fontWeight: 700, fontSize: 12, border: 0, cursor: 'pointer', opacity: loading ? .5 : 1 }}>
+                {loading ? <span style={{ width: 16, height: 16, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin .6s linear infinite' }} /> : null}
+                Reset password
+              </button>
+            </form>
+          )}
+          <p style={{ textAlign: 'center', color: 'oklch(52% .035 151)', fontSize: 11, marginTop: 18 }}>
+            Remember your password? <Link href="/signup?mode=login" style={{ color: 'oklch(52% .14 151)', fontWeight: 700, textDecoration: 'none' }}>Sign in</Link>
+          </p>
+        </div>
+      </main>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
 }
