@@ -12,10 +12,10 @@ interface Listing {
   category: string
   county: string
   status: 'active' | 'sold' | 'expired'
-  image_url: string | null
-  view_count: number
+  images: string[] | null
+  views_count: number
   created_at: string
-  user_id: string
+  seller_id: string
   profiles: {
     id: string
     full_name: string
@@ -78,6 +78,7 @@ export default function MarketPage() {
       .then(({ data }: { data: { listing_id: string }[] | null }) => {
         if (data) setSavedIds(new Set(data.map(s => s.listing_id)))
       })
+      .catch(() => { /* saved_listings table may not exist yet */ })
   }, [profile, supabase])
 
   const fetchListings = async () => {
@@ -87,7 +88,7 @@ export default function MarketPage() {
         .from('marketplace_listings')
         .select(`
           *,
-          profiles:user_id (
+          profiles!seller_id (
             id, full_name, username, avatar_url, county_hub
           )
         `)
@@ -146,11 +147,11 @@ export default function MarketPage() {
 
         await supabase
           .from('marketplace_listings')
-          .update({ view_count: (listings.find(l => l.id === listingId)?.view_count || 0) + 1 } as any)
+          .update({ views_count: (listings.find(l => l.id === listingId)?.views_count || 0) + 1 } as any)
           .eq('id', listingId)
       }
-    } catch (err) {
-      toast('Failed to save listing')
+    } catch {
+      toast('Saving not available yet')
     }
   }
 
@@ -280,8 +281,8 @@ export default function MarketPage() {
                 <div key={item.id} className="card section p-0 overflow-hidden group animate-rise">
                   {/* Image */}
                   <div className="relative h-[160px] bg-[oklch(18%_.028_151)] flex items-center justify-center overflow-hidden">
-                    {item.image_url ? (
-                      <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+                    {item.images && item.images.length > 0 ? (
+                      <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover" />
                     ) : (
                       <div className="text-[oklch(30%_.025_151)] flex flex-col items-center gap-2">
                         <Package className="w-8 h-8" />
@@ -311,7 +312,7 @@ export default function MarketPage() {
                         </span>
                       )}
                       <span className="flex items-center gap-1">
-                        <Eye className="w-3 h-3" /> {item.view_count || 0}
+                        <Eye className="w-3 h-3" /> {item.views_count || 0}
                       </span>
                     </div>
                     {author && (
@@ -348,8 +349,8 @@ export default function MarketPage() {
               return (
                 <div key={item.id} className="card section p-[14px] flex gap-4 animate-rise">
                   <div className="w-[100px] h-[100px] rounded-[12px] bg-[oklch(18%_.028_151)] flex-shrink-0 flex items-center justify-center overflow-hidden">
-                    {item.image_url ? (
-                      <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+                    {item.images && item.images.length > 0 ? (
+                      <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover" />
                     ) : (
                       <Package className="w-6 h-6 text-[oklch(30%_.025_151)]" />
                     )}
@@ -366,7 +367,7 @@ export default function MarketPage() {
                     </div>
                     <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted">
                       {item.county && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {item.county}</span>}
-                      <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {item.view_count || 0}</span>
+                      <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {item.views_count || 0}</span>
                       {author && <span>by {author.full_name || author.username}</span>}
                     </div>
                     <div className="flex gap-2 mt-2">

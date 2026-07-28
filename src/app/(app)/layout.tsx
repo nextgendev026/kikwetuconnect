@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import AppShell from '@/app/AppShell'
 
 export const metadata: Metadata = {
   title: 'KikwetuConnect',
@@ -7,5 +6,5 @@ export const metadata: Metadata = {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return <AppShell>{children}</AppShell>
+  return <>{children}</>
 }

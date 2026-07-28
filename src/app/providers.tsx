@@ -1,19 +1,18 @@
 'use client'
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/auth-helpers-nextjs'
-import { Toaster } from 'react-hot-toast'
 import { usePathname } from 'next/navigation'
-import AppShell from './AppShell'
 
 type SupabaseClient = ReturnType<typeof createBrowserClient>
 
 const SupabaseCtx = createContext<SupabaseClient | undefined>(undefined)
 const UserCtx = createContext<{ user: any; profile: any; loading: boolean; refreshProfile: () => void }>({ user: null, profile: null, loading: true, refreshProfile: () => {} })
+const ThemeCtx = createContext<{ theme: string; toggleTheme: () => void }>({ theme: 'light', toggleTheme: () => {} })
 
 export function toast(msg: string) {
   if (typeof window !== 'undefined') {
-    const el = document.getElementById('custom-toast')
-    if (el) { el.textContent = msg; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2300) }
+    const el = document.getElementById('global-toast')
+    if (el) { el.textContent = msg; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2200) }
   }
 }
 
@@ -23,12 +22,12 @@ export function ShellRouter({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
-
   const isPublic = publicPaths.some(p => pathname === p || pathname.startsWith(p + '/')) || pathname.startsWith('/admin')
-  if (!mounted) return <div className="min-h-screen bg-night" />
-
+  if (!mounted) return <div style={{ minHeight: '100vh', background: 'var(--bg)' }} />
   return <>{isPublic ? children : <AppShell>{children}</AppShell>}</>
 }
+
+import AppShell from './AppShell'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [supabase] = useState(() => createBrowserClient(
@@ -38,6 +37,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [theme, setTheme] = useState('light')
+
+  useEffect(() => {
+    const saved = localStorage.getItem('kikwetu-theme') || 'light'
+    setTheme(saved)
+    document.body.setAttribute('data-theme', saved)
+  }, [])
+
+  const toggleTheme = useCallback(() => {
+    setTheme(prev => {
+      const next = prev === 'dark' ? 'light' : 'dark'
+      localStorage.setItem('kikwetu-theme', next)
+      document.body.setAttribute('data-theme', next)
+      return next
+    })
+  }, [])
 
   const fetchProfile = useCallback(async (id: string) => {
     const { data } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle()
@@ -67,14 +82,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <SupabaseCtx.Provider value={supabase}>
-      <UserCtx.Provider value={{ user, profile, loading, refreshProfile }}>
-        {children}
-        <Toaster position="bottom-center" toastOptions={{ duration: 2300, style: { background: 'oklch(18% .028 151)', color: '#C6A860', border: '1px solid oklch(30% .025 151)', fontSize: '12px', borderRadius: '11px' } }} />
-        <div id="custom-toast" className="fixed z-30 bottom-[87px] left-[17px] right-[17px] bg-gold text-night rounded-[11px] px-[13px] py-[10px] text-center text-[11px] font-bold opacity-0 translate-y-[16px] pointer-events-none transition-all duration-250" style={{ transitionTimingFunction: 'cubic-bezier(.16,1,.3,1)' }}></div>
-      </UserCtx.Provider>
+      <ThemeCtx.Provider value={{ theme, toggleTheme }}>
+        <UserCtx.Provider value={{ user, profile, loading, refreshProfile }}>
+          {children}
+          {/* Toast element rendered once at root level */}
+        </UserCtx.Provider>
+      </ThemeCtx.Provider>
     </SupabaseCtx.Provider>
   )
 }
 
 export const useSupabase = () => { const c = useContext(SupabaseCtx); if (!c) throw new Error('Missing SupabaseProvider'); return c }
 export const useUser = () => useContext(UserCtx)
+export const useTheme = () => useContext(ThemeCtx)

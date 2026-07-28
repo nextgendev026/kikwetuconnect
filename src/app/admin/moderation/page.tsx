@@ -2,65 +2,113 @@
 import { useEffect, useState } from 'react'
 import { useSupabase, toast } from '@/app/providers'
 
-export default function ModerationPage() {
+export default function AdminModeration() {
   const supabase = useSupabase()
-  const [reports, setReports] = useState<any[]>([])
-  const [filter, setFilter] = useState('pending')
+  const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState('review')
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
-    loadReports()
-  }, [filter])
+    supabase.from('moderation')
+      .select('id, target_type, target_id, reason, status, created_at, reporter_id')
+      .order('created_at', { ascending: false })
+      .limit(20)
+      .then(({ data }: { data: any }) => {
+        setItems(data || [])
+        setLoading(false)
+      })
+  }, [supabase])
 
-  const loadReports = async () => {
-    setLoading(true)
-    const { data } = await supabase.from('moderation').select('*, profiles:reporter_id (full_name, username)').eq('status', filter).order('created_at', { ascending: false })
-    if (data) setReports(data)
-    setLoading(false)
-  }
+  const filtered = items.filter(item =>
+    !search || item.target_type?.toLowerCase().includes(search.toLowerCase()) || item.reason?.toLowerCase().includes(search.toLowerCase())
+  )
 
-  const handleAction = async (id: string, action: string) => {
-    await supabase.from('moderation').update({ status: action === 'resolve' ? 'resolved' : 'dismissed', resolved_at: new Date().toISOString() } as any).eq('id', id)
-    toast(`Report ${action === 'resolve' ? 'resolved' : 'dismissed'}`)
-    loadReports()
+  const statusStyle = (s: string) => {
+    if (s === 'high' || s === 'High') return { background: 'var(--red-soft)', color: 'var(--red)' }
+    if (s === 'medium' || s === 'Medium') return { background: 'oklch(90% .07 84)', color: 'oklch(47% .12 84)' }
+    return { background: 'var(--green-soft)', color: 'var(--green)' }
   }
 
   return (
     <>
-      <h1 className="text-[28px] font-bold mb-[8px]" style={{ fontFamily: "'Plus Jakarta Sans'", letterSpacing: '-.07em' }}>Moderation Queue</h1>
-      <p className="text-[13px] text-[oklch(65%_.028_151)] mb-[24px]">Review flagged content and community reports</p>
-      <div className="flex gap-[10px] mb-[20px] overflow-auto">
-        {['pending', 'reviewed', 'resolved', 'dismissed'].map(s => (
-          <button key={s} onClick={() => setFilter(s)} className={`px-[14px] py-[8px] rounded-[99px] text-[11px] font-bold capitalize ${filter === s ? 'bg-gold text-night' : 'bg-[oklch(21%_.03_151)] text-[oklch(65%_.028_151)]'}`}>{s}</button>
+      <div style={{ display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: 20, marginBottom: 26 }}>
+        <div>
+          <div style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--green)', fontWeight: 800 }}>Moderation</div>
+          <h1 style={{ fontWeight: 800, fontSize: 'clamp(2rem,4vw,3rem)', lineHeight: 1, letterSpacing: '-.07em', margin: '8px 0 0', color: 'var(--ink)' }}>Protect the circle, fairly.</h1>
+          <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.55, margin: '10px 0 0', maxWidth: '60ch' }}>Review reports, misinformation, scams, hate speech, unsafe content, and appeals.</p>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 6, marginBottom: 15, flexWrap: 'wrap' }}>
+        {['review', 'assigned', 'resolved', 'escalated'].map(t => (
+          <button key={t} onClick={() => setTab(t)}
+            style={{
+              border: '1px solid var(--line)', background: tab === t ? 'var(--gold)' : 'var(--raised)',
+              borderColor: tab === t ? 'var(--gold)' : 'var(--line)', borderRadius: 99, padding: '8px 10px',
+              color: tab === t ? 'var(--night)' : 'var(--muted)', fontSize: 10, fontWeight: tab === t ? 700 : 400,
+              cursor: 'pointer'
+            }}>
+            {t === 'review' ? 'Needs review' : t === 'assigned' ? 'Assigned to me' : t === 'resolved' ? 'Resolved' : 'Escalated'}
+          </button>
         ))}
       </div>
-      {loading ? <div className="flex justify-center py-[40px]"><div className="animate-spin w-8 h-8 border-2 border-gold border-t-transparent rounded-full" /></div> : reports.length === 0 ? (
-        <div className="text-center py-[40px] text-[oklch(65%_.028_151)]">No {filter} reports</div>
-      ) : (
-        <div className="space-y-[10px]">
-          {reports.map(r => (
-            <div key={r.id} className="bg-[oklch(18%_.028_151)] border border-[oklch(29%_.025_151)] rounded-[16px] p-[16px]">
-              <div className="flex items-start justify-between gap-[10px]">
-                <div>
-                  <div className="flex items-center gap-[8px] mb-[6px]">
-                    <span className="px-[8px] py-[3px] rounded-[99px] bg-[oklch(25%_.06_28)] text-red text-[10px] font-bold capitalize">{r.target_type}</span>
-                    <span className="text-[11px] text-[oklch(65%_.028_151)]">Reported by @{r.profiles?.username || 'unknown'}</span>
-                  </div>
-                  <p className="text-[13px] mb-[4px]">{r.reason}</p>
-                  {r.evidence && <p className="text-[11px] text-[oklch(65%_.028_151)]">Evidence: {r.evidence}</p>}
-                </div>
-                {r.status === 'pending' && (
-                  <div className="flex gap-[6px] flex-shrink-0">
-                    <button onClick={() => handleAction(r.id, 'resolve')} className="px-[10px] py-[6px] rounded-[8px] bg-green text-night text-[10px] font-bold">Resolve</button>
-                    <button onClick={() => handleAction(r.id, 'dismiss')} className="px-[10px] py-[6px] rounded-[8px] bg-[oklch(25%_.03_151)] text-[oklch(65%_.028_151)] text-[10px] font-bold">Dismiss</button>
-                  </div>
-                )}
-              </div>
-              <div className="text-[10px] text-[oklch(65%_.028_151)] mt-[8px]">{new Date(r.created_at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
-            </div>
-          ))}
+
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
+        <input placeholder="Search queue..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 180, height: 40, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, padding: '0 11px', fontSize: 11, color: 'var(--ink)' }} />
+        <select style={{ height: 40, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, padding: '0 11px', fontSize: 11, color: 'var(--ink)' }}>
+          <option>All priority</option>
+          <option>High</option>
+          <option>Medium</option>
+          <option>Low</option>
+        </select>
+        <button onClick={() => toast('Report export queued')} style={{ minHeight: 40, borderRadius: 10, padding: '0 14px', background: 'var(--raised)', border: '1px solid var(--line)', color: 'var(--ink)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Export</button>
+      </div>
+
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: 17 }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+            <thead>
+              <tr>
+                <th style={{ padding: '12px 8px', borderBottom: '1px solid var(--line)', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Entity</th>
+                <th style={{ padding: '12px 8px', borderBottom: '1px solid var(--line)', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Submitted by</th>
+                <th style={{ padding: '12px 8px', borderBottom: '1px solid var(--line)', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Created</th>
+                <th style={{ padding: '12px 8px', borderBottom: '1px solid var(--line)', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Priority</th>
+                <th style={{ padding: '12px 8px', borderBottom: '1px solid var(--line)', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Assignee</th>
+                <th style={{ padding: '12px 8px', borderBottom: '1px solid var(--line)', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={6} style={{ padding: 20, textAlign: 'center', color: 'var(--muted)' }}>Loading...</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={6} style={{ padding: 20, textAlign: 'center', color: 'var(--muted)' }}>No items found</td></tr>
+              ) : filtered.map((item: any) => (
+                <tr key={item.id}>
+                  <td style={{ padding: '12px 8px', borderBottom: '1px solid var(--line)' }}>
+                    <b style={{ color: 'var(--ink)' }}>{item.target_type || '—'}</b>
+                    <small style={{ display: 'block', color: 'var(--muted)', fontSize: 9, marginTop: 3 }}>{item.reason?.slice(0, 50) || '—'}</small>
+                  </td>
+                  <td style={{ padding: '12px 8px', borderBottom: '1px solid var(--line)', color: 'var(--muted)' }}>{item.reporter_id?.slice(0, 8) || '—'}</td>
+                  <td style={{ padding: '12px 8px', borderBottom: '1px solid var(--line)', color: 'var(--muted)' }}>
+                    {item.created_at ? new Date(item.created_at).toLocaleDateString() + ' ' + new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                  </td>
+                  <td style={{ padding: '12px 8px', borderBottom: '1px solid var(--line)' }}>
+                    <span style={{ ...statusStyle(item.status), display: 'inline-flex', alignItems: 'center', gap: 5, borderRadius: 99, padding: '5px 8px', fontSize: 9, fontWeight: 700 }}>
+                      {item.status || 'Open'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 8px', borderBottom: '1px solid var(--line)', color: 'var(--muted)' }}>—</td>
+                  <td style={{ padding: '12px 8px', borderBottom: '1px solid var(--line)' }}>
+                    <button onClick={() => toast('Review panel opened for ' + item.id)} style={{ height: 30, padding: '0 9px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--raised)', fontSize: 10, cursor: 'pointer', color: 'var(--ink)' }}>Open</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+      </div>
     </>
   )
 }

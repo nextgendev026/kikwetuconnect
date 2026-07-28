@@ -34,49 +34,48 @@ export default function CreateModal() {
   const handlePublish = async () => {
     if (!text.trim()) { toast('Add a little context first'); return }
     if (!user) { toast('Please sign in first'); return }
-
-    const postType = type === 'question' ? 'inquiry' : type === 'listing' || type === 'alert' ? 'baraza' : 'baraza'
-
+    const postType = type === 'question' ? 'inquiry' : 'baraza'
     const { error } = await supabase.from('posts').insert({
-      user_id: user.id,
-      post_type: postType,
-      content: text,
-      title: text.split('\n')[0].slice(0, 100),
+      user_id: user.id, post_type: postType, content: text, title: text.split('\n')[0].slice(0, 100),
     })
-
     if (error) { toast('Failed to publish'); return }
-    setOpen(false)
-    setText('')
-    toast('Published. Your circle can see it now.')
+    setOpen(false); setText(''); toast('Published. Your circle can see it now.')
   }
 
-  if (!open) return null
-
   return (
-    <div className="fixed inset-0 bg-[oklch(5%_.02_151_/.78)] z-20 flex items-end md:items-center md:justify-center" onClick={(e) => { if (e.target === e.currentTarget) setOpen(false) }}>
-      <div className="bg-night2 w-full md:w-[min(560px,100%)] border border-[oklch(30%_.025_151)] rounded-[23px_23px_0_0] md:rounded-[23px] p-[20px_16px_28px] animate-sheet">
-        <div className="flex justify-between items-start">
+    <div className={`modal-wrap${open ? ' open' : ''}`} onClick={e => { if (e.target === e.currentTarget) setOpen(false) }}>
+      <div className="modal">
+        <div className="modal-head">
           <div>
-            <h2 className="text-[20px] tracking-[-.05em] m-0" style={{ fontFamily: "'Plus Jakarta Sans'" }}>Put something useful into the circle.</h2>
-            <p className="text-muted text-[11px] my-[6px_17px]">Choose a format, add context, then share it.</p>
+            <h2>Put something useful into the circle.</h2>
+            <p>Choose a format, add context, then share it.</p>
           </div>
-          <button onClick={() => setOpen(false)} className="bg-none text-muted text-[24px]">×</button>
+          <button className="close" onClick={() => setOpen(false)}>×</button>
         </div>
-        <div className="flex gap-[7px] flex-wrap mb-[15px]">
+        <div className="chips">
           {TYPES.map(t => (
-            <button key={t.id} onClick={() => setType(t.id)}
-              className="rounded-[99px] py-[7px] px-[10px] text-[10px]"
-              style={{ border: `1px solid ${type === t.id ? 'var(--gold)' : 'oklch(32% .025 151)'}`, background: type === t.id ? 'oklch(29% .045 84)' : 'var(--deep)', color: type === t.id ? 'var(--gold)' : 'var(--muted)' }}
-            >{t.icon} {t.label}</button>
+            <button key={t.id} className="chip" style={{ borderColor: type === t.id ? 'var(--gold)' : undefined, background: type === t.id ? 'var(--gold-soft)' : undefined, color: type === t.id ? 'var(--ink)' : undefined }}
+              onClick={() => setType(t.id)}>
+              {t.icon} {t.label}
+            </button>
           ))}
         </div>
-        <div className="grid gap-[7px] my-[15px]">
-          <label className="text-muted text-[10px]">{LABELS[type] || 'What is on your mind?'}</label>
-          <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Share a useful thought, update, or local insight..." className="w-full bg-deep text-cream border border-[oklch(32%_.025_151)] rounded-[11px] p-[12px] min-h-[96px] resize-vertical" />
+        <div className="field">
+          <label>{LABELS[type] || 'What is on your mind?'}</label>
+          <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Share a useful thought, update, or local insight..." />
         </div>
-        <div className="grid grid-cols-2 gap-[8px] mt-[18px]">
-          <button onClick={() => setOpen(false)} className="btn min-h-[46px] rounded-[12px] px-[17px] font-bold text-[13px] bg-transparent text-cream border border-[oklch(30%_.025_151)]">Cancel</button>
-          <button onClick={handlePublish} className="btn min-h-[46px] rounded-[12px] px-[17px] font-bold text-[13px] bg-gold text-night">Publish</button>
+        <div className="field">
+          <label>Topic</label>
+          <select>
+            <option>Biashara & Hustles</option>
+            <option>Tech & Startups</option>
+            <option>Agriculture & Farming</option>
+            <option>Education</option>
+          </select>
+        </div>
+        <div className="modal-foot">
+          <button className="btn secondary" onClick={() => setOpen(false)}>Cancel</button>
+          <button className="btn primary" onClick={handlePublish}>Publish</button>
         </div>
       </div>
     </div>

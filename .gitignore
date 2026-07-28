@@ -47,3 +47,6 @@ next-env.d.ts
 logs/
 *.log
 .env.production
+
+supabase/.temp/
+.temp/
