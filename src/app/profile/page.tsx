@@ -9,6 +9,7 @@ import {
   Pin, PinOff, Calendar, Clock, ChevronDown, Sparkles
 } from 'lucide-react'
 import { ProfileHeader } from '@/components/profile'
+import useHeshimaRealtime from '@/hooks/useHeshimaRealtime'
 
 type Tab = 'overview' | 'posts' | 'answers' | 'services' | 'badges'
 
@@ -40,8 +41,11 @@ export default function ProfilePage() {
   const [loadingData, setLoadingData] = useState(true)
   const [postCount, setPostCount] = useState(0)
 
+  useHeshimaRealtime()
+
   const [featuredPost, setFeaturedPost] = useState<Post | null>(null)
   const [pinning, setPinning] = useState(false)
+  const [recentEarnings, setRecentEarnings] = useState<any[]>([])
 
   const [allPosts, setAllPosts] = useState<Post[]>([])
   const [postsCursor, setPostsCursor] = useState<string | null>(null)
@@ -52,7 +56,7 @@ export default function ProfilePage() {
     if (!profile) return
     setLoadingData(true)
     try {
-      const [answersRes, questionsRes, tokensRes, badgesRes, postsRes, savesRes, countRes, featuredRes] = await Promise.all([
+      const [answersRes, questionsRes, tokensRes, badgesRes, postsRes, savesRes, countRes, featuredRes, earningsRes] = await Promise.all([
         supabase.from('answers').select('id').eq('user_id', profile.id),
         supabase.from('posts').select('id').eq('user_id', profile.id).eq('post_type', 'inquiry'),
         supabase.from('tokens').select('amount').eq('user_id', profile.id),
@@ -63,6 +67,7 @@ export default function ProfilePage() {
         profile.featured_post_id
           ? supabase.from('posts').select('*').eq('id', profile.featured_post_id).single()
           : Promise.resolve({ data: null }),
+        supabase.from('heshima_earnings').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(10),
       ])
 
       setStats({
@@ -85,6 +90,7 @@ export default function ProfilePage() {
       setRecentPosts((postsRes.data as Post[]) || [])
       setSavedItems((savesRes.data as SavedItem[]) || [])
       if (featuredRes.data) setFeaturedPost(featuredRes.data as Post)
+      if (earningsRes.data) setRecentEarnings(earningsRes.data)
     } catch (err) {
       console.error('Error fetching profile data:', err)
     } finally {
@@ -245,7 +251,7 @@ export default function ProfilePage() {
 
       {/* Heshima Points */}
       <section className="card section mb-6">
-        <div className="flex items-center gap-6">
+        <div className="flex items-start gap-6">
           <div className="relative w-24 h-24 flex-shrink-0">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="42" fill="none" stroke="var(--line)" strokeWidth="8" />
@@ -282,6 +288,32 @@ export default function ProfilePage() {
             )}
           </div>
         </div>
+
+        {/* Recent Earnings */}
+        {recentEarnings.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-[var(--line)]">
+            <h4 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Recent Heshima</h4>
+            <div className="space-y-1.5">
+              {recentEarnings.slice(0, 5).map((e: any) => (
+                <div key={e.id} className="flex items-center justify-between py-1.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[10px] font-medium" style={{
+                      padding: '2px 6px', borderRadius: 4, fontSize: 9,
+                      background: e.amount > 0 ? 'color-mix(in oklab, var(--green) 15%, transparent)' : 'color-mix(in oklab, var(--red) 15%, transparent)',
+                      color: e.amount > 0 ? 'var(--green)' : 'var(--red)',
+                    }}>
+                      {e.source_type?.replace(/_/g, ' ')}
+                    </span>
+                    <span className="text-xs text-muted truncate">{e.description || ''}</span>
+                  </div>
+                  <span className={`text-xs font-bold flex-shrink-0 ${e.amount > 0 ? 'text-green' : 'text-red'}`}>
+                    {e.amount > 0 ? '+' : ''}{e.amount}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Badges Display */}
