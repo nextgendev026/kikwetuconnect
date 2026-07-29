@@ -1,8 +1,8 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { useSupabase, useUser, toast } from '@/app/providers'
-import { Users, Hash, Plus, X, Filter, Search, Globe, Sparkles, Sprout, Cpu, Ship, BookOpen, Coins, ShoppingBag, Leaf, Building2, Microscope, Scale, HeartPulse } from 'lucide-react'
+import { useUser, toast } from '@/app/providers'
+import { Users, Hash, Plus, X, Filter, Search, Globe, Sparkles, Sprout, Cpu, Ship, BookOpen, Coins, Leaf, Building2, Microscope, Scale, HeartPulse } from 'lucide-react'
 
 interface Space {
   id: string; name: string; slug: string; description: string; icon: string; category: string; member_count: number; post_count: number; created_by: string; cover_url?: string
@@ -21,22 +21,13 @@ const CATEGORY_META: Record<string, { gradient: string; icon: any }> = {
   Legal: { gradient: 'linear-gradient(135deg, #2c3e50, #3498db)', icon: Scale },
 }
 
-const SPACE_COVERS: Record<string, { gradient: string }> = {
-  '1': { gradient: 'linear-gradient(135deg, #2d6a4f 0%, #40916c 50%, #52b788 100%)' },
-  '2': { gradient: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)' },
-  '3': { gradient: 'linear-gradient(135deg, #0c3483 0%, #a2b6df 50%, #6b8cce 100%)' },
-  '4': { gradient: 'linear-gradient(135deg, #780206 0%, #061161 50%, #1a2a6c 100%)' },
-  '5': { gradient: 'linear-gradient(135deg, #134e5e 0%, #71b280 50%, #2c6e49 100%)' },
-  '6': { gradient: 'linear-gradient(135deg, #c94b4b 0%, #4b134f 50%, #8e44ad 100%)' },
-}
-
-const FALLBACK_SPACES: Space[] = [
-  { id: '1', name: '#KilimoSmart', slug: 'kilimo-smart', description: 'Modern farming techniques, smart agriculture, and agribusiness tips for Kenyan farmers.', icon: '🌱', category: 'Agriculture', member_count: 1420, post_count: 89, created_by: '' },
-  { id: '2', name: 'Nairobi Tech', slug: 'nairobi-tech', description: 'Kenyan tech scene — startups, AI, fintech, and developer meetups in Nairobi.', icon: '💻', category: 'Technology', member_count: 2340, post_count: 156, created_by: '' },
-  { id: '3', name: 'Mombasa Trade', slug: 'mombasa-trade', description: 'Coastal business hub — import/export, port trade, tourism ventures & biashara.', icon: '🚢', category: 'Business', member_count: 980, post_count: 67, created_by: '' },
-  { id: '4', name: 'Learn Together', slug: 'learn-together', description: 'Peer-to-peer learning groups, study circles, and educational resources across Kenya.', icon: '📚', category: 'Education', member_count: 1870, post_count: 112, created_by: '' },
-  { id: '5', name: 'Hustler Fund', slug: 'hustler-fund', description: 'Discussions on SACCOs, table banking, M-Pesa, credit access, and financial literacy.', icon: '💰', category: 'Finance', member_count: 2150, post_count: 134, created_by: '' },
-  { id: '6', name: 'Mama Mboga Network', slug: 'mama-mboga-network', description: 'Market vendors, fresh produce supply chains, and small-scale trading community.', icon: '🛒', category: 'Business', member_count: 760, post_count: 45, created_by: '' },
+const GRADIENTS = [
+  'linear-gradient(135deg, #2d6a4f 0%, #40916c 50%, #52b788 100%)',
+  'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
+  'linear-gradient(135deg, #0c3483 0%, #a2b6df 50%, #6b8cce 100%)',
+  'linear-gradient(135deg, #780206 0%, #061161 50%, #1a2a6c 100%)',
+  'linear-gradient(135deg, #134e5e 0%, #71b280 50%, #2c6e49 100%)',
+  'linear-gradient(135deg, #c94b4b 0%, #4b134f 50%, #8e44ad 100%)',
 ]
 
 const style = {
@@ -49,69 +40,87 @@ const style = {
   tagActive: { background: 'var(--gold)', color: 'var(--night)', borderColor: 'var(--gold)' },
   spaceCard: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, overflow: 'hidden', boxShadow: 'var(--card-shadow)' },
   modalOverlay: { background: 'color-mix(in oklab, var(--night) 80%, transparent)' },
-  modalContent: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(480px, 100%)' },
+  modalContent: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(480px, 100%)', position: 'relative' as const },
 }
 
 export default function SpacesPage() {
-  const supabase = useSupabase()
   const { profile, loading: userLoading } = useUser()
   const [spaces, setSpaces] = useState<Space[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [category, setCategory] = useState('All')
   const [searchTerm, setSearchTerm] = useState('')
   const [memberSpaces, setMemberSpaces] = useState<Set<string>>(new Set())
+  const [hasMore, setHasMore] = useState(false)
+  const [totalCount, setTotalCount] = useState(0)
+
   const [showCreate, setShowCreate] = useState(false)
   const [createName, setCreateName] = useState('')
   const [createDesc, setCreateDesc] = useState('')
   const [createIcon, setCreateIcon] = useState('🌍')
   const [createCategory, setCreateCategory] = useState('Technology')
   const [creating, setCreating] = useState(false)
-  const [seeding, setSeeding] = useState(false)
+
+  const modalRef = useRef<HTMLDivElement>(null)
+  const firstFieldRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { if (!userLoading) { fetchSpaces(); fetchMemberships() } }, [userLoading])
 
-  const fetchSpaces = async () => {
-    setLoading(true)
-    try {
-      const { data } = await supabase.from('spaces').select('*').order('member_count', { ascending: false })
-      if (data && data.length > 0) setSpaces(data as Space[])
-      else setSpaces(FALLBACK_SPACES)
-    } catch { setSpaces(FALLBACK_SPACES) }
-    finally { setLoading(false) }
+  useEffect(() => {
+    if (showCreate && firstFieldRef.current) firstFieldRef.current.focus()
+  }, [showCreate])
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowCreate(false) }
+    if (showCreate) document.addEventListener('keydown', handleEsc)
+    return () => document.removeEventListener('keydown', handleEsc)
+  }, [showCreate])
+
+  const fetchApi = async (path: string, opts?: RequestInit) => {
+    const res = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts })
+    const json = await res.json()
+    if (!res.ok) throw new Error(json.error || 'Request failed')
+    return json
   }
+
+  const fetchSpaces = async (append = false) => {
+    if (!append) setLoading(true)
+    try {
+      const params = new URLSearchParams({ limit: '12' })
+      if (category !== 'All') params.set('category', category)
+      if (searchTerm) params.set('search', searchTerm)
+      if (append && spaces.length > 0) {
+        const lastSpace = spaces[spaces.length - 1]
+        params.set('cursor', String(lastSpace.member_count))
+      }
+      const json = await fetchApi(`/api/spaces?${params}`)
+      const newSpaces = json.data || []
+      setSpaces(prev => append ? [...prev, ...newSpaces] : newSpaces)
+      setHasMore(!!json.nextCursor)
+      setTotalCount(json.count || 0)
+    } catch { /* keep existing data */ }
+    finally { setLoading(false); setLoadingMore(false) }
+  }
+
+  useEffect(() => {
+    if (!userLoading) { setSpaces([]); setHasMore(false); fetchSpaces() }
+  }, [category, searchTerm])
 
   const fetchMemberships = async () => {
     if (!profile) return
-    const { data } = await supabase.from('space_members').select('space_id').eq('user_id', profile.id)
-    if (data) setMemberSpaces(new Set(data.map((m: { space_id: string }) => m.space_id)))
-  }
-
-  const handleSeedSpaces = async () => {
-    if (!profile) return toast('Sign in to seed spaces')
-    setSeeding(true)
     try {
-      const { data: existing } = await supabase.from('spaces').select('id').limit(1)
-      if (existing && existing.length > 0) { toast('Spaces already exist in database'); return }
-      const { error } = await supabase.from('spaces').insert(
-        FALLBACK_SPACES.map(s => ({
-          name: s.name, slug: s.slug, description: s.description, icon: s.icon,
-          category: s.category, member_count: s.member_count, post_count: s.post_count,
-          created_by: profile.id, cover_url: s.cover_url || '',
-        }))
-      )
-      if (error) throw error
-      toast('Default spaces seeded!')
-      fetchSpaces()
-    } catch (err: any) { toast(err.message || 'Failed to seed spaces') }
-    finally { setSeeding(false) }
+      const json = await fetchApi(`/api/spaces?limit=1`)
+      setMemberSpaces(new Set(json.userMemberships || []))
+    } catch { /* ignore */ }
   }
 
   const handleJoin = async (space: Space) => {
     if (!profile) return toast('Sign in to join spaces')
     try {
-      const { error } = await supabase.from('space_members').insert({ space_id: space.id, user_id: profile.id, role: 'member' })
-      if (error) throw error
-      await supabase.from('spaces').update({ member_count: space.member_count + 1 }).eq('id', space.id)
+      await fetchApi('/api/spaces', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'join', space_id: space.id }),
+      })
       setMemberSpaces(prev => new Set(prev).add(space.id))
       setSpaces(prev => prev.map(s => s.id === space.id ? { ...s, member_count: s.member_count + 1 } : s))
       toast(`Joined ${space.name}`)
@@ -121,9 +130,10 @@ export default function SpacesPage() {
   const handleLeave = async (space: Space) => {
     if (!profile) return
     try {
-      const { error } = await supabase.from('space_members').delete().eq('space_id', space.id).eq('user_id', profile.id)
-      if (error) throw error
-      await supabase.from('spaces').update({ member_count: Math.max(0, space.member_count - 1) }).eq('id', space.id)
+      await fetchApi('/api/spaces', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'leave', space_id: space.id }),
+      })
       setMemberSpaces(prev => { const n = new Set(prev); n.delete(space.id); return n })
       setSpaces(prev => prev.map(s => s.id === space.id ? { ...s, member_count: Math.max(0, s.member_count - 1) } : s))
       toast(`Left ${space.name}`)
@@ -135,28 +145,33 @@ export default function SpacesPage() {
     if (!profile) return toast('Sign in to create a space')
     setCreating(true)
     try {
-      const slug = createName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-      const { data, error } = await supabase.from('spaces').insert({
-        name: createName.trim(), slug, description: createDesc.trim(), icon: createIcon,
-        category: createCategory, created_by: profile.id, member_count: 1,
-      }).select().single()
-      if (error) throw error
-      if (data) {
-        await supabase.from('space_members').insert({ space_id: data.id, user_id: profile.id, role: 'admin' })
-        setSpaces(prev => [data as Space, ...prev])
-        setMemberSpaces(prev => new Set(prev).add(data.id))
-      }
+      const json = await fetchApi('/api/spaces', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'create',
+          name: createName.trim(),
+          description: createDesc.trim(),
+          icon: createIcon,
+          category: createCategory,
+        }),
+      })
+      setSpaces(prev => [json.data, ...prev])
+      setMemberSpaces(prev => new Set(prev).add(json.data.id))
       setShowCreate(false); setCreateName(''); setCreateDesc(''); setCreateIcon('🌍')
       toast('Space created!')
     } catch { toast('Failed to create space') }
     finally { setCreating(false) }
   }
 
-  const filtered = spaces.filter(s => {
-    if (category !== 'All' && s.category !== category) return false
-    if (searchTerm && !s.name.toLowerCase().includes(searchTerm.toLowerCase()) && !s.description.toLowerCase().includes(searchTerm.toLowerCase())) return false
-    return true
-  })
+  const handleLoadMore = () => {
+    setLoadingMore(true); fetchSpaces(true)
+  }
+
+  const gradientForSpace = (space: Space) => {
+    let hash = 0
+    for (let i = 0; i < space.id.length; i++) hash = ((hash << 5) - hash) + space.id.charCodeAt(i)
+    return GRADIENTS[Math.abs(hash) % GRADIENTS.length]
+  }
 
   if (userLoading) return <div className="flex items-center justify-center min-h-[80vh]"><div className="animate-spin w-8 h-8 border-2" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent', borderRadius: '50%' }} /></div>
 
@@ -172,7 +187,6 @@ export default function SpacesPage() {
         </div>
       </section>
 
-      {/* Search & Filter */}
       <div style={style.card} className="mb-6">
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted)' }} />
@@ -189,12 +203,11 @@ export default function SpacesPage() {
         </div>
       </div>
 
-      {/* Spaces Grid */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="animate-spin w-8 h-8 border-2" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent', borderRadius: '50%' }} />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : spaces.length === 0 ? (
         <div style={style.card} className="text-center py-12">
           <Hash className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--muted)', opacity: 0.3 }} />
           <p className="font-medium mb-1" style={{ color: 'var(--ink)' }}>No spaces found</p>
@@ -208,29 +221,22 @@ export default function SpacesPage() {
       ) : (
         <>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{filtered.length} space{filtered.length !== 1 ? 's' : ''}</p>
-            <div className="flex gap-2">
-              <button onClick={handleSeedSpaces} disabled={seeding}
-                style={{ ...style.secondaryBtn, padding: '6px 12px', fontSize: 10 }}>
-                {seeding ? 'Seeding...' : 'Seed defaults'}
-              </button>
-              <button onClick={() => setShowCreate(true)} style={{ ...style.btn, ...style.primaryBtn }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = 'var(--card-shadow-hover)' }}
-                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
-                <Plus className="w-4 h-4" /> New Space
-              </button>
-            </div>
+            <p className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{totalCount} space{totalCount !== 1 ? 's' : ''}</p>
+            <button onClick={() => setShowCreate(true)} style={{ ...style.btn, ...style.primaryBtn }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = 'var(--card-shadow-hover)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
+              <Plus className="w-4 h-4" /> New Space
+            </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filtered.map(space => {
+            {spaces.map(space => {
               const isMember = memberSpaces.has(space.id)
-              const cover = SPACE_COVERS[space.id] || { gradient: 'linear-gradient(135deg, var(--gold), var(--green))' }
+              const gradient = gradientForSpace(space)
               const catMeta = CATEGORY_META[space.category] || CATEGORY_META.Technology
               const CatIcon = catMeta.icon
               return (
                 <div key={space.id} style={style.spaceCard} className="card-hover feature-card">
-                  {/* Cover thumbnail */}
-                  <div style={{ height: 120, background: cover.gradient, position: 'relative', display: 'flex', alignItems: 'flex-end', padding: 16 }}>
+                  <div style={{ height: 120, background: gradient, position: 'relative', display: 'flex', alignItems: 'flex-end', padding: 16 }}>
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 60%)' }} />
                     <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
                       <span className="text-2xl flex-shrink-0" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>{space.icon && space.icon !== '#' ? space.icon : '🌍'}</span>
@@ -272,25 +278,34 @@ export default function SpacesPage() {
               )
             })}
           </div>
+          {hasMore && (
+            <div className="flex justify-center mt-6">
+              <button onClick={handleLoadMore} disabled={loadingMore}
+                style={{ ...style.secondaryBtn, padding: '10px 24px', fontSize: 12 }}>
+                {loadingMore ? 'Loading...' : 'Load more spaces'}
+              </button>
+            </div>
+          )}
         </>
       )}
 
-      {/* Create Modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={style.modalOverlay} onClick={e => { if (e.target === e.currentTarget) setShowCreate(false) }}>
-          <div className="animate-rise" style={style.modalContent}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={style.modalOverlay}
+          role="dialog" aria-modal="true" aria-labelledby="create-space-title"
+          onClick={e => { if (e.target === e.currentTarget) setShowCreate(false) }}>
+          <div className="animate-rise" style={style.modalContent} ref={modalRef}>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="font-bold text-lg" style={{ color: 'var(--ink)' }}>Create a Space</h2>
+                <h2 id="create-space-title" className="font-bold text-lg" style={{ color: 'var(--ink)' }}>Create a Space</h2>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Build a focused community around a topic</p>
               </div>
-              <button onClick={() => setShowCreate(false)}
+              <button onClick={() => setShowCreate(false)} aria-label="Close create space dialog"
                 className="w-8 h-8 rounded-full grid place-items-center transition-colors"
-                style={{ background: 'var(--raised)', color: 'var(--muted)', border: 0, cursor: 'pointer' }}>&times;</button>
+                style={{ background: 'var(--raised)', color: 'var(--muted)', border: 0, cursor: 'pointer' }}><X className="w-4 h-4" /></button>
             </div>
 
             <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Icon</label>
-            <input type="text" placeholder="Emoji icon" value={createIcon} onChange={e => setCreateIcon(e.target.value)} maxLength={2}
+            <input ref={firstFieldRef} type="text" placeholder="Emoji icon" value={createIcon} onChange={e => setCreateIcon(e.target.value)} maxLength={2}
               style={style.input} className="!mb-3" />
 
             <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Name</label>
