@@ -48,8 +48,20 @@ export default function QuizzesPage() {
   const [showAiQuiz, setShowAiQuiz] = useState(false)
   const [progress, setProgress] = useState({ streak: 0, totalScore: 0, completed: 0 })
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [badges, setBadges] = useState<any[]>([])
+  const [randomQuiz, setRandomQuiz] = useState(false)
 
-  useEffect(() => { fetchQuizzes(); fetchProgress(); fetchLeaderboard() }, [activeCategory])
+  useEffect(() => { fetchQuizzes(); fetchProgress(); fetchLeaderboard(); fetchBadges() }, [activeCategory])
+
+  // Realtime: auto-refresh progress on quiz completion
+  useEffect(() => {
+    if (!user) return
+    const channel = supabase.channel(`quiz-progress-${user.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'quiz_attempts', filter: `user_id=eq.${user.id}` }, () => { fetchProgress(); fetchLeaderboard() })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, () => { fetchProgress() })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [user, supabase])
 
   const fetchQuizzes = async () => {
     setLoading(true)
@@ -70,6 +82,58 @@ export default function QuizzesPage() {
       const recent = (results as any[]).filter(r => r.completed_at && new Date(r.completed_at).toDateString() === today).length
       setProgress({ streak: recent > 0 ? 1 : 0, totalScore, completed })
     }
+  }
+
+  const fetchBadges = async () => {
+    if (!user) return
+    const { data } = await supabase.from('user_badges').select('*, badges(*)').eq('user_id', user.id)
+    if (data) setBadges(data)
+  }
+
+  // Realtime badge unlock
+  useEffect(() => {
+    if (!user) return
+    const ch = supabase.channel(`quiz-badges-${user.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_badges', filter: `user_id=eq.${user.id}` }, () => fetchBadges())
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [user, supabase])
+
+  const startRandomQuiz = async () => {
+    if (!user) { toast('Sign in to take quizzes'); return }
+    setRandomQuiz(true); setAiGenerating(true); setQuizStarted(false)
+    try {
+      const cats = categories.filter(c => !activeCategory || c.id === activeCategory)
+      const picked = cats[Math.floor(Math.random() * cats.length)]
+      const res = await fetch('/api/quiz/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: picked.id, difficulty: 'medium', count: 10 }),
+      })
+      const data = await res.json()
+      if (!data.questions?.length) throw new Error('No questions')
+      const qs: QuizQuestion[] = data.questions.map((q: any, i: number) => ({
+        id: `ai-${i}`, quiz_id: 'random',
+        question: q.question, options: q.options, correct_index: q.correct_index, explanation: q.explanation || null,
+      }))
+      setQuestions(qs)
+      setSelectedQuiz({ id: 'random', title: `${picked.icon} ${picked.label} Quiz`, description: 'AI-generated random quiz', category: picked.id, difficulty: 'medium', question_count: qs.length, estimated_time_minutes: 5, heshima_reward: 10 } as Quiz)
+      setQuizStarted(true)
+      setCurrentQuestion(0); setSelectedAnswers([]); setQuizComplete(false); setScore(0)
+    } catch { toast('Failed to generate quiz. Try again.') }
+    finally { setAiGenerating(false) }
+  }
+
+  const submitRandomQuiz = async () => {
+    if (!user) return
+    const correct = questions.reduce((c, q, i) => c + (selectedAnswers[i] === q.correct_index ? 1 : 0), 0)
+    setScore(correct); setQuizComplete(true)
+    const { error } = await supabase.from('quiz_attempts').insert({
+      user_id: user.id, quiz_id: selectedQuiz?.id || 'random', score: correct, total_questions: questions.length,
+      answers: selectedAnswers.map((a, i) => ({ question: questions[i]?.question, selected: a, correct: questions[i]?.correct_index })),
+    })
+    if (error) { console.error('Quiz submission error:', error); toast('Failed to save results') }
+    else toast(`+10 Heshima earned!`)
   }
 
   const fetchLeaderboard = async () => {
@@ -97,6 +161,7 @@ export default function QuizzesPage() {
   const selectAnswer = (oi: number) => { const na = [...selectedAnswers]; na[currentQuestion] = oi; setSelectedAnswers(na) }
   const submitQuiz = async () => {
     if (!selectedQuiz || !user) return
+    if (selectedQuiz.id === 'random') { await submitRandomQuiz(); return }
     const correct = questions.reduce((c, q, i) => c + (selectedAnswers[i] === q.correct_index ? 1 : 0), 0)
     setScore(correct); setQuizComplete(true)
     const { error } = await supabase.from('quiz_attempts').insert({
@@ -104,7 +169,6 @@ export default function QuizzesPage() {
       answers: selectedAnswers.map((a, i) => ({ question: questions[i]?.question, selected: a, correct: questions[i]?.correct_index })),
     })
     if (error) { console.error('Quiz submission error:', error); toast('Failed to save results') }
-    else { toast(`+${selectedQuiz.heshima_reward || 10} Heshima earned!`) }
     fetchProgress(); fetchLeaderboard()
   }
 
@@ -172,6 +236,12 @@ export default function QuizzesPage() {
         ))}
       </div>
 
+      {/* Random AI Quiz */}
+      <button onClick={startRandomQuiz} disabled={aiGenerating}
+        style={{ ...style.btn, background: 'linear-gradient(135deg, var(--gold), var(--green))', color: 'var(--night)', width: '100%', justifyContent: 'center', marginBottom: 16, opacity: aiGenerating ? 0.6 : 1 }}>
+        {aiGenerating ? <><div className="animate-spin w-4 h-4 border-2 border-night border-t-transparent rounded-full mr-2" /> Generating...</> : <><Sparkles className="w-4 h-4" /> Random AI Quiz — 10 Questions</>}
+      </button>
+
       {/* Categories */}
       <div className="flex flex-wrap gap-2 mb-6">
         <button onClick={() => setActiveCategory(null)} style={{ ...style.tag, ...(!activeCategory ? style.tagActive : {}) }}>All</button>
@@ -182,6 +252,23 @@ export default function QuizzesPage() {
           </button>
         ))}
       </div>
+
+      {/* Earned Badges */}
+      {badges.length > 0 && (
+        <div style={style.card} className="mb-6">
+          <h2 className="font-bold text-sm mb-3 flex items-center gap-2" style={{ color: 'var(--ink)' }}>
+            <Award className="w-4 h-4" style={{ color: 'var(--gold)' }} /> Badges Earned
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {badges.map((ub: any) => (
+              <span key={ub.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                style={{ background: 'color-mix(in oklab, var(--gold) 12%, var(--surface))', color: 'var(--gold)', border: '1px solid color-mix(in oklab, var(--gold) 25%, transparent)' }}>
+                {ub.badges?.icon || '🏅'} {ub.badges?.name || 'Badge'}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quiz Grid */}
       {loading ? (
@@ -328,11 +415,20 @@ export default function QuizzesPage() {
                 </div>
                 <div className="flex flex-wrap gap-3 justify-center">
                   <button onClick={closeQuiz} style={{ ...style.btn, ...style.secondaryBtn }}>Back to Quizzes</button>
-                  <button onClick={() => startQuiz(selectedQuiz)} style={{ ...style.btn, ...style.primaryBtn }}><RotateCcw className="w-3.5 h-3.5" /> Retry</button>
-                  <button onClick={generateAiQuiz} disabled={aiGenerating}
-                    style={{ ...style.btn, background: 'linear-gradient(135deg, var(--gold), var(--green))', color: 'var(--night)', opacity: aiGenerating ? 0.6 : 1 }}>
-                    {aiGenerating ? <><div className="animate-spin w-3.5 h-3.5 border-2 border-night border-t-transparent rounded-full" /> Generating...</> : <><Sparkles className="w-3.5 h-3.5" /> AI Quiz</>}
-                  </button>
+                  {selectedQuiz?.id !== 'random' ? (
+                    <>
+                      <button onClick={() => startQuiz(selectedQuiz!)} style={{ ...style.btn, ...style.primaryBtn }}><RotateCcw className="w-3.5 h-3.5" /> Retry</button>
+                      <button onClick={generateAiQuiz} disabled={aiGenerating}
+                        style={{ ...style.btn, background: 'linear-gradient(135deg, var(--gold), var(--green))', color: 'var(--night)', opacity: aiGenerating ? 0.6 : 1 }}>
+                        {aiGenerating ? <><div className="animate-spin w-3.5 h-3.5 border-2 border-night border-t-transparent rounded-full" /> Generating...</> : <><Sparkles className="w-3.5 h-3.5" /> AI Quiz</>}
+                      </button>
+                    </>
+                  ) : (
+                    <button onClick={startRandomQuiz} disabled={aiGenerating}
+                      style={{ ...style.btn, background: 'linear-gradient(135deg, var(--gold), var(--green))', color: 'var(--night)', opacity: aiGenerating ? 0.6 : 1 }}>
+                      {aiGenerating ? <><div className="animate-spin w-3.5 h-3.5 border-2 border-night border-t-transparent rounded-full" /> Next Random...</> : <><Sparkles className="w-3.5 h-3.5" /> New Random Quiz</>}
+                    </button>
+                  )}
                 </div>
               </div>
             )}
