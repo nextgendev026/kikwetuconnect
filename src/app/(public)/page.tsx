@@ -44,7 +44,7 @@ export default function LandingPage() {
       <header style={{ height: 74, padding: '0 clamp(18px,5vw,76px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 2 }}>
         <Link href="/" className="flex items-center gap-[10px] no-underline" style={{ color: 'oklch(20% .04 151)' }}>
           <div style={{ width: 36, height: 36, borderRadius: 12, background: 'oklch(72% .15 84)', display: 'grid', placeItems: 'center', fontWeight: 800, color: 'oklch(16% .03 151)', fontSize: 18, transform: 'rotate(-8deg)' }}>K</div>
-          <div><b>KikwetuConnect</b><small className="block text-[9px] tracking-[.14em] uppercase" style={{ color: 'oklch(48% .035 151)' }}>Tuko pamoja</small></div>
+          <div><b style={{ fontSize: 16, letterSpacing: '-.04em' }}>KikwetuConnect</b><small className="block text-[8px] tracking-[.14em] uppercase" style={{ color: 'oklch(48% .035 151)', marginTop: 1, opacity: 0.7 }}>Tuko pamoja</small></div>
         </Link>
         <nav className="hidden md:flex gap-[26px] items-center lp-nav">
           <a href="#why">Why Kikwetu</a>

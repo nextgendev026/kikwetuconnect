@@ -238,8 +238,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .field select { min-height: 0; }
 .modal-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
-.toast { position: fixed; z-index: 40; left: 50%; bottom: 22px; transform: translate(-50%, 20px); opacity: 0; background: var(--night); color: var(--surface); padding: 12px 15px; border-radius: 11px; font-size: 11px; font-weight: 700; pointer-events: none; transition: opacity .25s var(--ease), transform .25s var(--ease); }
-.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast { position: fixed; z-index: 40; top: 1rem; right: 1rem; transform: translateY(-10px); opacity: 0; background: var(--night); color: var(--surface); padding: 12px 15px; border-radius: 11px; font-size: 11px; font-weight: 700; pointer-events: none; transition: opacity .25s var(--ease), transform .25s var(--ease); }
+.toast.show { opacity: 1; transform: translateY(0); }
 
 .bottom { display: none; }
 
@@ -345,10 +345,21 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .btn-gold:hover, .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px color-mix(in oklab, var(--gold) 35%, transparent); filter: brightness(1.08); }
 .btn-ghost:hover { background: var(--raised); color: var(--ink); }
 
+.baraza-hub-card:hover { transform: translateY(-4px); box-shadow: var(--card-shadow-hover); border-color: color-mix(in oklab, var(--green) 50%, transparent); }
+.baraza-row-card:hover { background: var(--raised); }
+.baraza-row-card:hover .baraza-row-icon { transform: scale(1.1); }
+.baraza-row-card:hover .baraza-row-arrow { color: var(--green); transform: translateX(4px); }
+
 .card-glow { box-shadow: 0 0 0 1px var(--line), 0 8px 30px color-mix(in oklab, var(--night) 6%, transparent); }
 .card-glow:hover { box-shadow: 0 0 0 1px color-mix(in oklab, var(--gold) 30%, transparent), 0 12px 40px color-mix(in oklab, var(--night) 10%, transparent); }
 
-.animate-rise { animation: rise .3s var(--ease); }
+.animate-rise { animation: rise .3s var(--ease); will-change: transform; }
+
+/* Overflow peek — last child in scroll containers signals more content */
+.overflow-x-auto > :last-child { padding-right: 20px; }
+
+/* Min touch target for interactive divs */
+.clickable-box, [class*="cursor-pointer"] { min-height: 44px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }

@@ -106,9 +106,8 @@ export default function BarazaPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.sort((a, b) => b.trend - a.trend).slice(0, 6).map(hub => (
             <Link key={hub.id} href={`/baraza/${hub.slug}`}
-              style={{ ...s.card, display: 'block', textDecoration: 'none', transition: 'all 0.3s var(--ease)' }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = 'var(--card-shadow-hover)'; e.currentTarget.style.borderColor = 'color-mix(in oklab, var(--green) 50%, transparent)' }}
-              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = 'var(--line)' }}>
+              className="baraza-hub-card"
+              style={{ ...s.card, display: 'block', textDecoration: 'none', transition: 'all 0.3s var(--ease)' }}>
               <div className="flex items-start justify-between mb-3">
                 <span style={{ padding: '2px 10px', borderRadius: 99, fontSize: 10, fontWeight: 600, background: 'color-mix(in oklab, var(--green) 20%, var(--surface))', color: 'var(--green)' }}>County Hub</span>
                 <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600 }}><TrendingUp className="w-3 h-3" /> +{hub.trend}%</span>
@@ -131,21 +130,16 @@ export default function BarazaPage() {
         <div className="space-y-2">
           {filtered.map(hub => (
             <Link key={hub.id} href={`/baraza/${hub.slug}`}
-              style={{ ...s.card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none', transition: 'all 0.2s var(--ease)' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--raised)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)' }}>
+              className="baraza-row-card"
+              style={{ ...s.card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none', transition: 'all 0.2s var(--ease)' }}>
               <div className="flex items-center gap-4 flex-1">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg transition-transform" style={{ background: 'color-mix(in oklab, var(--green) 20%, var(--gold) 20%, var(--surface))', fontSize: 18 }}
-                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
-                  onMouseLeave={e => e.currentTarget.style.transform = ''}>📍</div>
+                <div className="baraza-row-icon w-10 h-10 rounded-full flex items-center justify-center text-lg transition-transform" style={{ background: 'color-mix(in oklab, var(--green) 20%, var(--gold) 20%, var(--surface))', fontSize: 18 }}>📍</div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold" style={{ color: 'var(--ink)' }}>{hub.name}</h3>
                   <p className="text-xs" style={{ color: 'var(--muted)' }}>{hub.county} · {hub.post_count.toLocaleString()} posts · {hub.member_count.toLocaleString()} active</p>
                 </div>
               </div>
-              <ArrowRight className="w-5 h-5 transition-all" style={{ color: 'var(--muted)' }}
-                onMouseEnter={e => { e.currentTarget.style.color = 'var(--green)'; e.currentTarget.style.transform = 'translateX(4px)' }}
-                onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)'; e.currentTarget.style.transform = '' }} />
+              <ArrowRight className="baraza-row-arrow w-5 h-5 transition-all" style={{ color: 'var(--muted)' }} />
             </Link>
           ))}
         </div>

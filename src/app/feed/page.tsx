@@ -658,8 +658,9 @@ export default function FeedPage() {
 
       {/* Composer */}
       <div
-        onClick={openCreateModal}
-        className="bg-night2 border border-[var(--line)] rounded-[16px] p-[14px] mb-[12px] cursor-pointer hover:bg-deep transition-colors"
+        onClick={openCreateModal} role="button" tabIndex={0} aria-label="Create a new post"
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCreateModal() } }}
+        className="bg-night2 border border-[var(--line)] rounded-[16px] p-[14px] mb-[12px] cursor-pointer hover:bg-deep transition-colors min-h-[44px]"
       >
         <div className="flex items-center gap-3">
           {profile ? (
