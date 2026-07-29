@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --bg: oklch(97% .012 85);
+  --bg: oklch(94% .015 85);
   --surface: oklch(100% .004 85);
   --raised: oklch(93% .02 85);
   --ink: oklch(20% .04 151);
@@ -27,8 +27,8 @@
 }
 
 [data-theme=dark] {
-  --bg: oklch(11% .018 151);
-  --surface: oklch(14% .022 151);
+  --bg: oklch(9% .02 151);
+  --surface: oklch(16% .028 151);
   --raised: oklch(18% .026 151);
   --ink: oklch(94% .01 91);
   --muted: oklch(64% .022 151);
