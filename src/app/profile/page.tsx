@@ -247,6 +247,8 @@ export default function ProfilePage() {
         profile={profile}
         isOwn={true}
         postCount={postCount}
+        onAvatarChange={refreshProfile}
+        onCoverChange={refreshProfile}
       />
 
       {/* Heshima Points */}

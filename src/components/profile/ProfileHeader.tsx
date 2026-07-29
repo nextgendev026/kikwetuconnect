@@ -29,8 +29,8 @@ interface ProfileHeaderProps {
   onFollow?: () => void
   onMessage?: () => void
   onBook?: () => void
-  onAvatarChange?: (file: File) => void
-  onCoverChange?: (file: File) => void
+  onAvatarChange?: (url: string) => void
+  onCoverChange?: (url: string) => void
 }
 
 export default function ProfileHeader({
@@ -104,9 +104,9 @@ export default function ProfileHeader({
       const { url } = await confirmRes.json()
 
       if (type === 'avatar') {
-        profile.avatar_url = url
+        onAvatarChange?.(url)
       } else {
-        profile.cover_url = url
+        onCoverChange?.(url)
       }
       setShowCropModal(false)
       setAvatarPreview(null)
