@@ -7,29 +7,59 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const formData = await request.formData()
-    const file = formData.get('file') as File | null
-    const bucket = (formData.get('bucket') as string) || 'public-media'
-    const folder = (formData.get('folder') as string) || 'uploads'
+    const body = await request.json()
+    const { action } = body
 
-    if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+    // Generate signed upload URL for any file type
+    if (action === 'signed-url') {
+      const { folder = 'uploads', contentType = 'image/jpeg', fileSize } = body
 
-    const maxSize = file.type.startsWith('image/') ? 10 * 1024 * 1024 : 50 * 1024 * 1024
-    if (file.size > maxSize) return NextResponse.json({ error: 'File too large' }, { status: 400 })
+      const maxSize = 10 * 1024 * 1024
+      if (fileSize && fileSize > maxSize) {
+        return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 400 })
+      }
 
-    const ext = file.name.split('.').pop() || 'bin'
-    const fileName = `${folder}/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const ext = contentType.split('/').pop() || 'jpg'
+      const path = `${folder}/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
-    const { error: uploadError } = await supabase.storage
-      .from(bucket)
-      .upload(fileName, file, { upsert: false, contentType: file.type })
+      const { data, error } = await supabase.storage
+        .from('media')
+        .createSignedUploadUrl(path)
 
-    if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 })
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(fileName)
+      return NextResponse.json({ url: data.signedUrl, path, token: data.token })
+    }
 
-    return NextResponse.json({ url: publicUrl, path: fileName })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Upload failed' }, { status: 500 })
+    // Finalize: confirm upload, optionally make public
+    if (action === 'finalize') {
+      const { path, makePublic = true } = body
+      if (!path) return NextResponse.json({ error: 'Missing path' }, { status: 400 })
+
+      if (makePublic) {
+        const publicPath = `public/${path}`
+        const { error: copyErr } = await supabase.storage
+          .from('media')
+          .copy(path, publicPath)
+
+        if (copyErr) return NextResponse.json({ error: copyErr.message }, { status: 500 })
+
+        const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(publicPath)
+        return NextResponse.json({ url: publicUrl, path: publicPath })
+      }
+
+      // Private file: return signed read URL (7 days)
+      const { data, error } = await supabase.storage
+        .from('media')
+        .createSignedUrl(path, 60 * 60 * 24 * 7)
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+      return NextResponse.json({ url: data.signedUrl, path })
+    }
+
+    return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || 'Upload error' }, { status: 500 })
   }
 }

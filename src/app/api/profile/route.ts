@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { action } = body
 
-    // Generate signed upload URL for avatar or cover
+    // Generate signed upload URL for avatar or cover (private bucket)
     if (action === 'upload-url') {
       const { type, mimeType } = body
       if (!type || !['avatar', 'cover'].includes(type)) {
@@ -18,29 +18,35 @@ export async function POST(request: NextRequest) {
       }
       const ext = (mimeType?.split('/')[1] || 'jpg').replace(/[^a-zA-Z0-9]/g, '')
       const path = `${type}s/${user.id}-${Date.now()}.${ext}`
-      const bucket = 'public-media'
 
       const { data: signedData, error: signedError } = await supabase.storage
-        .from(bucket)
+        .from('media')
         .createSignedUploadUrl(path)
       if (signedError) throw signedError
 
       return NextResponse.json({
         signedUrl: signedData.signedUrl,
         path,
-        fullPath: `${bucket}/${path}`,
+        fullPath: `media/${path}`,
         token: signedData.token,
       })
     }
 
-    // Confirm upload: verify file exists, update profile
+    // Confirm upload: copy to public prefix, update profile
     if (action === 'confirm-upload') {
       const { type, path } = body
       if (!type || !['avatar', 'cover'].includes(type)) {
         return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
       }
 
-      const { data: { publicUrl } } = supabase.storage.from('public-media').getPublicUrl(path)
+      // Copy from private to public location
+      const publicPath = `public/${path}`
+      const { error: copyErr } = await supabase.storage
+        .from('media')
+        .copy(path, publicPath)
+      if (copyErr) throw copyErr
+
+      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(publicPath)
 
       const updateField = type === 'avatar' ? 'avatar_url' : 'cover_url'
       const { error: updateError } = await supabase
