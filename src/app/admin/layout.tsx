@@ -29,14 +29,22 @@ const NAV = {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useUser()
   const { theme, toggleTheme } = useTheme()
+  const supabase = useSupabase()
   const router = useRouter()
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [pendingModCount, setPendingModCount] = useState(0)
 
   useEffect(() => {
     if (!loading && (!user || profile?.role !== 'admin')) router.push('/feed')
   }, [user, profile, loading, router])
+
+  useEffect(() => {
+    if (!supabase || profile?.role !== 'admin') return
+    supabase.from('moderation_queue').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+      .then(({ count }: { count: number | null }) => { if (count !== null) setPendingModCount(count) })
+  }, [supabase, profile])
 
   const current = pathname.split('/').pop() || 'dashboard'
   const initials = (profile?.full_name || profile?.username || 'AD').slice(0, 2).toUpperCase()
@@ -73,8 +81,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     textAlign: 'left', padding: '0 12px', fontSize: 12, width: '100%',
                     fontWeight: current === item.id ? 700 : 400, cursor: 'pointer', border: 0,
                     transition: 'background .2s, transform .2s',
+                    display: 'flex', alignItems: 'center', gap: 6,
                   }}>
                   {item.icon} &nbsp; {item.label}
+                  {item.id === 'moderation' && pendingModCount > 0 && (
+                    <span style={{ marginLeft: 'auto', background: 'var(--red)', color: '#fff', fontSize: 9, fontWeight: 700, minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{pendingModCount}</span>
+                  )}
                 </button>
               ))}
             </div>

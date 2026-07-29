@@ -74,7 +74,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     supabase.from('profiles').select('id, username, full_name').limit(5).then(({ data }: { data: any }) => { if (data) setRecentProfiles(data) })
     supabase.from('posts').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setPostCount(count ?? 0) })
     supabase.from('topics').select('name').order('follower_count', { ascending: false }).limit(3).then(({ data }: { data: any }) => { if (data) setTrendingTopics(data) })
-    supabase.from('moderation').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setModerationCount(count ?? 0) })
+    supabase.from('moderation_queue').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setModerationCount(count ?? 0) })
   }, [supabase])
 
   useEffect(() => {

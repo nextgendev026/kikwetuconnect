@@ -17,11 +17,11 @@ export default function AdminDashboard() {
       supabase.from('posts').select('*', { count: 'exact', head: true }),
       supabase.from('topics').select('*', { count: 'exact', head: true }),
       supabase.from('marketplace_listings').select('*', { count: 'exact', head: true }),
-      supabase.from('moderation').select('*', { count: 'exact', head: true }),
+      supabase.from('moderation_queue').select('*', { count: 'exact', head: true }),
       supabase.from('quizzes').select('*', { count: 'exact', head: true }),
       supabase.from('quiz_results').select('*', { count: 'exact', head: true }),
       supabase.from('quiz_questions').select('*', { count: 'exact', head: true }),
-      supabase.from('moderation').select('id, target_type, reason, created_at, status').order('created_at', { ascending: false }).limit(5),
+      supabase.from('moderation_queue').select('id, target_type, reason, created_at, status').order('created_at', { ascending: false }).limit(5),
     ]).then(([users, posts, topics, listings, mods, quizes, results, questions, modData]) => {
       setStats({
         users: users.count || 0,
