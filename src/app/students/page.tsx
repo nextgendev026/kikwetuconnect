@@ -84,23 +84,26 @@ export default function StudentsPage() {
     if (!profile) { toast('Sign in first'); return }
     setAssigning(requestId)
     try {
-      const { error } = await supabase.from('student_help_requests').update({ assigned_to: profile.id, status: 'assigned' }).eq('id', requestId)
-      if (error) throw error
-      const { error: sErr } = await supabase.from('student_sessions').insert({ request_id: requestId, expert_id: profile.id, student_id: requests.find(r => r.id === requestId)?.student_id, status: 'active' })
-      if (sErr) throw sErr
+      const res = await fetch('/api/sessions', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request_id: requestId }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to assign')
       toast('Session started! Help the student.'); fetchRequests(); fetchSessions()
     } catch (err: any) { toast(err.message || 'Failed') } finally { setAssigning(null) }
   }
 
   const handleEndSession = async () => {
     if (!activeSession || !sessionStart) return
-    const duration = Math.floor((Date.now() - sessionStart.getTime()) / 60000)
     try {
-      const { error } = await supabase.from('student_sessions').update({
-        ended_at: new Date().toISOString(), duration_minutes: duration, status: 'completed',
-      }).eq('id', activeSession.id)
-      if (error) throw error
-      toast(`Session completed! ${duration} min — Heshima awarded.`)
+      const res = await fetch('/api/sessions', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: activeSession.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to end session')
+      toast(data.message || 'Session completed! Heshima awarded.')
       setActiveSession(null); setSessionStart(null); setElapsed(0)
       if (timerRef.current) clearInterval(timerRef.current)
       fetchSessions()

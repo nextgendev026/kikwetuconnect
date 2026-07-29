@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { Search, MapPin, TrendingUp, Users, BookOpen, Zap, Star, ChevronRight, Award, Compass } from 'lucide-react'
+import { Search, MapPin, TrendingUp, Users, BookOpen, Zap, Star, ChevronRight, Award, Compass, Sprout, Monitor, Briefcase, Scale, GraduationCap, Palette } from 'lucide-react'
 
 interface Professional {
   id: string; user_id: string; title: string; bio: string; expertise: string[]; county: string; rate: number; rating: number; session_count: number
@@ -17,13 +17,18 @@ interface Quiz {
   id: string; title: string; description: string; category: string; difficulty: string; question_count: number; estimated_time_minutes: number; heshima_reward: number
 }
 
+const TOPIC_ICONS: Record<string, React.ComponentType<any>> = {
+  Agriculture: Sprout, 'Tech & Startups': Monitor, Biashara: Briefcase,
+  'Legal Rights': Scale, Education: GraduationCap, Culture: Palette,
+}
+
 const TOPICS = [
-  { name: 'Agriculture', count: '1.8k', icon: '🌱' },
-  { name: 'Tech & Startups', count: '2.4k', icon: '💻' },
-  { name: 'Biashara', count: '3.1k', icon: '💼' },
-  { name: 'Legal Rights', count: '940', icon: '⚖️' },
-  { name: 'Education', count: '2.2k', icon: '📚' },
-  { name: 'Culture', count: '1.4k', icon: '🎭' },
+  { name: 'Agriculture', count: '1.8k', icon: 'Agriculture' },
+  { name: 'Tech & Startups', count: '2.4k', icon: 'Tech & Startups' },
+  { name: 'Biashara', count: '3.1k', icon: 'Biashara' },
+  { name: 'Legal Rights', count: '940', icon: 'Legal Rights' },
+  { name: 'Education', count: '2.2k', icon: 'Education' },
+  { name: 'Culture', count: '1.4k', icon: 'Culture' },
 ]
 
 const POPULAR_SEARCHES = ['NairobiTechWeek', 'Farming in Kitale', 'M-Pesa for Business']
@@ -97,14 +102,17 @@ export default function ExplorePage() {
       <section className="mb-8">
         <h2 className="font-bold mb-4" style={{ color: 'var(--ink)' }}>Browse by Topic</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {TOPICS.map(t => (
+          {TOPICS.map(t => {
+            const Icon = TOPIC_ICONS[t.icon]
+            return (
             <Link key={t.name} href={`/topics/${t.name.toLowerCase().replace(/[ &]+/g, '-')}`}
               style={style.miniCard} className="card-hover block transition-all">
-              <span className="text-2xl">{t.icon}</span>
+              {Icon ? <Icon className="w-8 h-8" style={{ color: 'var(--green)' }} /> : null}
               <h3 className="font-bold text-sm mt-2" style={{ color: 'var(--ink)' }}>{t.name}</h3>
               <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{t.count} posts</p>
             </Link>
-          ))}
+            )
+          })}
         </div>
       </section>
 

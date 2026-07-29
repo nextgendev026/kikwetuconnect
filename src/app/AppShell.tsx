@@ -83,7 +83,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <Link href="/notifications" className="icon" aria-label="Notifications" title="Notifications">♡</Link>
               <button className="icon" onClick={() => setChatOpen(!chatOpen)} aria-label={chatOpen ? 'Close chat' : 'Open chat'} title="Messages">◍</button>
               <Link href="/profile" className="icon" aria-label="Profile" title="Profile">
-                <span className="avatar" style={{ width: 30, height: 30, fontSize: 10 }}>{initials}</span>
+                <span className="avatar" style={{ width: 30, height: 30, fontSize: 10, overflow: 'hidden' }}>
+                  {profile.avatar_url ? (
+                    <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy"
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.textContent = initials }} />
+                  ) : initials}
+                </span>
               </Link>
             </div>
           </header>
