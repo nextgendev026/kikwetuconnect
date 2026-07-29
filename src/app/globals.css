@@ -113,7 +113,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .input:focus { border-color: var(--gold); }
 .input::placeholder { color: var(--muted); }
 
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 20px; }
 .card-title { font-size: 14px; font-weight: 800; font-family: var(--jakarta); margin: 0 0 12px; }
 .section { margin-bottom: 20px; }
 
@@ -193,11 +193,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .topic small { display: block; color: var(--muted); font-size: 10px; margin-top: 4px; }
 
 .right-panel { background: var(--bg); background-image: var(--bg-pattern); background-attachment: fixed; border-left: 1px solid var(--line); padding: 26px 16px; display: grid; align-content: start; gap: 12px; }
-.side-section { border: 1px solid var(--line); background: var(--surface); border-radius: 15px; overflow: hidden; }
-.side-section summary { list-style: none; cursor: pointer; padding: 14px; display: flex; align-items: center; justify-content: space-between; font: 800 12px 'Plus Jakarta Sans'; }
+.side-section { border: 1px solid var(--line); background: var(--surface); border-radius: 20px; overflow: hidden; }
+.side-section summary { list-style: none; cursor: pointer; padding: 14px; display: flex; align-items: center; justify-content: space-between; font: 600 14px 'Plus Jakarta Sans'; }
 .side-section summary::-webkit-details-marker { display: none; }
-.side-section summary:after { content: '⌄'; color: var(--muted); transition: transform .2s var(--ease); }
-.side-section[open] summary:after { transform: rotate(180deg); }
+.side-section summary::after { content: '›'; color: var(--muted); font-size: 18px; transition: transform .2s var(--ease); }
+.side-section[open] summary::after { transform: rotate(90deg); }
+.side-section > div { overflow: hidden; transition: max-height .3s var(--ease); max-height: 1000px; }
 .side-body { padding: 0 14px 14px; }
 .side-body .list-row { padding: 10px 0; }
 .online { width: 8px; height: 8px; background: var(--green); border-radius: 50%; display: inline-block; box-shadow: 0 0 0 3px var(--green-soft); }
@@ -355,6 +356,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .card-glow:hover { box-shadow: 0 0 0 1px color-mix(in oklab, var(--gold) 30%, transparent), 0 12px 40px color-mix(in oklab, var(--night) 10%, transparent); }
 
 .animate-rise { animation: rise .3s var(--ease); will-change: transform; }
+
+/* Z-index layering system */
+:root { --z-header: 100; --z-sidebar: 200; --z-modal: 300; --z-toast: 400; }
 
 /* Overflow peek — last child in scroll containers signals more content */
 .overflow-x-auto > :last-child { padding-right: 20px; }

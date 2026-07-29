@@ -1,8 +1,8 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { Plus, MapPin, Heart, Eye, Filter, SortAsc, Package, ShoppingBag, Wrench, Palette, Bird, Grid3X3, MessageCircle, Store, Star, X, ChevronDown, CreditCard, Truck, Check, Clock, AlertCircle } from 'lucide-react'
+import { Plus, MapPin, Heart, Eye, Filter, SortAsc, Package, ShoppingBag, Wrench, Palette, Bird, Grid3X3, MessageCircle, Store, Star, X, ChevronDown, CreditCard, Truck, Check, Clock, AlertCircle, Upload, ImageIcon } from 'lucide-react'
 
 interface Listing {
   id: string; title: string; description: string; price: number; category: string; county: string; status: 'active' | 'sold' | 'expired'; images: string[] | null; views_count: number; seller_rating: number; orders_count: number; created_at: string; seller_id: string
@@ -62,9 +62,11 @@ export default function MarketPage() {
   const [tab, setTab] = useState<TabType>('browse')
 
   // Create listing modal
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [showCreate, setShowCreate] = useState(false)
-  const [createForm, setCreateForm] = useState({ title: '', description: '', price: '', category: 'Produce', county: '', images: '' })
+  const [createForm, setCreateForm] = useState({ title: '', description: '', price: '', category: 'Produce', county: '', imageFile: null as File | null, imagePreview: '' })
   const [creating, setCreating] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
 
   // Buy modal
   const [buyItem, setBuyItem] = useState<Listing | null>(null)
@@ -85,7 +87,7 @@ export default function MarketPage() {
   const fetchListings = async () => {
     setLoading(true)
     try {
-      let query = supabase.from('marketplace_listings').select(`*, profiles!seller_id (id, full_name, username, avatar_url, county_hub)`).eq('is_active', true)
+      let query = supabase.from('marketplace_listings').select(`*, profiles!seller_id (id, full_name, username, avatar_url, county_hub)`).eq('status', 'active')
       if (category !== 'All') query = query.eq('category', category)
       if (county) query = query.eq('county', county)
       switch (sort) { case 'newest': query = query.order('created_at', { ascending: false }); break; case 'price': query = query.order('price', { ascending: true }); break; default: query = query.order('created_at', { ascending: false }) }
@@ -134,17 +136,44 @@ export default function MarketPage() {
   const handleCreateListing = async () => {
     if (!profile) { toast('Sign in to list'); return }
     if (!createForm.title.trim() || !createForm.price) { toast('Title and price required'); return }
+    if (parseFloat(createForm.price) <= 0) { toast('Price must be greater than 0'); return }
     setCreating(true)
+    setUploadProgress(0)
     try {
+      let imageUrls: string[] = []
+      if (createForm.imageFile) {
+        setUploadProgress(10)
+        const ext = createForm.imageFile.name.split('.').pop() || 'jpg'
+        const path = `marketplace/${profile.id}-${Date.now()}.${ext}`
+        const { error: upErr } = await supabase.storage.from('public-media').upload(path, createForm.imageFile, { upsert: true })
+        if (upErr) throw upErr
+        setUploadProgress(70)
+        const { data: { publicUrl } } = supabase.storage.from('public-media').getPublicUrl(path)
+        imageUrls = [publicUrl]
+        setUploadProgress(100)
+      }
       const { error } = await supabase.from('marketplace_listings').insert({
         seller_id: profile.id, title: createForm.title.trim(), description: createForm.description.trim(),
         price: parseFloat(createForm.price), category: createForm.category, county: createForm.county || null,
-        images: createForm.images.trim() ? [createForm.images.trim()] : null, status: 'active',
+        images: imageUrls.length > 0 ? imageUrls : null, is_active: true,
       })
       if (error) throw error
-      toast('Listing created!'); setShowCreate(false); setCreateForm({ title: '', description: '', price: '', category: 'Produce', county: '', images: '' })
+      toast('Listing created!'); setShowCreate(false)
+      if (createForm.imagePreview) URL.revokeObjectURL(createForm.imagePreview)
+      setCreateForm({ title: '', description: '', price: '', category: 'Produce', county: '', imageFile: null, imagePreview: '' })
+      setUploadProgress(0)
       fetchListings()
     } catch (err: any) { toast(err.message || 'Failed to create') } finally { setCreating(false) }
+  }
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 10 * 1024 * 1024) { toast('Image too large (max 10MB)'); return }
+    if (!file.type.startsWith('image/')) { toast('Please select an image'); return }
+    const preview = URL.createObjectURL(file)
+    setCreateForm(p => ({ ...p, imageFile: file, imagePreview: preview }))
+    e.target.value = ''
   }
 
   const handleBuy = async () => {
@@ -152,38 +181,48 @@ export default function MarketPage() {
     if (!buyForm.phone.trim() || !buyForm.address.trim()) { toast('Phone and address required'); return }
     setBuying(true)
     try {
-      const { error } = await supabase.from('marketplace_orders').insert({
-        listing_id: buyItem.id, buyer_id: profile.id, seller_id: buyItem.seller_id,
-        quantity: buyForm.quantity, total_price: buyItem.price * buyForm.quantity,
-        status: 'pending', delivery_address: buyForm.address.trim(), contact_phone: buyForm.phone.trim(),
-        delivery_notes: buyForm.notes.trim() || null,
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          listing_id: buyItem.id, quantity: buyForm.quantity,
+          delivery_address: buyForm.address.trim(), contact_phone: buyForm.phone.trim(),
+          delivery_notes: buyForm.notes.trim() || null,
+        }),
       })
-      if (error) throw error
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to order')
       toast('Order placed! The seller will contact you.'); setBuyItem(null)
       setBuyForm({ quantity: 1, phone: '', address: '', notes: '' }); fetchOrders()
-      await supabase.from('marketplace_listings').update({ orders_count: (buyItem.orders_count || 0) + 1 }).eq('id', buyItem.id)
     } catch (err: any) { toast(err.message || 'Failed to order') } finally { setBuying(false) }
   }
 
   const handleUpdateOrderStatus = async (orderId: string, status: string) => {
     if (!profile) return
     try {
-      await supabase.from('marketplace_orders').update({ status, updated_at: new Date().toISOString() }).eq('id', orderId)
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, status }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to update')
       toast(`Order ${status}`); fetchOrders()
       if (status === 'delivered') {
         const o = orders.find(o => o.id === orderId)
         if (o && o.buyer_id === profile.id) setReviewOrder(o)
       }
-    } catch { toast('Failed to update') }
+    } catch (err: any) { toast(err.message) }
   }
 
   const handleSubmitReview = async () => {
     if (!profile || !reviewOrder) return
     try {
-      await supabase.from('marketplace_reviews').insert({
+      const { error } = await supabase.from('marketplace_reviews').insert({
         order_id: reviewOrder.id, reviewer_id: profile.id, listing_id: reviewOrder.listing_id,
         rating: reviewRating, comment: reviewComment.trim() || null,
       })
+      if (error) throw error
       toast('Review submitted!'); setReviewOrder(null); setReviewRating(5); setReviewComment('')
     } catch { toast('Failed to submit review') }
   }
@@ -427,7 +466,30 @@ export default function MarketPage() {
                   {COUNTIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <div><label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>Image URL (optional)</label><input value={createForm.images} onChange={e => setCreateForm(p => ({ ...p, images: e.target.value }))} style={s.input} placeholder="https://..." /></div>
+              <div>
+                <label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>Image (optional)</label>
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageSelect} style={{ display: 'none' }} />
+                {createForm.imagePreview ? (
+                  <div className="relative rounded-[11px] overflow-hidden" style={{ background: 'var(--raised)' }}>
+                    <img src={createForm.imagePreview} alt="Preview" className="w-full h-[160px] object-cover" />
+                    <button onClick={() => { URL.revokeObjectURL(createForm.imagePreview); setCreateForm(p => ({ ...p, imageFile: null, imagePreview: '' })) }}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full grid place-items-center" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)', color: '#fff', border: 0, cursor: 'pointer' }}>
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => fileInputRef.current?.click()}
+                    style={{ ...s.input, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '20px', cursor: 'pointer', borderStyle: 'dashed' }}>
+                    <ImageIcon className="w-5 h-5" style={{ color: 'var(--muted)' }} />
+                    <span style={{ color: 'var(--muted)', fontSize: 12 }}>Tap to upload image</span>
+                  </button>
+                )}
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--raised)' }}>
+                    <div className="h-full rounded-full transition-all" style={{ width: `${uploadProgress}%`, background: 'var(--gold)' }} />
+                  </div>
+                )}
+              </div>
               <button onClick={handleCreateListing} disabled={creating} style={{ ...s.btn, ...s.primaryBtn, width: '100%', justifyContent: 'center' }}>
                 {creating ? 'Listing...' : 'Publish Listing'}
               </button>
