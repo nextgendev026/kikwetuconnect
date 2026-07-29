@@ -30,14 +30,6 @@ const TYPE_FILTERS = [
   { id: 'poll', label: 'Poll' },
 ] as const
 
-const CATEGORY_FILTERS = [
-  { id: '', label: 'All' },
-  { id: 'Post', label: 'Post' },
-  { id: 'Ask', label: 'Ask' },
-  { id: 'Poll', label: 'Poll' },
-  { id: 'Nairobi', label: 'Nairobi' },
-] as const
-
 const EMOJI_REACTIONS = ['🔥', '❤️', '😂', '😮', '😢', '🙏', '💡', '🗳️']
 
 type TabId = typeof TABS[number]['id']
@@ -96,7 +88,7 @@ function truncateContent(content: string, maxLen = 200): string {
 
 function SkeletonCard() {
   return (
-    <div className="bg-night2 border border-[var(--line)] rounded-[16px] p-[18px] mb-[12px] animate-rise">
+    <div className="bg-night2 border border-[var(--line)] rounded-[16px] p-[18px] mb-[12px] animate-rise card-hover">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-[40px] h-[40px] rounded-full skeleton" />
         <div className="flex-1">
@@ -204,7 +196,7 @@ function PostCardComponent({
   }
 
   return (
-    <div className="bg-night2 border border-[var(--line)] rounded-[16px] p-[18px] mb-[12px] animate-rise">
+    <div className="bg-night2 border border-[var(--line)] rounded-[16px] p-[18px] mb-[12px] animate-rise card-hover">
       {/* Header */}
       <div className="flex items-start gap-3 mb-[12px]">
         <Link href={`/profile/${author?.username || ''}`} className="flex-shrink-0 relative">
@@ -401,8 +393,7 @@ export default function FeedPage() {
   const [activeTab, setActiveTab] = useState<TabId>('for_you')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [countyFilter, setCountyFilter] = useState<string | null>(null)
-  const [categoryFilter, setCategoryFilter] = useState('')
-  const [showCountyPicker, setShowCountyPicker] = useState(false)
+const [showCountyPicker, setShowCountyPicker] = useState(false)
   const [composerText, setComposerText] = useState('')
 
   const composerTypeMap: Record<string, string> = { baraza: 'post', inquiry: 'question', poll: 'poll' }
@@ -484,7 +475,7 @@ export default function FeedPage() {
 
       if (typeFilter !== 'all') query = query.eq('post_type', typeFilter)
       if (activeTab === 'questions') query = query.eq('post_type', 'inquiry')
-      if (categoryFilter) query = query.eq('category', categoryFilter)
+
 
       if (activeTab === 'following' && profile) {
         const { data: following } = await supabase.from('follows').select('following_id').eq('follower_id', profile.id)
@@ -534,7 +525,7 @@ export default function FeedPage() {
     } finally {
       setLoading(false); setLoadingMore(false)
     }
-  }, [supabase, profile, activeTab, typeFilter, countyFilter, categoryFilter])
+  }, [supabase, profile, activeTab, typeFilter, countyFilter])
 
   useEffect(() => {
     fetchPosts()
@@ -608,7 +599,7 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="max-w-[640px] mx-auto px-[12px] py-[16px]">
+    <div className="max-w-[640px] mx-auto px-[12px] py-[16px] animate-fade-in-up">
       {/* Offline banner */}
       {!isOnline && (
         <div className="bg-red/20 border border-red/30 rounded-[12px] p-[10px_14px] mb-[12px] flex items-center gap-2 text-[12px] text-red font-semibold">
@@ -759,23 +750,6 @@ export default function FeedPage() {
             </>
           )}
         </div>
-      </div>
-
-      {/* Category filter chips */}
-      <div className="flex gap-[4px] overflow-x-auto pb-[12px] scrollbar-none -mx-[12px] px-[12px]">
-        {CATEGORY_FILTERS.map(f => (
-          <button
-            key={f.id}
-            onClick={() => setCategoryFilter(f.id)}
-            className={`flex-shrink-0 px-[12px] py-[5px] rounded-full text-[11px] font-semibold transition-all ${
-              categoryFilter === f.id
-                ? 'bg-gold text-night'
-                : 'text-[var(--muted)] border border-[var(--line)] hover:bg-deep hover:text-cream'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
       </div>
 
       {/* Content area */}

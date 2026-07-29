@@ -62,7 +62,7 @@ export default function SearchPage() {
   }
 
   return (
-    <>
+    <div className="animate-fade-in-up">
       <section className="page-head">
         <h1 className="page-title">Search</h1>
         <p className="text-muted text-sm">Find posts, people, and topics</p>
@@ -138,7 +138,7 @@ export default function SearchPage() {
                     className="card section hover:border-blue/50 transition-colors group"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue to-green flex items-center justify-center text-sm font-bold text-bg flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue to-green flex items-center justify-center text-sm font-bold text-night flex-shrink-0">
                         {profile.full_name
                           .split(' ')
                           .map((n: string) => n[0])
@@ -208,6 +208,7 @@ export default function SearchPage() {
           <p className="text-muted">Enter a search term to get started</p>
         </div>
       )}
-    </>
+    </div>
   )
 }
+

@@ -248,6 +248,7 @@ export default function PostDetailPage() {
         <Link
           href="/feed"
           className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-surface hover:bg-surface-2 transition-colors"
+          aria-label="Back to feed"
         >
           <ArrowLeft className="w-5 h-5" />
         </Link>
@@ -264,7 +265,7 @@ export default function PostDetailPage() {
       <div className="card section mb-6">
         {/* Header */}
         <div className="flex items-start gap-3 mb-4">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green to-gold flex items-center justify-center text-sm font-bold text-bg flex-shrink-0">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green to-gold flex items-center justify-center text-sm font-bold text-night flex-shrink-0">
             {initials}
           </div>
           <div className="flex-1">
@@ -296,7 +297,7 @@ export default function PostDetailPage() {
             )}
           </div>
         )}
-        <h1 className="text-2xl font-bold mb-4">{post.title}</h1>
+        {post.title && <h1 className="text-2xl font-bold mb-4">{post.title}</h1>}
         <p className="text-base text-text mb-4 leading-relaxed">{post.content}</p>
 
         {/* Metadata */}
@@ -333,7 +334,7 @@ export default function PostDetailPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => handleVote(postId, 1)}
-              className={`px-3 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
+              className={`min-h-[44px] px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
                 userVotes[postId] === 1
                   ? 'bg-green-bg text-green'
                   : 'text-muted hover:bg-surface'
@@ -343,7 +344,7 @@ export default function PostDetailPage() {
               Upvote
             </button>
             <button onClick={() => { navigator.clipboard.writeText(window.location.href); toast('Link copied') }}
-              className="px-3 py-2 rounded-full text-sm font-medium text-muted hover:bg-surface transition-colors flex items-center gap-1"
+              className="min-h-[44px] px-4 py-2 rounded-full text-sm font-medium text-muted hover:bg-surface transition-colors flex items-center gap-1"
               aria-label="Share post">
               <Share2 className="w-4 h-4" />
               Share
@@ -358,7 +359,7 @@ export default function PostDetailPage() {
               if (res.ok) { setUserSaved(data.saved); toast(data.saved ? 'Saved' : 'Removed') }
               else toast('Failed')
             }}
-              className={`px-3 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${userSaved ? 'bg-gold-bg text-gold' : 'text-muted hover:bg-surface'}`}
+              className={`min-h-[44px] px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${userSaved ? 'bg-gold-bg text-gold' : 'text-muted hover:bg-surface'}`}
               aria-label={userSaved ? 'Unsave post' : 'Save post'}>
               <Bookmark className={`w-4 h-4 ${userSaved ? 'fill-current' : ''}`} />
               {userSaved ? 'Saved' : 'Save'}
@@ -391,7 +392,7 @@ export default function PostDetailPage() {
                   {/* Answer Header */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue to-green flex items-center justify-center text-xs font-bold text-bg flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue to-green flex items-center justify-center text-xs font-bold text-night flex-shrink-0">
                         {answerInitials}
                       </div>
                       <div>
@@ -427,7 +428,7 @@ export default function PostDetailPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleVote(answer.id, 1)}
-                        className={`px-2 py-1 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
+                        className={`min-h-[36px] px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 ${
                           userVotes[answer.id] === 1
                             ? 'bg-green-bg text-green'
                             : 'text-muted hover:bg-surface'
@@ -436,7 +437,7 @@ export default function PostDetailPage() {
                         <TrendingUp className="w-3 h-3" />
                         Upvote
                       </button>
-                      <button className="px-2 py-1 rounded-full text-xs font-medium text-muted hover:bg-surface transition-colors">
+                      <button className="min-h-[36px] px-3 py-1.5 rounded-full text-xs font-medium text-muted hover:bg-surface transition-colors">
                         Share
                       </button>
                     </div>

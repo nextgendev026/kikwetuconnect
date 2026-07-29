@@ -38,10 +38,16 @@ const NotifCtx = createContext<{
   unsubscribe: () => {},
 })
 
-export function toast(msg: string) {
+export function toast(msg: string, type?: 'info' | 'success' | 'error') {
   if (typeof window !== 'undefined') {
     const el = document.getElementById('global-toast')
-    if (el) { el.textContent = msg; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 2200) }
+    if (el) {
+      el.textContent = msg
+      el.className = 'toast'
+      if (type && type !== 'info') el.classList.add(type)
+      el.classList.add('show')
+      setTimeout(() => el.classList.remove('show'), 2400)
+    }
   }
 }
 

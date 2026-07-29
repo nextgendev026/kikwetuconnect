@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useUser, toast } from '@/app/providers'
+import BottomSheet from '@/components/ui/bottom-sheet'
 import { Users, Hash, Plus, X, Filter, Search, Globe, Sparkles, Sprout, Cpu, Ship, BookOpen, Coins, Leaf, Building2, Microscope, Scale, HeartPulse } from 'lucide-react'
 
 interface Space {
@@ -33,14 +34,31 @@ const GRADIENTS = [
 const style = {
   card: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: 20, boxShadow: 'var(--card-shadow)' },
   input: { width: '100%', background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 11, padding: '10px 14px', fontSize: 13, color: 'var(--ink)', outline: 'none' },
-  btn: { padding: '10px 20px', borderRadius: 11, fontWeight: 700, fontSize: 12, border: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, transition: 'all .2s var(--ease)' },
+  btn: { padding: '10px 20px', borderRadius: 11, fontWeight: 700, fontSize: 13, border: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, transition: 'transform .1s var(--ease), box-shadow .2s var(--ease), background .2s var(--ease)' },
   primaryBtn: { background: 'var(--gold)', color: 'var(--night)' },
   secondaryBtn: { background: 'var(--raised)', color: 'var(--ink)', border: '1px solid var(--line)' },
-  tag: { padding: '6px 14px', borderRadius: 99, fontSize: 10, fontWeight: 600, border: '1px solid var(--line)', background: 'var(--raised)', color: 'var(--muted)', cursor: 'pointer', transition: 'all .2s var(--ease)' },
+  tag: { padding: '6px 14px', borderRadius: 99, fontSize: 11, fontWeight: 600, border: '1px solid var(--line)', background: 'var(--raised)', color: 'var(--muted)', cursor: 'pointer', transition: 'all .2s var(--ease)' },
   tagActive: { background: 'var(--gold)', color: 'var(--night)', borderColor: 'var(--gold)' },
   spaceCard: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, overflow: 'hidden', boxShadow: 'var(--card-shadow)' },
   modalOverlay: { background: 'color-mix(in oklab, var(--night) 80%, transparent)' },
   modalContent: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(480px, 100%)', position: 'relative' as const },
+}
+
+function SkeletonCard() {
+  return (
+    <div style={style.spaceCard}>
+      <div style={{ height: 120, background: 'var(--raised)' }} />
+      <div style={{ padding: 16 }}>
+        <div style={{ height: 14, width: '60%', background: 'var(--raised)', borderRadius: 6, marginBottom: 10 }} />
+        <div style={{ height: 12, width: '90%', background: 'var(--raised)', borderRadius: 6, marginBottom: 6 }} />
+        <div style={{ height: 12, width: '70%', background: 'var(--raised)', borderRadius: 6, marginBottom: 16 }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ height: 12, width: '30%', background: 'var(--raised)', borderRadius: 6 }} />
+          <div style={{ height: 28, width: 60, background: 'var(--raised)', borderRadius: 11 }} />
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function SpacesPage() {
@@ -61,19 +79,12 @@ export default function SpacesPage() {
   const [createCategory, setCreateCategory] = useState('Technology')
   const [creating, setCreating] = useState(false)
 
-  const modalRef = useRef<HTMLDivElement>(null)
   const firstFieldRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { if (!userLoading) { fetchSpaces(); fetchMemberships() } }, [userLoading])
 
   useEffect(() => {
-    if (showCreate && firstFieldRef.current) firstFieldRef.current.focus()
-  }, [showCreate])
-
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowCreate(false) }
-    if (showCreate) document.addEventListener('keydown', handleEsc)
-    return () => document.removeEventListener('keydown', handleEsc)
+    if (showCreate && firstFieldRef.current) setTimeout(() => firstFieldRef.current?.focus(), 100)
   }, [showCreate])
 
   const fetchApi = async (path: string, opts?: RequestInit) => {
@@ -173,6 +184,11 @@ export default function SpacesPage() {
     return GRADIENTS[Math.abs(hash) % GRADIENTS.length]
   }
 
+  const activeBtn = (base: React.CSSProperties): React.CSSProperties => ({
+    ...base,
+    transition: 'transform .1s var(--ease), box-shadow .2s var(--ease)',
+  })
+
   if (userLoading) return <div className="flex items-center justify-center min-h-[80vh]"><div className="animate-spin w-8 h-8 border-2" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent', borderRadius: '50%' }} /></div>
 
   return (
@@ -204,15 +220,15 @@ export default function SpacesPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin w-8 h-8 border-2" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent', borderRadius: '50%' }} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
         </div>
       ) : spaces.length === 0 ? (
         <div style={style.card} className="text-center py-12">
           <Hash className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--muted)', opacity: 0.3 }} />
           <p className="font-medium mb-1" style={{ color: 'var(--ink)' }}>No spaces found</p>
           <p className="text-xs mb-6" style={{ color: 'var(--muted)' }}>Try a different category or search</p>
-          <button onClick={() => setShowCreate(true)} style={{ ...style.btn, ...style.primaryBtn }}
+          <button onClick={() => setShowCreate(true)} style={activeBtn({ ...style.btn, ...style.primaryBtn })}
             onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = 'var(--card-shadow-hover)' }}
             onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
             <Plus className="w-4 h-4" /> Create the first space
@@ -222,7 +238,7 @@ export default function SpacesPage() {
         <>
           <div className="flex items-center justify-between mb-4">
             <p className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{totalCount} space{totalCount !== 1 ? 's' : ''}</p>
-            <button onClick={() => setShowCreate(true)} style={{ ...style.btn, ...style.primaryBtn }}
+            <button onClick={() => setShowCreate(true)} style={activeBtn({ ...style.btn, ...style.primaryBtn })}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = 'var(--card-shadow-hover)' }}
               onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
               <Plus className="w-4 h-4" /> New Space
@@ -263,12 +279,12 @@ export default function SpacesPage() {
                       </div>
                       {isMember ? (
                         <button onClick={() => handleLeave(space)}
-                          style={{ ...style.secondaryBtn, padding: '6px 12px', fontSize: 10 }}>
+                          style={{ ...style.secondaryBtn, padding: '8px 16px', fontSize: 12 }}>
                           Leave
                         </button>
                       ) : (
                         <button onClick={() => handleJoin(space)}
-                          style={{ ...style.btn, ...style.primaryBtn, padding: '6px 12px', fontSize: 10 }}>
+                          style={{ ...style.btn, ...style.primaryBtn, padding: '8px 16px', fontSize: 12 }}>
                           <Sparkles className="w-3 h-3" /> Join
                         </button>
                       )}
@@ -281,7 +297,7 @@ export default function SpacesPage() {
           {hasMore && (
             <div className="flex justify-center mt-6">
               <button onClick={handleLoadMore} disabled={loadingMore}
-                style={{ ...style.secondaryBtn, padding: '10px 24px', fontSize: 12 }}>
+                style={{ ...style.secondaryBtn, padding: '12px 28px', fontSize: 13 }}>
                 {loadingMore ? 'Loading...' : 'Load more spaces'}
               </button>
             </div>
@@ -289,46 +305,32 @@ export default function SpacesPage() {
         </>
       )}
 
-      {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={style.modalOverlay}
-          role="dialog" aria-modal="true" aria-labelledby="create-space-title"
-          onClick={e => { if (e.target === e.currentTarget) setShowCreate(false) }}>
-          <div className="animate-rise" style={style.modalContent} ref={modalRef}>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 id="create-space-title" className="font-bold text-lg" style={{ color: 'var(--ink)' }}>Create a Space</h2>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Build a focused community around a topic</p>
-              </div>
-              <button onClick={() => setShowCreate(false)} aria-label="Close create space dialog"
-                className="w-8 h-8 rounded-full grid place-items-center transition-colors"
-                style={{ background: 'var(--raised)', color: 'var(--muted)', border: 0, cursor: 'pointer' }}><X className="w-4 h-4" /></button>
-            </div>
+      <BottomSheet open={showCreate} onClose={() => setShowCreate(false)} title="Create a Space">
+        <p className="text-xs mb-4" style={{ color: 'var(--muted)' }}>Build a focused community around a topic</p>
 
-            <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Icon</label>
-            <input ref={firstFieldRef} type="text" placeholder="Emoji icon" value={createIcon} onChange={e => setCreateIcon(e.target.value)} maxLength={2}
-              style={style.input} className="!mb-3" />
+        <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Icon</label>
+        <input ref={firstFieldRef} type="text" placeholder="Emoji icon" value={createIcon} onChange={e => setCreateIcon(e.target.value)} maxLength={2}
+          style={style.input} className="!mb-3" />
 
-            <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Name</label>
-            <input type="text" placeholder="e.g. Kilimo Smart" value={createName} onChange={e => setCreateName(e.target.value)}
-              style={style.input} className="!mb-3" />
+        <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Name</label>
+        <input type="text" placeholder="e.g. Kilimo Smart" value={createName} onChange={e => setCreateName(e.target.value)}
+          style={style.input} className="!mb-3" />
 
-            <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Description</label>
-            <textarea placeholder="What is this space about?" value={createDesc} onChange={e => setCreateDesc(e.target.value)} rows={3}
-              style={{ ...style.input, resize: 'none' }} className="!mb-3" />
+        <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Description</label>
+        <textarea placeholder="What is this space about?" value={createDesc} onChange={e => setCreateDesc(e.target.value)} rows={3}
+          style={{ ...style.input, resize: 'none' }} className="!mb-3" />
 
-            <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Category</label>
-            <select value={createCategory} onChange={e => setCreateCategory(e.target.value)}
-              style={style.input} className="!mb-5">
-              {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+        <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Category</label>
+        <select value={createCategory} onChange={e => setCreateCategory(e.target.value)}
+          style={style.input} className="!mb-5">
+          {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
 
-            <button onClick={handleCreate} disabled={creating || !createName.trim() || !createDesc.trim()}
-              style={{ ...style.btn, ...style.primaryBtn, width: '100%', justifyContent: 'center', opacity: (creating || !createName.trim() || !createDesc.trim()) ? 0.5 : 1 }}>
-              {creating ? 'Creating...' : 'Create Space'}
-            </button>
-          </div>
-        </div>
-      )}
+        <button onClick={handleCreate} disabled={creating || !createName.trim() || !createDesc.trim()}
+          style={{ ...style.btn, ...style.primaryBtn, width: '100%', justifyContent: 'center', opacity: (creating || !createName.trim() || !createDesc.trim()) ? 0.5 : 1 }}>
+          {creating ? 'Creating...' : 'Create Space'}
+        </button>
+      </BottomSheet>
     </div>
   )
 }

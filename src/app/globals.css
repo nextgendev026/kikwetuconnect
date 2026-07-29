@@ -52,6 +52,7 @@ body { margin: 0; color: var(--ink); font: 16px 'DM Sans', system-ui, -apple-sys
 ::before, ::after, * { transition: background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease; }
 button, input, textarea, select { font: inherit; color: inherit; }
 button { border: 0; cursor: pointer; }
+button:active { transform: scale(0.97); }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 
 .app { display: grid; grid-template-columns: 248px minmax(0, 1fr) 294px; min-height: 100vh; max-width: 1600px; margin: auto; }
@@ -239,8 +240,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .field select { min-height: 0; }
 .modal-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 
-.toast { position: fixed; z-index: 40; top: 1rem; right: 1rem; transform: translateY(-10px); opacity: 0; background: var(--night); color: var(--surface); padding: 12px 15px; border-radius: 11px; font-size: 11px; font-weight: 700; pointer-events: none; transition: opacity .25s var(--ease), transform .25s var(--ease); }
-.toast.show { opacity: 1; transform: translateY(0); }
+.toast { position: fixed; z-index: 400; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0; background: var(--night); color: var(--surface); padding: 14px 24px; border-radius: 14px; font-size: 13px; font-weight: 700; pointer-events: none; transition: all .35s var(--ease); max-width: 90vw; text-align: center; box-shadow: 0 12px 40px oklch(0% 0 0 / 0.25); border: 1px solid color-mix(in oklab, var(--surface) 15%, transparent); backdrop-filter: blur(12px); }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--green); color: var(--surface); }
+.toast.error { background: var(--red); color: var(--surface); }
 
 .bottom { display: none; }
 
