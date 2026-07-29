@@ -85,6 +85,13 @@ function getInitials(name: string | null | undefined): string {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
+function truncateContent(content: string, maxLen = 200): string {
+  if (content.length <= maxLen) return content
+  const firstPara = content.split(/\n\s*\n/)[0]
+  if (firstPara.length <= maxLen) return firstPara
+  return firstPara.slice(0, maxLen).replace(/\s+\S*$/, '') + '...'
+}
+
 function SkeletonCard() {
   return (
     <div className="bg-night2 border border-[var(--line)] rounded-[16px] p-[18px] mb-[12px] animate-rise">
@@ -182,7 +189,7 @@ function PostCardComponent({
       <div className="flex items-start gap-3 mb-[12px]">
         <Link href={`/profile/${author?.username || ''}`} className="flex-shrink-0 relative">
           {author?.avatar_url ? (
-            <img src={author.avatar_url} alt="" className="w-[40px] h-[40px] rounded-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.querySelector('.avatar-fallback')?.classList.remove('hidden') }} />
+            <img src={author.avatar_url} alt="" className="w-[40px] h-[40px] rounded-full object-cover" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.querySelector('.avatar-fallback')?.classList.remove('hidden') }} />
           ) : null}
           <div className={`avatar-fallback w-[40px] h-[40px] rounded-full bg-gradient-to-br from-gold to-green flex items-center justify-center text-[12px] font-extrabold text-night ${author?.avatar_url ? 'hidden' : ''}`}>{initials}</div>
           {author?.is_verified_expert && (
@@ -220,8 +227,17 @@ function PostCardComponent({
         <Link href={`/posts/${post.id}`} className="block text-cream font-bold text-[15px] mb-[6px] leading-[1.3] hover:text-gold transition-colors">{post.title}</Link>
       )}
 
-      {/* Content */}
-      <p className="text-cream text-[13px] leading-[1.6] mb-[12px] whitespace-pre-wrap break-words">{post.content}</p>
+      {/* Content — truncated to first paragraph in feed */}
+      <div className="mb-[12px]">
+        <p className="text-cream text-[13px] leading-[1.6] whitespace-pre-wrap break-words">
+          {truncateContent(post.content)}
+        </p>
+        {post.content.length > 200 && (
+          <Link href={`/posts/${post.id}`} className="inline-block mt-[6px] text-gold text-[12px] font-bold hover:underline">
+            Read full post ↗
+          </Link>
+        )}
+      </div>
 
       {/* Media */}
       {post.media_url && (

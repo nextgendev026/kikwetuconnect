@@ -410,7 +410,7 @@ export default function MessagesPage() {
               )}
 
               {/* Messages */}
-              <div ref={chatContainerRef} className="flex-1 overflow-y-auto space-y-3 mb-4 px-1" style={{ maxHeight: '400px' }}>
+              <div ref={chatContainerRef} className="flex-1 overflow-y-auto space-y-3 mb-4 px-1" style={{ maxHeight: 'min(400px, 60vh)' }}>
                 {chatLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="animate-spin w-6 h-6 border-2 border-green border-t-transparent rounded-full" />

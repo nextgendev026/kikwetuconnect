@@ -172,7 +172,7 @@ export default function SignupPage() {
   if (created) {
     return (
       <div className="shell" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px,.78fr) minmax(520px,1.22fr)', minHeight: '100vh' }}>
-        <aside className="story" style={{ background: 'oklch(16% .035 151)', color: 'oklch(95% .012 91)', padding: 'clamp(28px,6vw,80px)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
+        <aside className="story2" style={{ background: 'oklch(16% .035 151)', color: 'oklch(95% .012 91)', padding: 'clamp(28px,6vw,80px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 15% 18%,oklch(43% .08 151),transparent 33%),radial-gradient(circle at 85% 27%,oklch(38% .08 84),transparent 28%)', opacity: .62 }} />
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -181,7 +181,7 @@ export default function SignupPage() {
             </div>
           </div>
         </aside>
-        <main style={{ padding: 'clamp(20px,4vw,70px)', display: 'grid', placeItems: 'center' }}>
+        <main className="auth-main" style={{ padding: 'clamp(20px,4vw,70px)', display: 'grid', placeItems: 'center' }}>
           <div style={{ textAlign: 'center', width: 'min(480px,100%)', animation: 'rise .35s ease' }}>
             <div style={{ width: 68, height: 68, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'oklch(90% .055 151)', color: 'oklch(52% .14 151)', fontSize: 30, margin: '0 auto 16px' }}>✓</div>
             <h2 style={{ fontWeight: 800, fontSize: 30, letterSpacing: '-.06em', margin: '0 0 10px', color: 'oklch(16% .035 151)' }}>Welcome to the circle.</h2>
@@ -208,9 +208,9 @@ export default function SignupPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: 'minmax(300px,.78fr) minmax(520px,1.22fr)' }}>
+    <div className="shell" style={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: 'minmax(300px,.78fr) minmax(520px,1.22fr)' }}>
       {/* Story sidebar */}
-      <aside style={{ background: 'oklch(16% .035 151)', color: 'oklch(95% .012 91)', padding: 'clamp(28px,6vw,80px)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
+      <aside className="story" style={{ background: 'oklch(16% .035 151)', color: 'oklch(95% .012 91)', padding: 'clamp(28px,6vw,80px)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 15% 18%,oklch(43% .08 151),transparent 33%),radial-gradient(circle at 85% 27%,oklch(38% .08 84),transparent 28%)', opacity: .62 }} />
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -231,7 +231,7 @@ export default function SignupPage() {
       </aside>
 
       {/* Auth zone */}
-      <main style={{ padding: 'clamp(20px,4vw,70px)', display: 'grid', placeItems: 'center', background: 'oklch(96% .025 91)' }}>
+      <main className="auth-main" style={{ padding: 'clamp(20px,4vw,70px)', display: 'grid', placeItems: 'center', background: 'oklch(96% .025 91)' }}>
         <div style={{ width: 'min(660px,100%)' }}>
           {/* Top bar */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
@@ -309,7 +309,7 @@ export default function SignupPage() {
               {step === 1 && (
                 <div style={{ animation: 'rise .3s ease' }}>
                   <h3 style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-.03em', margin: '0 0 15px' }}>1. Your account</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
+                  <div className="auth-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
                     <div style={{ display: 'grid', gap: 7, marginBottom: 14 }}>
                       <label style={{ fontSize: 11, color: 'oklch(52% .035 151)', fontWeight: 600 }}>First name *</label>
                       <input placeholder="Akinyi" value={first} onChange={e => setFirst(e.target.value)} style={{ height: 46, width: '100%', background: 'oklch(99% .008 91)', border: '1px solid oklch(85% .035 91)', borderRadius: 11, padding: '0 12px', fontSize: 12 }} />
@@ -357,7 +357,7 @@ export default function SignupPage() {
               {step === 2 && (
                 <div style={{ animation: 'rise .3s ease' }}>
                   <h3 style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-.03em', margin: '0 0 15px' }}>2. Your place and service needs</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
+                  <div className="auth-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
                     <div style={{ display: 'grid', gap: 7, marginBottom: 14 }}>
                       <label style={{ fontSize: 11, color: 'oklch(52% .035 151)', fontWeight: 600 }}>County *</label>
                       <select value={county} onChange={e => setCounty(e.target.value)} style={{ height: 46, width: '100%', background: 'oklch(99% .008 91)', border: '1px solid oklch(85% .035 91)', borderRadius: 11, padding: '0 12px', fontSize: 12 }}>
@@ -382,7 +382,7 @@ export default function SignupPage() {
                     </div>
                     <div style={{ gridColumn: '1/-1' }}>
                       <label style={{ fontSize: 11, color: 'oklch(52% .035 151)', fontWeight: 600, display: 'block', marginBottom: 7 }}>What service do you want from Kikwetu? Pick all that fit.</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
+                      <div className="auth-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
                         {SERVICES.map(s => (
                           <button key={s.id} type="button" onClick={() => toggleService(s.id)}
                             style={{ minHeight: 78, textAlign: 'left', background: services.includes(s.id) ? 'oklch(93% .07 84)' : 'oklch(99% .008 91)', border: `1px solid ${services.includes(s.id) ? 'oklch(72% .15 84)' : 'oklch(85% .035 91)'}`, borderRadius: 13, padding: 11, cursor: 'pointer', transition: 'transform .2s ease,border-color .2s ease' }}>
@@ -401,10 +401,10 @@ export default function SignupPage() {
               {step === 3 && (
                 <div style={{ animation: 'rise .3s ease' }}>
                   <h3 style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-.03em', margin: '0 0 15px' }}>3. Your interests and preferences</h3>
-                  <div style={{ display: 'grid', gap: 13 }}>
+                  <div className="auth-grid-2" style={{ display: 'grid', gap: 13 }}>
                     <div>
                       <label style={{ fontSize: 11, color: 'oklch(52% .035 151)', fontWeight: 600, display: 'block', marginBottom: 7 }}>Topics to follow</label>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
+                      <div className="auth-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
                         {TOPICS.map(t => (
                           <button key={t.id} type="button" onClick={() => toggleTopic(t.id)}
                             style={{ minHeight: 78, textAlign: 'left', background: topics.includes(t.id) ? 'oklch(93% .07 84)' : 'oklch(99% .008 91)', border: `1px solid ${topics.includes(t.id) ? 'oklch(72% .15 84)' : 'oklch(85% .035 91)'}`, borderRadius: 13, padding: 11, cursor: 'pointer' }}>
@@ -420,7 +420,7 @@ export default function SignupPage() {
                       <textarea placeholder="What are you building, learning, or known for?" value={bio} onChange={e => setBio(e.target.value)} rows={3}
                         style={{ width: '100%', background: 'oklch(99% .008 91)', border: '1px solid oklch(85% .035 91)', borderRadius: 11, padding: 12, fontSize: 12, resize: 'vertical' }} />
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
+                    <div className="auth-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
                       <div style={{ display: 'grid', gap: 7, marginBottom: 14 }}>
                         <label style={{ fontSize: 11, color: 'oklch(52% .035 151)', fontWeight: 600 }}>Notifications</label>
                         <select value={notifPref} onChange={e => setNotifPref(e.target.value)} style={{ height: 46, width: '100%', background: 'oklch(99% .008 91)', border: '1px solid oklch(85% .035 91)', borderRadius: 11, padding: '0 12px', fontSize: 12 }}>
@@ -474,7 +474,9 @@ export default function SignupPage() {
         @keyframes spin { to { transform: rotate(360deg) } }
         @media(max-width:850px) {
           .shell { grid-template-columns: 1fr !important }
-          .story { min-height: 320px !important; padding: 25px 20px !important }
+          .story { min-height: 260px !important; padding: 20px !important }
+          .auth-grid-2 { grid-template-columns: 1fr !important }
+          .auth-main { padding: 20px 16px !important }
         }
       `}</style>
     </div>

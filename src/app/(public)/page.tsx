@@ -33,6 +33,12 @@ export default function LandingPage() {
         .lp-nav a:hover { color: oklch(20% .04 151); }
         .lp-nav a::after { content:''; position:absolute; bottom:-4px; left:0; width:0; height:2px; background:oklch(72% .15 84); transition:width .2s; }
         .lp-nav a:hover::after { width:100%; }
+        @media(max-width:768px) {
+          .lp-hero { grid-template-columns:1fr !important; padding-bottom:50px !important; min-height:auto !important; }
+          .lp-hero-text { max-width:100% !important; }
+          .lp-hero-mockup { min-height:350px !important; }
+          .lp-spaces { grid-template-columns:1fr !important; gap:30px !important; }
+        }
       `}</style>
 
       <header style={{ height: 74, padding: '0 clamp(18px,5vw,76px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 2 }}>
@@ -51,7 +57,7 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <section style={{ minHeight: 'calc(100vh - 74px)', display: 'grid', gridTemplateColumns: '1.02fr .98fr', gap: 40, padding: 'clamp(46px,9vw,120px) clamp(18px,8vw,126px) 76px', position: 'relative' }}>
+      <section className="lp-hero" style={{ minHeight: 'calc(100vh - 74px)', display: 'grid', gridTemplateColumns: '1.02fr .98fr', gap: 40, padding: 'clamp(46px,9vw,120px) clamp(18px,8vw,126px) 76px', position: 'relative' }}>
         <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
           <div style={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', background: 'oklch(52% .14 151 / .1)', top: '10%', left: '5%', filter: 'blur(120px)' }}></div>
           <div style={{ position: 'absolute', width: 350, height: 350, borderRadius: '50%', background: 'oklch(72% .15 84 / .1)', top: '20%', right: '8%', filter: 'blur(120px)' }}></div>
@@ -59,7 +65,7 @@ export default function LandingPage() {
           <div style={{ position: 'absolute', width: 250, height: 250, borderRadius: '50%', background: 'oklch(72% .15 84 / .08)', bottom: '10%', right: '15%', filter: 'blur(100px)' }}></div>
         </div>
 
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: 590, alignSelf: 'center' }}>
+        <div className="lp-hero-text" style={{ position: 'relative', zIndex: 1, maxWidth: 590, alignSelf: 'center' }}>
           <div className="inline-flex items-center gap-[8px] mb-[20px]" style={{ color: 'oklch(52% .14 151)', fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', fontWeight: 800 }}>
             <span style={{ width: 28, height: 2, background: 'oklch(72% .15 84)' }}></span>Kenya's knowledge circle
           </div>
@@ -82,7 +88,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div style={{ position: 'relative', zIndex: 1, alignSelf: 'center', minHeight: 520, display: 'grid', placeItems: 'center' }}>
+        <div className="lp-hero-mockup" style={{ position: 'relative', zIndex: 1, alignSelf: 'center', minHeight: 520, display: 'grid', placeItems: 'center' }}>
           <div style={{ position: 'absolute', width: 260, height: 260, borderRadius: '50%', background: 'linear-gradient(135deg, oklch(72% .15 84 / .3), oklch(72% .15 84 / .1))', right: '13%', top: '4%', boxShadow: '0 0 0 18px oklch(75% .14 84 / .12), 0 0 0 40px oklch(75% .14 84 / .07)' }}></div>
           <div style={{ position: 'absolute', bottom: '9%', width: '110%', height: '42%', background: 'linear-gradient(135deg, oklch(52% .14 151 / .2), oklch(52% .14 151 / .05))', borderRadius: '52% 52% 0 0 / 35% 35% 0 0', transform: 'rotate(-6deg)' }}></div>
           <div style={{ position: 'absolute', bottom: '2%', right: '-11%', width: '95%', height: '31%', background: 'linear-gradient(135deg, oklch(48% .1 55 / .3), oklch(48% .1 55 / .05))', borderRadius: '52% 52% 0 0 / 35% 35% 0 0', transform: 'rotate(7deg)', opacity: .88 }}></div>
@@ -143,7 +149,7 @@ export default function LandingPage() {
           <div style={{ position: 'absolute', width: 600, height: 600, borderRadius: '50%', background: 'oklch(52% .14 151 / .03)', top: '-100%', right: '-10%', filter: 'blur(200px)' }}></div>
           <div style={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', background: 'oklch(72% .15 84 / .04)', bottom: '-50%', left: '-10%', filter: 'blur(150px)' }}></div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.35fr', gap: 70, alignItems: 'center' }}>
+        <div className="lp-spaces" style={{ display: 'grid', gridTemplateColumns: '1fr 1.35fr', gap: 70, alignItems: 'center' }}>
           <div style={{ position: 'relative' }}>
             <div className="inline-flex items-center gap-[8px] mb-[20px]" style={{ color: 'oklch(52% .14 151)', fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', fontWeight: 800 }}>
               <span style={{ width: 28, height: 2, background: 'oklch(72% .15 84)' }}></span>The circle is already moving
