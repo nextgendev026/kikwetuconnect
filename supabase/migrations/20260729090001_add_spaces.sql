@@ -95,28 +95,43 @@ ALTER TABLE spaces ENABLE ROW LEVEL SECURITY;
 ALTER TABLE space_members ENABLE ROW LEVEL SECURITY;
 
 -- Anyone can read public spaces
+DROP POLICY IF EXISTS "Anyone can read spaces" ON spaces;
 CREATE POLICY "Anyone can read spaces" ON spaces FOR SELECT USING (true);
 -- Authenticated users can create spaces
+DROP POLICY IF EXISTS "Users can create spaces" ON spaces;
 CREATE POLICY "Users can create spaces" ON spaces FOR INSERT WITH CHECK (auth.uid() = created_by);
 -- Only admin/owner can update space
+DROP POLICY IF EXISTS "Space admins can update" ON spaces;
 CREATE POLICY "Space admins can update" ON spaces FOR UPDATE USING (
   EXISTS (SELECT 1 FROM space_members WHERE space_id = id AND user_id = auth.uid() AND role IN ('admin', 'owner'))
 );
 
 -- Space members: read own memberships
+DROP POLICY IF EXISTS "Members can read space_members" ON space_members;
 CREATE POLICY "Members can read space_members" ON space_members FOR SELECT USING (
   user_id = auth.uid() OR
   EXISTS (SELECT 1 FROM space_members sm WHERE sm.space_id = space_id AND sm.user_id = auth.uid() AND sm.role IN ('admin', 'owner', 'moderator'))
 );
 -- Insert via server RPC only (no client insert policy for safety; use API)
+DROP POLICY IF EXISTS "Users can join via API" ON space_members;
 CREATE POLICY "Users can join via API" ON space_members FOR INSERT WITH CHECK (auth.uid() = user_id);
 -- Delete own membership (leave)
+DROP POLICY IF EXISTS "Users can leave" ON space_members;
 CREATE POLICY "Users can leave" ON space_members FOR DELETE USING (auth.uid() = user_id);
 -- Admin can manage members
+DROP POLICY IF EXISTS "Admins can manage members" ON space_members;
 CREATE POLICY "Admins can manage members" ON space_members FOR ALL USING (
   EXISTS (SELECT 1 FROM space_members sm WHERE sm.space_id = space_id AND sm.user_id = auth.uid() AND sm.role IN ('admin', 'owner'))
 );
 
--- 6. Realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE spaces;
-ALTER PUBLICATION supabase_realtime ADD TABLE space_members;
+-- 6. Realtime (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'spaces') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE spaces;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'space_members') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE space_members;
+  END IF;
+END;
+$$;

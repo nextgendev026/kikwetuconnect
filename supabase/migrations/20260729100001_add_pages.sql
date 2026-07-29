@@ -115,30 +115,47 @@ ALTER TABLE public.page_admins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.page_follows ENABLE ROW LEVEL SECURITY;
 
 -- Anyone can read pages
+DROP POLICY IF EXISTS "Anyone can read pages" ON public.pages;
 CREATE POLICY "Anyone can read pages" ON public.pages FOR SELECT USING (true);
 -- Authenticated users can create pages
+DROP POLICY IF EXISTS "Users can create pages" ON public.pages;
 CREATE POLICY "Users can create pages" ON public.pages FOR INSERT WITH CHECK (auth.uid() = created_by);
 -- Only owner/admin can update page
+DROP POLICY IF EXISTS "Page admins can update" ON public.pages;
 CREATE POLICY "Page admins can update" ON public.pages FOR UPDATE USING (
   EXISTS (SELECT 1 FROM public.page_admins WHERE page_id = id AND user_id = auth.uid() AND role IN ('owner', 'admin'))
 );
 
 -- Page admins: read own memberships
+DROP POLICY IF EXISTS "Anyone can read page_admins" ON public.page_admins;
 CREATE POLICY "Anyone can read page_admins" ON public.page_admins FOR SELECT USING (true);
 -- Insert via server API only
+DROP POLICY IF EXISTS "Admins can manage page admins" ON public.page_admins;
 CREATE POLICY "Admins can manage page admins" ON public.page_admins FOR INSERT WITH CHECK (
   EXISTS (SELECT 1 FROM public.page_admins pa WHERE pa.page_id = page_id AND pa.user_id = auth.uid() AND pa.role IN ('owner', 'admin'))
 );
+DROP POLICY IF EXISTS "Admins can delete page admins" ON public.page_admins;
 CREATE POLICY "Admins can delete page admins" ON public.page_admins FOR DELETE USING (
   EXISTS (SELECT 1 FROM public.page_admins pa WHERE pa.page_id = page_id AND pa.user_id = auth.uid() AND pa.role IN ('owner', 'admin'))
 );
 
 -- Page follows: anyone can read
+DROP POLICY IF EXISTS "Anyone can read page_follows" ON public.page_follows;
 CREATE POLICY "Anyone can read page_follows" ON public.page_follows FOR SELECT USING (true);
 -- Users can follow/unfollow via API
+DROP POLICY IF EXISTS "Users can follow pages" ON public.page_follows;
 CREATE POLICY "Users can follow pages" ON public.page_follows FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can unfollow pages" ON public.page_follows;
 CREATE POLICY "Users can unfollow pages" ON public.page_follows FOR DELETE USING (auth.uid() = user_id);
 
--- 7. Realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE public.pages;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.page_follows;
+-- 7. Realtime (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'pages') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.pages;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'page_follows') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.page_follows;
+  END IF;
+END;
+$$;

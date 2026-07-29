@@ -38,8 +38,17 @@ DROP POLICY IF EXISTS "Anyone can read help requests" ON student_help_requests;
 CREATE POLICY "Anyone can read help requests" ON student_help_requests
   FOR SELECT USING (true);
 
--- 6. Add realtime for student_sessions
-ALTER PUBLICATION supabase_realtime ADD TABLE student_sessions;
+-- 6. Add realtime for student_sessions (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'student_sessions'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE student_sessions;
+  END IF;
+END;
+$$;
 
 -- 7. Reset the trigger status check to handle requested→active transitions too
 CREATE OR REPLACE FUNCTION handle_session_completion() RETURNS trigger AS $$
