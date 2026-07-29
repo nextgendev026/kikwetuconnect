@@ -1,49 +1,29 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
 import { useRouter } from 'next/navigation'
 import {
-  Edit3, Settings, Shield, Award, BarChart3, Users, MessageCircle, LogOut,
-  Bookmark, Clock, ThumbsUp, MessageSquare, FileText, Star, MapPin, Zap, TrendingUp, Flame
+  ThumbsUp, MessageSquare, Bookmark, Award, Shield, LogOut,
+  TrendingUp, Edit3, Settings, BarChart3, Users, Star, MapPin
 } from 'lucide-react'
+import { ProfileHeader } from '@/components/profile'
 
 type Tab = 'overview' | 'posts' | 'answers' | 'badges'
 
 interface Badge {
-  id: string
-  name: string
-  description: string
-  icon: string
-  awarded_at: string
+  id: string; name: string; description: string; icon: string; awarded_at: string
 }
 
 interface RecentPost {
-  id: string
-  title: string | null
-  content: string
-  post_type: string
-  created_at: string
-  upvotes_count: number
-  answers_count: number
+  id: string; title: string | null; content: string; post_type: string
+  created_at: string; upvotes_count: number; answers_count: number
 }
 
 interface SavedItem {
-  id: string
-  target_id: string
-  target_type: string
-  created_at: string
+  id: string; target_id: string; target_type: string; created_at: string
   posts?: { id: string; title: string | null; content: string; post_type: string } | null
 }
-
-const menuItems = [
-  { icon: <Edit3 className="w-5 h-5" />, label: 'Edit Profile', href: '/profile/edit' },
-  { icon: <Shield className="w-5 h-5" />, label: 'Expert Verification', href: '#' },
-  { icon: <BarChart3 className="w-5 h-5" />, label: 'Analytics', href: '#' },
-  { icon: <Award className="w-5 h-5" />, label: 'Badges', href: '#' },
-  { icon: <Users className="w-5 h-5" />, label: 'Followers', href: '#' },
-  { icon: <Settings className="w-5 h-5" />, label: 'Settings', href: '/settings' },
-]
 
 export default function ProfilePage() {
   const { user, profile, loading: userLoading, refreshProfile } = useUser()
@@ -55,23 +35,20 @@ export default function ProfilePage() {
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([])
   const [savedItems, setSavedItems] = useState<SavedItem[]>([])
   const [loadingData, setLoadingData] = useState(true)
-  const [avatarUploading, setAvatarUploading] = useState(false)
+  const [postCount, setPostCount] = useState(0)
 
-  useEffect(() => {
+  const fetchAllData = useCallback(async () => {
     if (!profile) return
-    fetchAllData()
-  }, [profile])
-
-  const fetchAllData = async () => {
     setLoadingData(true)
     try {
-      const [answersRes, questionsRes, tokensRes, badgesRes, postsRes, savesRes] = await Promise.all([
+      const [answersRes, questionsRes, tokensRes, badgesRes, postsRes, savesRes, countRes] = await Promise.all([
         supabase.from('answers').select('id').eq('user_id', profile.id),
         supabase.from('posts').select('id').eq('user_id', profile.id).eq('post_type', 'inquiry'),
         supabase.from('tokens').select('amount').eq('user_id', profile.id),
         supabase.from('user_badges').select('badge_id, awarded_at, badges:badge_id(id, name, description, icon)').eq('user_id', profile.id),
         supabase.from('posts').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(5),
         supabase.from('saves').select('id, target_id, target_type, created_at, posts:target_id!left(id, title, content, post_type)').eq('user_id', profile.id).eq('target_type', 'post').order('created_at', { ascending: false }).limit(5),
+        supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profile.id),
       ])
 
       setStats({
@@ -80,6 +57,7 @@ export default function ProfilePage() {
         tokens: tokensRes.data?.reduce((sum: number, t: any) => sum + t.amount, 0) || 0,
         heshima: profile.heshima_rating || 0,
       })
+      setPostCount(countRes.count || 0)
 
       if (badgesRes.data) {
         setBadges(badgesRes.data.map((b: any) => ({
@@ -90,7 +68,6 @@ export default function ProfilePage() {
           awarded_at: b.awarded_at,
         })))
       }
-
       setRecentPosts((postsRes.data as RecentPost[]) || [])
       setSavedItems((savesRes.data as SavedItem[]) || [])
     } catch (err) {
@@ -98,26 +75,12 @@ export default function ProfilePage() {
     } finally {
       setLoadingData(false)
     }
-  }
+  }, [profile, supabase])
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !profile) return
-    if (!file.type.startsWith('image/')) { toast('Please select an image'); return }
-    if (file.size > 5 * 1024 * 1024) { toast('Image must be under 5MB'); return }
-    setAvatarUploading(true)
-    try {
-      const ext = file.name.split('.').pop()
-      const path = `avatars/${profile.id}-${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from('public-media').upload(path, file, { upsert: true })
-      if (upErr) throw upErr
-      const { data: { publicUrl } } = supabase.storage.from('public-media').getPublicUrl(path)
-      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', profile.id)
-      await refreshProfile()
-      toast('Profile photo updated!')
-    } catch { toast('Failed to upload') }
-    finally { setAvatarUploading(false); e.target.value = '' }
-  }
+  useEffect(() => {
+    if (!profile) return
+    fetchAllData()
+  }, [profile, fetchAllData])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -141,57 +104,14 @@ export default function ProfilePage() {
     )
   }
 
-  const initials = profile.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'KK'
-
   return (
-    <>
-      <section className="page-head">
-        <h1 className="page-title">Profile</h1>
-        <p className="text-muted text-sm">Your Kikwetu identity</p>
-      </section>
-
+    <div className="animate-fade-in-up">
       {/* Profile Header */}
-      <section className="card section mb-6">
-        <div className="flex items-start gap-4">
-          <div className="relative group flex-shrink-0">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green to-gold flex items-center justify-center text-2xl font-bold text-night overflow-hidden">
-              {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                initials
-              )}
-            </div>
-            <label className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
-              {avatarUploading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Edit3 className="w-5 h-5 text-white" />
-              )}
-              <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" disabled={avatarUploading} />
-            </label>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold truncate">{profile.full_name}</h2>
-              {profile.is_verified_expert && (
-                <Shield className="w-5 h-5 text-green flex-shrink-0" />
-              )}
-            </div>
-            <p className="text-sm text-muted">@{profile.username}</p>
-            {profile.county_hub && (
-              <p className="text-xs text-muted mt-1 flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5" /> {profile.county_hub}
-              </p>
-            )}
-            {profile.bio && (
-              <p className="text-sm text-muted mt-2 line-clamp-2">{profile.bio}</p>
-            )}
-          </div>
-          <Link href="/profile/edit" className="btn btn-secondary btn-sm flex-shrink-0">
-            <Edit3 className="w-4 h-4" /> Edit
-          </Link>
-        </div>
-      </section>
+      <ProfileHeader
+        profile={profile}
+        isOwn={true}
+        postCount={postCount}
+      />
 
       {/* Heshima Points */}
       <section className="card section mb-6">
@@ -225,31 +145,11 @@ export default function ProfilePage() {
             {profile.is_expert && (
               <div className="flex items-center gap-1.5 mt-1">
                 <Shield className="w-4 h-4 text-green" />
-                <span className="text-xs font-medium text-green">Verified Expert {profile.expert_since ? `since ${new Date(profile.expert_since).toLocaleDateString()}` : ''}</span>
+                <span className="text-xs font-medium text-green">
+                  Verified Expert {profile.expert_since ? `since ${new Date(profile.expert_since).toLocaleDateString()}` : ''}
+                </span>
               </div>
             )}
-          </div>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="card section mb-6">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="text-center">
-            <div className="text-lg font-bold text-green">{stats.answers}</div>
-            <div className="text-xs text-muted">Answers</div>
-          </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-gold">{stats.tokens}</div>
-            <div className="text-xs text-muted">Tokens</div>
-          </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-blue">{stats.questions}</div>
-            <div className="text-xs text-muted">Questions</div>
-          </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-green">{stats.heshima}</div>
-            <div className="text-xs text-muted">Heshima</div>
           </div>
         </div>
       </section>
@@ -288,7 +188,6 @@ export default function ProfilePage() {
           ))}
         </div>
 
-        {/* Tab Content */}
         {loadingData ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin w-6 h-6 border-2 border-green border-t-transparent rounded-full" />
@@ -297,34 +196,32 @@ export default function ProfilePage() {
           <>
             {activeTab === 'overview' && (
               <div className="space-y-4">
-                {/* Recent Posts */}
                 <div>
                   <h4 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Recent Posts</h4>
                   {recentPosts.length === 0 ? (
                     <p className="text-sm text-muted">No posts yet.</p>
                   ) : (
                     <div className="space-y-2">
-                      {recentPosts.map(post => {
-                        const typeIcon = post.post_type === 'baraza' ? '💬' : post.post_type === 'inquiry' ? '❓' : '📄'
-                        return (
-                          <Link key={post.id} href={`/posts/${post.id}`} className="flex items-start gap-3 p-3 rounded-lg hover:bg-night2 transition-colors">
-                            <span className="text-lg mt-0.5">{typeIcon}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{post.title || post.content.slice(0, 60)}</p>
-                              <div className="flex items-center gap-3 text-xs text-muted mt-1">
-                                <span className="flex items-center gap-1"><ThumbsUp className="w-3 h-3" />{post.upvotes_count}</span>
-                                <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" />{post.answers_count}</span>
-                                <span>{new Date(post.created_at).toLocaleDateString()}</span>
-                              </div>
+                      {recentPosts.map(post => (
+                        <Link key={post.id} href={`/posts/${post.id}`}
+                          className="flex items-start gap-3 p-3 rounded-lg hover:bg-night2 transition-colors">
+                          <span className="text-lg mt-0.5">
+                            {post.post_type === 'baraza' ? '💬' : post.post_type === 'inquiry' ? '❓' : '📄'}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{post.title || post.content.slice(0, 60)}</p>
+                            <div className="flex items-center gap-3 text-xs text-muted mt-1">
+                              <span className="flex items-center gap-1"><ThumbsUp className="w-3 h-3" />{post.upvotes_count}</span>
+                              <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" />{post.answers_count}</span>
+                              <span>{new Date(post.created_at).toLocaleDateString()}</span>
                             </div>
-                          </Link>
-                        )
-                      })}
+                          </div>
+                        </Link>
+                      ))}
                     </div>
                   )}
                 </div>
 
-                {/* Saved Content */}
                 <div>
                   <h4 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Saved Content</h4>
                   {savedItems.length === 0 ? (
@@ -332,11 +229,8 @@ export default function ProfilePage() {
                   ) : (
                     <div className="space-y-2">
                       {savedItems.map(item => (
-                        <Link
-                          key={item.id}
-                          href={`/posts/${item.target_id}`}
-                          className="flex items-start gap-3 p-3 rounded-lg hover:bg-night2 transition-colors"
-                        >
+                        <Link key={item.id} href={`/posts/${item.target_id}`}
+                          className="flex items-start gap-3 p-3 rounded-lg hover:bg-night2 transition-colors">
                           <Bookmark className="w-4 h-4 text-gold mt-0.5 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">
@@ -361,10 +255,13 @@ export default function ProfilePage() {
                 ) : (
                   <div className="space-y-2">
                     {recentPosts.map(post => (
-                      <Link key={post.id} href={`/posts/${post.id}`} className="block p-3 rounded-lg hover:bg-night2 transition-colors">
+                      <Link key={post.id} href={`/posts/${post.id}`}
+                        className="block p-3 rounded-lg hover:bg-night2 transition-colors">
                         <p className="text-sm font-medium">{post.title || post.content.slice(0, 80)}</p>
                         <div className="flex items-center gap-3 text-xs text-muted mt-1">
-                          <span className="capitalize text-[10px] px-2 py-0.5 rounded-full bg-night2 border border-[var(--line)]">{post.post_type}</span>
+                          <span className="capitalize text-[10px] px-2 py-0.5 rounded-full bg-night2 border border-[var(--line)]">
+                            {post.post_type}
+                          </span>
                           <span>{new Date(post.created_at).toLocaleDateString()}</span>
                         </div>
                       </Link>
@@ -407,12 +304,16 @@ export default function ProfilePage() {
       <section className="card section mb-6">
         <h3 className="font-bold text-sm mb-3">Account</h3>
         <div className="space-y-1">
-          {menuItems.map(item => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-night2 transition-colors text-sm"
-            >
+          {[
+            { icon: <Edit3 className="w-5 h-5" />, label: 'Edit Profile', href: '/profile/edit' },
+            { icon: <Shield className="w-5 h-5" />, label: 'Expert Verification', href: '#' },
+            { icon: <BarChart3 className="w-5 h-5" />, label: 'Analytics', href: '#' },
+            { icon: <Award className="w-5 h-5" />, label: 'Badges', href: '#' },
+            { icon: <Users className="w-5 h-5" />, label: 'Followers', href: '#' },
+            { icon: <Settings className="w-5 h-5" />, label: 'Settings', href: '/settings' },
+          ].map(item => (
+            <Link key={item.label} href={item.href}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-night2 transition-colors text-sm">
               <span className="text-muted">{item.icon}</span>
               {item.label}
             </Link>
@@ -422,14 +323,12 @@ export default function ProfilePage() {
 
       {/* Sign Out */}
       <section className="card section">
-        <button
-          onClick={handleSignOut}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-night2 transition-colors text-red text-sm"
-        >
+        <button onClick={handleSignOut}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-night2 transition-colors text-red text-sm">
           <LogOut className="w-5 h-5" />
           Sign out
         </button>
       </section>
-    </>
+    </div>
   )
 }

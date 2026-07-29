@@ -286,7 +286,6 @@ function PostCardComponent({
           >
             <MessageCircle className="w-4 h-4" />
             <span>{post.answers_count || 0}</span>
-            <span style={{ fontSize: 10, marginLeft: 2 }}>{post.post_type === 'inquiry' ? 'Answer' : 'Comment'}</span>
           </Link>
 
           <div className="relative">
