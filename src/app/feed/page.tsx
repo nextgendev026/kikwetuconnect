@@ -270,7 +270,7 @@ function PostCardComponent({
       <div className="flex items-center gap-[4px] pt-[12px] border-t border-[var(--line)]">
         <button
           onClick={() => onVote(post.id, post.user_vote === 1 ? null : 1)}
-          className={`flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold transition-all ${post.user_vote === 1 ? 'bg-green/20 text-green' : 'text-[var(--muted)] hover:bg-deep hover:text-cream'}`}
+          className={`flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold transition-all ${post.user_vote === 1 ? 'bg-green/20 text-green' : 'text-[var(--muted)] hover:bg-deep hover:text-cream'}`}
         >
           <span className={post.user_vote === 1 ? 'text-green' : ''}>▲</span>
           <span>{post.upvotes_count || 0}</span>
@@ -278,7 +278,7 @@ function PostCardComponent({
 
         <Link
           href={`/posts/${post.id}`}
-          className="flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold transition-all"
+          className="flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold transition-all"
           style={{ color: 'var(--muted)' }}
           onMouseEnter={e => { e.currentTarget.style.background = 'var(--raised)'; e.currentTarget.style.color = 'var(--gold)' }}
           onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--muted)' }}
@@ -291,7 +291,7 @@ function PostCardComponent({
         <div className="relative">
           <button
             onClick={() => setShowReactions(!showReactions)}
-            className="flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all"
+            className="flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all"
           >
             <span>😊</span>
             {Object.keys(reactions).length > 0 && <span className="text-[10px]">{Object.values(reactions).reduce((a, b) => a + b, 0)}</span>}
@@ -310,28 +310,28 @@ function PostCardComponent({
 
         <button
           onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`); toast('Link copied to clipboard') }}
-          className="flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all"
+          className="flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all"
         >
           <span>↗</span>
         </button>
 
         <button
           onClick={() => toast('Tafsiri — Kiswahili translation coming soon')}
-          className="flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all"
-        >
-          <span>🌐</span>
-        </button>
+          className="flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all"
+          >
+            <span>🌐</span>
+          </button>
 
         <button
           onClick={() => onSave(post.id)}
-          className={`flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold transition-all ${post.user_saved ? 'bg-gold/20 text-gold' : 'text-[var(--muted)] hover:bg-deep hover:text-cream'}`}
+          className={`flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold transition-all ${post.user_saved ? 'bg-gold/20 text-gold' : 'text-[var(--muted)] hover:bg-deep hover:text-cream'}`}
         >
           <span>{post.user_saved ? '★' : '☆'}</span>
         </button>
 
         <button
           onClick={() => toast('Report submitted. Moderators will review.')}
-          className="flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all ml-auto"
+          className="flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all ml-auto"
         >
           <span>⚑</span>
         </button>
@@ -363,20 +363,11 @@ export default function FeedPage() {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [countyFilter, setCountyFilter] = useState<string | null>(null)
   const [showCountyPicker, setShowCountyPicker] = useState(false)
-  const [showCreateModal, setShowCreateModal] = useState(false)
   const [composerText, setComposerText] = useState('')
 
-  // Create modal state
-  const [createType, setCreateType] = useState('baraza')
-  const [createTitle, setCreateTitle] = useState('')
-  const [createContent, setCreateContent] = useState('')
-  const [createCounty, setCreateCounty] = useState('')
-  const [createTopics, setCreateTopics] = useState<string[]>([])
-  const [createBounty, setCreateBounty] = useState(0)
-  const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState('')
-  const [availableTopics, setAvailableTopics] = useState<{ id: string; name: string }[]>([])
-  const [createStep, setCreateStep] = useState<'type' | 'content'>('type')
+  const openCreateModal = () => {
+    document.dispatchEvent(new CustomEvent('open-create-modal'))
+  }
 
   const [isOnline, setIsOnline] = useState(true)
 
@@ -562,12 +553,6 @@ export default function FeedPage() {
     return () => { supabase.removeChannel(channel) }
   }, [supabase, profile, fetchPosts])
 
-  useEffect(() => {
-    supabase.from('topics').select('id, name').then(({ data }: { data: { id: string; name: string }[] | null }) => {
-      if (data) setAvailableTopics(data)
-    })
-  }, [supabase])
-
   const handleVote = useCallback(async (postId: string, voteType: 1 | -1 | null) => {
     if (!profile) { toast('Sign in to vote'); return }
     const previousPosts = [...posts]
@@ -621,44 +606,6 @@ export default function FeedPage() {
     // Reactions stored locally; could sync to DB later
   }, [])
 
-  const handleCreatePost = async () => {
-    setCreateError('')
-    if (!createContent.trim()) { setCreateError('Write something'); return }
-    if (createContent.trim().length < 5) { setCreateError('At least 5 characters'); return }
-    if (createType === 'inquiry' && !createTitle.trim()) { setCreateError('Add a title'); return }
-    setCreating(true)
-    try {
-      const topicIds = availableTopics.filter(t => createTopics.includes(t.name)).map(t => t.id)
-      const res = await fetch('/api/posts/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          postType: createType,
-          title: createTitle || null,
-          content: createContent,
-          countyTag: createCounty || null,
-          bountyTokens: createType === 'inquiry' ? createBounty : 0,
-          topics: topicIds,
-        }),
-      })
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed to post') }
-      toast('Posted to Baraza!')
-      setShowCreateModal(false)
-      setCreateContent('')
-      setCreateTitle('')
-      setCreateCounty('')
-      setCreateTopics([])
-      setCreateBounty(0)
-      setCreateStep('type')
-      setComposerText('')
-      fetchPosts()
-    } catch (err: any) {
-      setCreateError(err.message)
-    } finally {
-      setCreating(false)
-    }
-  }
-
   if (userLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -684,7 +631,7 @@ export default function FeedPage() {
           <p className="text-[var(--muted)] text-[11px] mt-[2px]">The people's square</p>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={openCreateModal}
           className="bg-gold text-night text-[12px] font-bold px-[18px] py-[10px] rounded-full flex items-center gap-[6px] transition-opacity hover:opacity-90"
         >
           <span className="text-[16px] leading-none">+</span>
@@ -711,7 +658,7 @@ export default function FeedPage() {
 
       {/* Composer */}
       <div
-        onClick={() => setShowCreateModal(true)}
+        onClick={openCreateModal}
         className="bg-night2 border border-[var(--line)] rounded-[16px] p-[14px] mb-[12px] cursor-pointer hover:bg-deep transition-colors"
       >
         <div className="flex items-center gap-3">
@@ -737,7 +684,7 @@ export default function FeedPage() {
           ].map(action => (
             <button
               key={action.label}
-              onClick={(e) => { e.stopPropagation(); setShowCreateModal(true); setCreateType(action.type) }}
+              onClick={(e) => { e.stopPropagation(); openCreateModal() }}
               className="flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-[var(--raised)] hover:text-cream transition-all"
             >
               <span>{action.icon}</span>
@@ -829,164 +776,7 @@ export default function FeedPage() {
         />
       ))}
 
-      {/* Create Modal */}
-      {showCreateModal && (
-        <>
-          <div className="fixed inset-0 bg-black/60 z-50 md:flex md:items-center md:justify-center" onClick={() => setShowCreateModal(false)}>
-            <div
-              className="fixed bottom-0 left-0 right-0 md:relative md:max-w-[520px] md:w-full bg-night2 border-t md:border border-[var(--line)] rounded-t-[20px] md:rounded-[16px] max-h-[85vh] overflow-y-auto animate-sheet z-50"
-              onClick={e => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between p-[16px] border-b border-[var(--line)] sticky top-0 bg-night2 z-10">
-                <button onClick={() => { if (createStep === 'content') { setCreateStep('type'); setCreateError('') } else setShowCreateModal(false) }} className="text-[var(--muted)] text-[13px] font-semibold hover:text-cream transition-colors">
-                  {createStep === 'content' ? '← Back' : 'Cancel'}
-                </button>
-                <h2 className="text-cream font-bold text-[15px]">Create in Baraza</h2>
-                {createStep === 'content' ? (
-                  <button
-                    onClick={handleCreatePost}
-                    disabled={creating || !createContent.trim()}
-                    className="bg-gold text-night text-[12px] font-bold px-[16px] py-[7px] rounded-full transition-opacity hover:opacity-90 disabled:opacity-40"
-                  >
-                    {creating ? 'Posting...' : 'Publish'}
-                  </button>
-                ) : (
-                  <div className="w-[60px]" />
-                )}
-              </div>
 
-              {createError && (
-                <div className="mx-[16px] mt-[12px] p-[10px] rounded-[10px] bg-red/10 border border-red/30 text-red text-[12px] font-medium">
-                  {createError}
-                </div>
-              )}
-
-              {/* Step 1: Type selection */}
-              {createStep === 'type' && (
-                <div className="p-[16px]">
-                  <p className="text-[var(--muted)] text-[12px] mb-[14px]">What kind of post do you want to create?</p>
-                  <div className="grid grid-cols-2 gap-[8px]">
-                    {[
-                      { id: 'baraza', label: 'Post', icon: '💬', desc: 'Share a thought or update' },
-                      { id: 'inquiry', label: 'Question', icon: '❓', desc: 'Ask the community' },
-                      { id: 'poll', label: 'Poll', icon: '📊', desc: 'Gather opinions' },
-                      { id: 'alert', label: 'Mtaa listing', icon: '📍', desc: 'Share local info' },
-                    ].map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => { setCreateType(t.id); setCreateStep('content') }}
-                        className="flex flex-col items-start gap-[6px] p-[14px] rounded-[12px] border border-[var(--line)] hover:bg-deep hover:border-gold/30 transition-all text-left"
-                      >
-                        <span className="text-[22px]">{t.icon}</span>
-                        <span className="text-cream font-bold text-[13px]">{t.label}</span>
-                        <span className="text-[var(--muted)] text-[10px]">{t.desc}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Step 2: Content creation */}
-              {createStep === 'content' && (
-                <div className="p-[16px]">
-                  {/* Title (for inquiries/articles) */}
-                  {(createType === 'inquiry') && (
-                    <input
-                      value={createTitle}
-                      onChange={e => setCreateTitle(e.target.value)}
-                      placeholder="What's your question?"
-                      className="w-full bg-transparent text-cream text-[15px] font-bold outline-none placeholder:text-[var(--muted)] mb-[12px]"
-                    />
-                  )}
-
-                  {/* Content */}
-                  <textarea
-                    value={createContent}
-                    onChange={e => setCreateContent(e.target.value)}
-                    placeholder={
-                      createType === 'inquiry'
-                        ? 'Provide more details about your question...'
-                        : createType === 'poll'
-                        ? 'Ask a question for the poll...'
-                        : createType === 'alert'
-                        ? 'Share a local update...'
-                        : 'What would you like to share?'
-                    }
-                    rows={5}
-                    className="w-full bg-transparent text-cream text-[13px] outline-none resize-none placeholder:text-[var(--muted)] leading-[1.6] mb-[16px]"
-                  />
-
-                  {/* Topics */}
-                  {availableTopics.length > 0 && (
-                    <div className="mb-[14px]">
-                      <label className="text-[var(--muted)] text-[11px] font-semibold mb-[6px] block">Topics</label>
-                      <div className="flex flex-wrap gap-[4px]">
-                        {availableTopics.map(t => (
-                          <button
-                            key={t.id}
-                            onClick={() => setCreateTopics(prev => prev.includes(t.name) ? prev.filter(x => x !== t.name) : [...prev, t.name])}
-                            className={`px-[10px] py-[4px] rounded-full text-[11px] font-medium transition-all ${
-                              createTopics.includes(t.name) ? 'bg-gold text-night' : 'bg-deep text-[var(--muted)] hover:text-cream'
-                            }`}
-                          >
-                            {t.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* County */}
-                  <div className="mb-[14px]">
-                    <label className="text-[var(--muted)] text-[11px] font-semibold mb-[6px] block">Location (optional)</label>
-                    <select
-                      value={createCounty}
-                      onChange={e => setCreateCounty(e.target.value)}
-                      className="w-full bg-deep text-cream text-[12px] px-[10px] py-[8px] rounded-[10px] border border-[var(--line)] outline-none focus:border-gold/50 transition-colors appearance-none"
-                    >
-                      <option value="">Select a county</option>
-                      {COUNTIES.map(c => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Bounty for inquiries */}
-                  {createType === 'inquiry' && (
-                    <div className="mb-[14px]">
-                      <label className="text-[var(--muted)] text-[11px] font-semibold mb-[6px] block">Bounty (optional)</label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min="0"
-                          max="500"
-                          value={createBounty || ''}
-                          onChange={e => setCreateBounty(Number(e.target.value) || 0)}
-                          placeholder="0"
-                          className="w-[80px] bg-deep text-cream text-[13px] px-[10px] py-[7px] rounded-[10px] border border-[var(--line)] outline-none focus:border-gold/50 transition-colors"
-                        />
-                        <span className="text-[var(--muted)] text-[11px]">tokens for the best answer</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Post type indicator */}
-                  <div className="flex items-center gap-2 pt-[12px] border-t border-[var(--line)]">
-                    <span className="text-[10px] font-semibold text-[var(--muted)]">
-                      Posting as{' '}
-                      <span className="text-cream">{profile?.full_name || profile?.username}</span>
-                    </span>
-                    <span className="text-[10px] px-[6px] py-[2px] rounded-full bg-deep text-[var(--muted)]">
-                      {createType === 'baraza' ? 'Baraza' : createType === 'inquiry' ? 'Question' : createType === 'poll' ? 'Poll' : 'Alert'}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
 
       {/* Load more indicator */}
       {!loading && posts.length > 0 && (

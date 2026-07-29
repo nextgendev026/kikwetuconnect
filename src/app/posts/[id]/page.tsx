@@ -61,6 +61,8 @@ export default function PostDetailPage() {
     }
   }, [postId, profile])
 
+
+
   const fetchPost = async () => {
     try {
       const { data, error } = await supabase
@@ -106,21 +108,24 @@ export default function PostDetailPage() {
         .order('upvotes_count', { ascending: false })
 
       if (error) throw error
-      setAnswers((data || []) as Answer[])
+      const list = (data || []) as Answer[]
+      setAnswers(list)
+      if (profile) fetchUserVotes(list.map(a => a.id))
     } catch (err) {
       console.error('Error fetching answers:', err)
     }
   }
 
-  const fetchUserVotes = async () => {
+  const fetchUserVotes = async (answerIds?: string[]) => {
     if (!profile) return
+    const ids = answerIds ?? answers.map(a => a.id)
 
     try {
       const { data, error } = await supabase
         .from('votes')
         .select('target_id, vote_type')
         .eq('user_id', profile.id)
-        .in('target_id', [postId, ...answers.map(a => a.id)])
+        .in('target_id', [postId, ...ids])
 
       if (!error && data) {
         const votes: Record<string, number> = {}
@@ -196,7 +201,6 @@ export default function PostDetailPage() {
 
       await fetchPost()
       await fetchAnswers()
-      await fetchUserVotes()
     } catch (err: any) {
       setError(err.message)
     }
