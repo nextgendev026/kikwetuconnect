@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { AlertTriangle, AlertCircle, Droplets, Zap, Users, Shield, Share2, Bookmark, Flag, Plus, MapPin, Clock, Check, X, ChevronDown, ChevronUp, MessageCircle, Home, Bell, Eye, EyeOff, ThumbsUp, UserPlus, UserCheck, LogIn, Gavel, Search, RefreshCw } from 'lucide-react'
+import { AlertTriangle, AlertCircle, Droplets, Zap, Users, Shield, Share2, Bookmark, Flag, Plus, MapPin, Clock, Check, X, ChevronDown, ChevronUp, MessageCircle, Home, Bell, Eye, EyeOff, ThumbsUp, UserPlus, UserCheck, LogIn, Gavel, Search, RefreshCw, Languages } from 'lucide-react'
 
 interface Alert {
   id: string; alert_type: 'safety' | 'traffic' | 'utility' | 'patrol' | 'urgent'; title: string; description: string; location: string; severity: 'low' | 'medium' | 'high' | 'critical'; confirmations_count: number; created_at: string; user_id: string
@@ -54,6 +54,8 @@ export default function NyumbaPage() {
   const [formData, setFormData] = useState({ alert_type: 'safety', title: '', description: '', location: '', severity: 'medium' })
   const [submitting, setSubmitting] = useState(false)
   const [rateLimitRemaining, setRateLimitRemaining] = useState<number | null>(null)
+  const [translations, setTranslations] = useState<Record<string, string>>({})
+  const [loadingTrans, setLoadingTrans] = useState<string | null>(null)
 
   // Group membership state
   const [groups, setGroups] = useState<Group[]>([])
@@ -280,6 +282,29 @@ export default function NyumbaPage() {
     } catch { toast('Failed to update') }
   }
 
+  const handleTranslate = async (alertId: string) => {
+    if (!profile) { toast('Sign in to translate'); return }
+    if (translations[alertId]) {
+      setTranslations(prev => { const n = { ...prev }; delete n[alertId]; return n })
+      return
+    }
+    setLoadingTrans(alertId)
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_id: alertId, source_type: 'nyumba_kumi_alerts', language: 'sw' }),
+      })
+      const j = await res.json()
+      if (j.translated_text) {
+        setTranslations(prev => ({ ...prev, [alertId]: j.translated_text }))
+      } else {
+        toast('Translation failed')
+      }
+    } catch { toast('Translation error') }
+    finally { setLoadingTrans(null) }
+  }
+
   const handleHideAlert = async (alertId: string) => {
     if (!profile) return
     try {
@@ -330,7 +355,10 @@ export default function NyumbaPage() {
           {isUrgent && <span className="flex items-center gap-1 text-[9px] font-bold" style={{ color: 'var(--red)' }}><span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--red)' }} /> URGENT</span>}
         </div>
         <h3 className="text-[14px] font-bold mb-1" style={{ color: 'var(--ink)' }}>{alert.title}</h3>
-        <p className="text-[12px] leading-relaxed mb-3" style={{ color: 'var(--muted)' }}>{alert.description}</p>
+        <p className="text-[12px] leading-relaxed mb-3" style={{ color: 'var(--muted)' }}>
+          {translations[alert.id] || alert.description}
+          {translations[alert.id] && <span className="text-[9px] ml-1 opacity-60">(SW)</span>}
+        </p>
         <div className="flex flex-wrap items-center gap-3 text-[10px] mb-3" style={{ color: 'var(--muted)' }}>
           {alert.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {alert.location}</span>}
           <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {formatRelativeTime(alert.created_at)}</span>
@@ -347,6 +375,12 @@ export default function NyumbaPage() {
             style={{ background: 'color-mix(in oklab, var(--green) 20%, transparent)', color: 'var(--green)' }}
             className="flex items-center gap-1 text-[10px] font-semibold px-3 py-1.5 rounded-[8px]">
             <MessageCircle className="w-3 h-3" /> Share
+          </button>
+          <button onClick={() => handleTranslate(alert.id)}
+            style={{ background: translations[alert.id] ? 'color-mix(in oklab, var(--blue) 20%, transparent)' : 'var(--raised)', color: translations[alert.id] ? 'var(--blue)' : 'var(--muted)' }}
+            className="flex items-center gap-1 text-[10px] font-semibold px-3 py-1.5 rounded-[8px] transition-colors">
+            {loadingTrans === alert.id ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Languages className="w-3 h-3" />}
+            {loadingTrans === alert.id ? 'Tafsiri...' : translations[alert.id] ? 'Asili' : 'Tafsiri'}
           </button>
           <button onClick={() => handleSave(alert.id)}
             style={{ background: isSaved ? 'color-mix(in oklab, var(--earth) 20%, transparent)' : 'var(--raised)', color: isSaved ? 'var(--earth)' : 'var(--muted)' }}

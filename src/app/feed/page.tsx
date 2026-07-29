@@ -171,6 +171,8 @@ function PostCardComponent({
   const initials = getInitials(author?.full_name || author?.username)
   const [showReactions, setShowReactions] = useState(false)
   const [reactions, setReactions] = useState<Record<string, number>>({})
+  const [translatedText, setTranslatedText] = useState<string | null>(null)
+  const [loadingTrans, setLoadingTrans] = useState(false)
 
   useEffect(() => {
     const stored = localStorage.getItem(`reactions-${post.id}`)
@@ -183,6 +185,22 @@ function PostCardComponent({
     localStorage.setItem(`reactions-${post.id}`, JSON.stringify(updated))
     onReact(post.id, emoji)
     setShowReactions(false)
+  }
+
+  const handleTranslate = async () => {
+    if (translatedText) { setTranslatedText(null); return }
+    setLoadingTrans(true)
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_id: post.id, source_type: 'posts', language: 'sw' }),
+      })
+      const j = await res.json()
+      if (j.translated_text) setTranslatedText(j.translated_text)
+      else toast('Translation failed')
+    } catch { toast('Translation error') }
+    finally { setLoadingTrans(false) }
   }
 
   return (
@@ -241,9 +259,10 @@ function PostCardComponent({
       {/* Content — truncated to first paragraph in feed */}
       <div className="mb-[12px]">
         <p className="text-cream text-[13px] leading-[1.6] whitespace-pre-wrap break-words">
-          {truncateContent(post.content)}
+          {translatedText || truncateContent(post.content)}
+          {translatedText && <span className="text-[10px] ml-1 opacity-50">(SW)</span>}
         </p>
-        {post.content.length > 200 && (
+        {!translatedText && post.content.length > 200 && (
           <Link href={`/posts/${post.id}`} className="inline-block mt-[6px] text-gold text-[12px] font-bold hover:underline">
             Read full post ↗
           </Link>
@@ -330,11 +349,11 @@ function PostCardComponent({
           </button>
 
           <button
-            onClick={() => toast('Tafsiri — Kiswahili translation coming soon')}
-            className="action-button"
-            aria-label="Translate"
+            onClick={handleTranslate}
+            className={`action-button ${translatedText ? 'active-vote' : ''}`}
+            aria-label={translatedText ? 'Show original' : 'Translate to Swahili'}
           >
-            <Globe className="w-4 h-4" />
+            {loadingTrans ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Globe className="w-4 h-4" />}
           </button>
 
           <button
