@@ -2,35 +2,49 @@
   "name": "KikwetuConnect",
   "short_name": "Kikwetu",
   "description": "Kenya's Community Platform - Connect, Learn, Grow",
-  "start_url": "/",
+  "start_url": "/?utm_source=homescreen",
   "display": "standalone",
   "background_color": "#F5F5F0",
   "theme_color": "#438854",
   "orientation": "portrait-primary",
+  "scope": "/",
+  "id": "/",
   "icons": [
     {
       "src": "/favicon.svg",
-      "sizes": "any",
+      "sizes": "192x192",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
     }
   ],
   "categories": ["social", "community", "education"],
+  "screenshots": [],
   "shortcuts": [
     {
       "name": "Explore",
       "url": "/explore",
-      "description": "Browse communities"
+      "description": "Browse communities and discover content"
     },
     {
       "name": "Messages",
       "url": "/messages",
-      "description": "View messages"
+      "description": "View your messages"
     },
     {
       "name": "Create",
       "url": "/create",
-      "description": "Create a post"
+      "description": "Create a new post"
+    },
+    {
+      "name": "Market",
+      "url": "/market",
+      "description": "Mtaa Exchange marketplace"
     }
   ]
 }

@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
 import { Plus, MapPin, Heart, Eye, Filter, SortAsc, Package, ShoppingBag, Wrench, Palette, Bird, Grid3X3, MessageCircle, Store, Star, X, ChevronDown, CreditCard, Truck, Check, Clock, AlertCircle, Upload, ImageIcon } from 'lucide-react'
+import imageCompress from 'browser-image-compression'
 
 interface Listing {
   id: string; title: string; description: string; price: number; category: string; county: string; status: 'active' | 'sold' | 'expired'; images: string[] | null; views_count: number; seller_rating: number; orders_count: number; created_at: string; seller_id: string
@@ -167,11 +168,14 @@ export default function MarketPage() {
     } catch (err: any) { toast(err.message || 'Failed to create') } finally { setCreating(false) }
   }
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    let file = e.target.files?.[0]
     if (!file) return
     if (file.size > 10 * 1024 * 1024) { toast('Image too large (max 10MB)'); return }
     if (!file.type.startsWith('image/')) { toast('Please select an image'); return }
+    try {
+      file = await imageCompress(file, { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true })
+    } catch { /* use original */ }
     const preview = URL.createObjectURL(file)
     setCreateForm(p => ({ ...p, imageFile: file, imagePreview: preview }))
     e.target.value = ''

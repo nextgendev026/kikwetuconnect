@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSupabase, useUser, toast } from '@/app/providers'
 import { X, PenSquare, HelpCircle, BarChart3, ShoppingBag, Shield, Image, Video, Mic, Trash2, Upload } from 'lucide-react'
+import imageCompress from 'browser-image-compression'
 
 const TYPES = [
   { id: 'post', label: 'Post', icon: PenSquare, color: 'var(--green)' },
@@ -56,13 +57,18 @@ export default function CreateModal() {
     return () => { clearTimeout(timer); document.removeEventListener('keydown', handleKeyDown) }
   }, [open, handleKeyDown])
 
-  const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>, mediaType: string) => {
+  const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>, mediaType: string) => {
     const files = Array.from(e.target.files || [])
-    files.forEach(file => {
-      if (file.size > 10 * 1024 * 1024) { toast(`${file.name} is too large (max 10MB)`); return }
-      const preview = URL.createObjectURL(file)
-      setMediaFiles(prev => [...prev, { file, preview, type: mediaType }])
-    })
+    for (const file of files) {
+      if (file.size > 10 * 1024 * 1024) { toast(`${file.name} is too large (max 10MB)`); continue }
+      try {
+        const processed = mediaType === 'image' && file.type.startsWith('image/')
+          ? await imageCompress(file, { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true })
+          : file
+        const preview = URL.createObjectURL(processed)
+        setMediaFiles(prev => [...prev, { file: processed, preview, type: mediaType }])
+      } catch { toast(`Failed to process ${file.name}`) }
+    }
     e.target.value = ''
   }
 

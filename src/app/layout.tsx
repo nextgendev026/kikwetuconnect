@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Plus_Jakarta_Sans, DM_Sans } from 'next/font/google'
 import './globals.css'
 import { Providers, ShellRouter } from './providers'
+import PwaSetup from '@/components/PwaSetup'
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--jakarta', weight: ['400', '500', '600', '700', '800'], display: 'swap' })
 const dm = DM_Sans({ subsets: ['latin'], variable: '--dm', weight: ['400', '500', '600', '700'], display: 'swap' })
@@ -34,11 +35,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${jakarta.variable} ${dm.variable}`} suppressHydrationWarning>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#438854" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#1a2e1a" media="(prefers-color-scheme: dark)" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Kikwetu" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
+        <link rel="apple-touch-startup-image" href="/favicon.svg" />
       </head>
       <body className="min-h-screen antialiased">
         <Providers>
           <ShellRouter>{children}</ShellRouter>
+          <PwaSetup />
         </Providers>
       </body>
     </html>

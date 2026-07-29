@@ -269,7 +269,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .app { display: block; }
   .sidebar { display: none; }
   .topbar { height: 68px; padding: 0 15px; }
-  .page { padding: 22px 15px 94px; }
+  .page { padding: 22px 15px 100px; }
   .page-head { display: block; }
   .page-head .btn { width: 100%; margin-top: 17px; }
   .topic-grid { grid-template-columns: 1fr 1fr; }
@@ -279,6 +279,24 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .chat { left: 10px; right: 10px; bottom: 84px; width: auto; }
   .modal-wrap { align-items: end; padding: 0; }
   .modal { border-radius: 22px 22px 0 0; }
+
+  /* Mobile-first: single-column cards, larger touch targets */
+  .grid.grid-cols-2 { grid-template-columns: 1fr !important; }
+  [class*="grid-cols-"]:where(:not(.grid-cols-1):not(.topic-grid)) { grid-template-columns: 1fr !important; }
+
+  /* Larger tap areas for action buttons on mobile */
+  .action-button { min-width: 48px; min-height: 48px; padding: 8px 14px; }
+  .action-button span:not(.sr-only) { font-size: 12px; }
+
+  /* Prevent horizontal scroll */
+  .overflow-x-auto { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .overflow-x-auto::-webkit-scrollbar { display: none; }
+}
+
+/* Bottom safe area for modern phones */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .page { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+  .bottom { padding-bottom: env(safe-area-inset-bottom); }
 }
 
 @keyframes float-slow { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-20px) rotate(2deg); } }
