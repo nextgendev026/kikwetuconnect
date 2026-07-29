@@ -84,9 +84,20 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 
 .main { min-width: 0; background: var(--bg); background-image: var(--bg-pattern); background-attachment: fixed; }
 .topbar { height: 75px; padding: 0 30px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: color-mix(in oklab, var(--bg) 94%, transparent); backdrop-filter: blur(12px); z-index: 6; }
-.search { height: 43px; display: flex; align-items: center; gap: 8px; flex: 1; max-width: 500px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0 13px; color: var(--muted); }
+.topbar-brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--ink); flex-shrink: 0; }
+.topbar-brand-text { font: 800 14px var(--jakarta); letter-spacing: -.04em; }
+@media (max-width: 760px) { .topbar-brand-text { display: none; } }
+.search { height: 43px; display: flex; align-items: center; gap: 8px; flex: 1; max-width: 500px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0 13px; color: var(--muted); transition: all .25s var(--ease); }
 .search input { width: 100%; border: 0; outline: 0; background: none; font-size: 12px; color: var(--ink); }
 .search input::placeholder { color: var(--muted); }
+.search-toggle { display: none; background: none; border: 0; cursor: pointer; color: var(--muted); font-size: 18px; padding: 4px; }
+@media (max-width: 760px) {
+  .search { max-width: 42px; padding: 0; border-color: transparent; background: none; cursor: pointer; justify-content: center; }
+  .search.expanded { max-width: 260px; padding: 0 13px; background: var(--surface); border-color: var(--line); }
+  .search input { display: none; }
+  .search.expanded input { display: block; }
+  .search-toggle { display: grid; place-items: center; }
+}
 .top-actions { display: flex; gap: 4px; margin-left: auto; }
 .icon { width: 42px; height: 42px; border-radius: 12px; background: none; color: var(--muted); display: grid; place-items: center; font-size: 18px; text-decoration: none; }
 .icon:hover { background: var(--raised); color: var(--ink); }

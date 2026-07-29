@@ -5,7 +5,7 @@ import { useSupabase, useUser, toast } from '@/app/providers'
 import { useRouter } from 'next/navigation'
 import {
   Edit3, Settings, Shield, Award, BarChart3, Users, MessageCircle, LogOut,
-  Bookmark, Clock, ThumbsUp, MessageSquare, FileText, Star, MapPin
+  Bookmark, Clock, ThumbsUp, MessageSquare, FileText, Star, MapPin, Zap, TrendingUp, Flame
 } from 'lucide-react'
 
 type Tab = 'overview' | 'posts' | 'answers' | 'badges'
@@ -193,7 +193,7 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* Heshima Rating with Circular Gauge */}
+      {/* Heshima Points */}
       <section className="card section mb-6">
         <div className="flex items-center gap-6">
           <div className="relative w-24 h-24 flex-shrink-0">
@@ -201,24 +201,31 @@ export default function ProfilePage() {
               <circle cx="50" cy="50" r="42" fill="none" stroke="var(--line)" strokeWidth="8" />
               <circle
                 cx="50" cy="50" r="42" fill="none" stroke="var(--green)" strokeWidth="8"
-                strokeDasharray={263.89} strokeDashoffset={263.89 - (263.89 * Math.min(profile.heshima_rating, 1000)) / 1000}
+                strokeDasharray={263.89} strokeDashoffset={263.89 - (263.89 * Math.min(profile.heshima_rating ?? 0, 5000)) / 5000}
                 strokeLinecap="round" className="transition-all duration-700"
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-xl font-bold text-green">{profile.heshima_rating}</span>
-              <span className="text-[10px] text-muted">/ 1000</span>
+              <span className="text-xl font-bold text-green">{profile.heshima_rating || 0}</span>
+              <span className="text-[10px] text-muted">/ 5000</span>
             </div>
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-sm">Heshima Rating</h3>
-            <p className="text-xs text-muted mt-1">
-              Top {Math.max(1, 100 - Math.floor(profile.heshima_rating / 10))}% contributor
-            </p>
-            {profile.is_verified_expert && (
+            <h3 className="font-bold text-sm">Heshima Points</h3>
+            <div className="flex items-center gap-3 mt-1">
+              <p className="text-xs text-muted">Balance: <strong className="text-green">{profile.heshima_balance || 0}</strong></p>
+              <p className="text-xs text-muted">Streak: <strong className="text-gold">{profile.streak_days || 0}d</strong></p>
+            </div>
+            {profile.heshima_rating >= 1000 && (
               <div className="flex items-center gap-1.5 mt-2">
+                <Award className="w-4 h-4 text-gold" />
+                <span className="text-xs font-medium text-gold">Community Sage</span>
+              </div>
+            )}
+            {profile.is_expert && (
+              <div className="flex items-center gap-1.5 mt-1">
                 <Shield className="w-4 h-4 text-green" />
-                <span className="text-xs font-medium text-green">Verified Expert</span>
+                <span className="text-xs font-medium text-green">Verified Expert {profile.expert_since ? `since ${new Date(profile.expert_since).toLocaleDateString()}` : ''}</span>
               </div>
             )}
           </div>

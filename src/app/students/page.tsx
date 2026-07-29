@@ -1,315 +1,297 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { BookOpen, MessageCircle, Award, TrendingUp, Zap, Calendar, Clock, Users, Star, ChevronRight, BarChart3, Flame, X, GraduationCap } from 'lucide-react'
+import { BookOpen, MessageCircle, Award, TrendingUp, Zap, Calendar, Clock, Users, Star, ChevronRight, BarChart3, Flame, X, GraduationCap, Play, StopCircle, Timer, HelpCircle, Check, Search, Plus } from 'lucide-react'
 
-interface StudentQuestion {
-  id: string; title: string | null; content: string; user_id: string; answers_count: number; upvotes_count: number; bounty_tokens: number; created_at: string
-  profiles: { id: string; full_name: string; username: string; avatar_url: string | null } | null
-}
+interface HelpRequest { id: string; student_id: string; title: string; description: string; subject: string; budget_heshima: number; status: string; created_at: string; profiles: { id: string; full_name: string; username: string } | null }
+interface Session { id: string; request_id: string; expert_id: string; student_id: string; started_at: string; ended_at: string | null; duration_minutes: number | null; heshima_earned: number; status: string; expert_notes: string; student_rating: number; expert: { id: string; full_name: string; username: string } | null; student: { id: string; full_name: string; username: string } | null }
+interface Subject { id: string; name: string; icon: string }
 
-interface Professional {
-  id: string; user_id: string; title: string; expertise: string[]; county: string; rating: number; rate: number
-  profiles: { id: string; full_name: string; username: string; is_verified_expert: boolean } | null
-}
-
-interface Quiz {
-  id: string; title: string; description: string; category: string; difficulty: string; question_count: number; estimated_time_minutes: number; heshima_reward: number
-}
-
-const style = {
+const SUBJECTS = ['Mathematics', 'English', 'Kiswahili', 'Sciences', 'History', 'Geography', 'Business', 'Computer', 'CRE', 'Agriculture', 'Home Science', 'Art']
+const s = {
   card: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: 20, boxShadow: 'var(--card-shadow)' },
-  statCard: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 16, boxShadow: 'var(--card-shadow)' },
-  miniCard: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 16, boxShadow: 'var(--card-shadow)' },
+  cardSm: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 16 },
   input: { width: '100%', background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 11, padding: '10px 14px', fontSize: 13, color: 'var(--ink)', outline: 'none' },
   btn: { padding: '10px 20px', borderRadius: 11, fontWeight: 700, fontSize: 12, border: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, transition: 'all .2s var(--ease)' },
-  primaryBtn: { background: 'var(--gold)', color: 'var(--night)' },
-  secondaryBtn: { background: 'var(--raised)', color: 'var(--ink)', border: '1px solid var(--line)' },
+  primary: { background: 'var(--gold)', color: 'var(--night)' },
+  secondary: { background: 'var(--raised)', color: 'var(--ink)', border: '1px solid var(--line)' },
+  green: { background: 'var(--green)', color: 'var(--night)' },
 }
 
 export default function StudentsPage() {
   const supabase = useSupabase()
   const { profile, loading: userLoading } = useUser()
-  const [questions, setQuestions] = useState<StudentQuestion[]>([])
-  const [professionals, setProfessionals] = useState<Professional[]>([])
-  const [quizzes, setQuizzes] = useState<Quiz[]>([])
+  const [requests, setRequests] = useState<HelpRequest[]>([])
+  const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
-  const [bookingPro, setBookingPro] = useState<Professional | null>(null)
-  const [bookingTopic, setBookingTopic] = useState('')
-  const [bookingGoal, setBookingGoal] = useState('')
-  const [sendingBooking, setSendingBooking] = useState(false)
+  const [tab, setTab] = useState<'help' | 'sessions'>('help')
+  const [showRequestForm, setShowRequestForm] = useState(false)
+  const [reqForm, setReqForm] = useState({ title: '', description: '', subject: 'Mathematics', budget: 0 })
+  const [submitting, setSubmitting] = useState(false)
+  const [activeSession, setActiveSession] = useState<Session | null>(null)
+  const [sessionStart, setSessionStart] = useState<Date | null>(null)
+  const [elapsed, setElapsed] = useState(0)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const [assigning, setAssigning] = useState<string | null>(null)
 
-  useEffect(() => { if (!userLoading) fetchStudentData() }, [userLoading])
+  useEffect(() => { if (!userLoading) { fetchRequests(); if (profile) fetchSessions() } }, [userLoading])
 
-  const fetchStudentData = async () => {
+  useEffect(() => {
+    if (activeSession && sessionStart) {
+      timerRef.current = setInterval(() => {
+        setElapsed(Math.floor((Date.now() - sessionStart.getTime()) / 1000))
+      }, 1000)
+      return () => { if (timerRef.current) clearInterval(timerRef.current) }
+    }
+  }, [activeSession, sessionStart])
+
+  const fetchRequests = async () => {
     setLoading(true)
     try {
-      const [qRes, pRes, quizRes] = await Promise.all([
-        supabase.from('posts').select(`*, profiles:user_id (id, full_name, username, avatar_url)`).eq('post_type', 'inquiry').order('created_at', { ascending: false }).limit(10),
-        supabase.from('professionals').select(`*, profiles:user_id (id, full_name, username, is_verified_expert)`).eq('status', 'approved').order('rating', { ascending: false }).limit(4),
-        supabase.from('quizzes').select('*').order('created_at', { ascending: false }).limit(4),
-      ])
-      if (qRes.data) setQuestions(qRes.data as unknown as StudentQuestion[])
-      if (pRes.data) setProfessionals(pRes.data as unknown as Professional[])
-      if (quizRes.data) setQuizzes(quizRes.data as Quiz[])
-    } catch (err) { console.error(err) }
-    finally { setLoading(false) }
+      const { data } = await supabase.from('student_help_requests').select(`*, profiles:student_id (id, full_name, username)`).eq('status', 'open').order('created_at', { ascending: false }).limit(20)
+      if (data) setRequests(data as unknown as HelpRequest[])
+    } catch (err) { console.error(err) } finally { setLoading(false) }
   }
 
-  const handleBookSession = async () => {
-    if (!profile) return toast('Sign in to book a session')
-    if (!bookingPro || !bookingTopic.trim()) return toast('Topic is required')
-    setSendingBooking(true)
+  const fetchSessions = async () => {
+    if (!profile) return
+    const { data } = await supabase.from('student_sessions').select(`*, expert:expert_id (id, full_name, username), student:student_id (id, full_name, username)`)
+      .or(`expert_id.eq.${profile.id},student_id.eq.${profile.id}`).order('created_at', { ascending: false }).limit(20)
+    if (data) {
+      setSessions(data as unknown as Session[])
+      const active = data.find((s: any) => s.status === 'active')
+      if (active) { setActiveSession(active as unknown as Session); setSessionStart(new Date(active.started_at)); setElapsed(Math.floor((Date.now() - new Date(active.started_at).getTime()) / 1000)) }
+    }
+  }
+
+  const handleCreateRequest = async () => {
+    if (!profile) { toast('Sign in first'); return }
+    if (!reqForm.title.trim() || !reqForm.description.trim()) { toast('Title and description required'); return }
+    setSubmitting(true)
     try {
-      const { error } = await supabase.from('sessions').insert({ student_id: profile.id, professional_id: bookingPro.user_id, topic: bookingTopic.trim(), goal: bookingGoal.trim() || null, status: 'requested', format: 'video', language: 'English' })
+      const { error } = await supabase.from('student_help_requests').insert({
+        student_id: profile.id, title: reqForm.title.trim(), description: reqForm.description.trim(),
+        subject: reqForm.subject, budget_heshima: reqForm.budget,
+      })
       if (error) throw error
-      toast('Session requested! The professional will respond shortly.')
-      setBookingPro(null); setBookingTopic(''); setBookingGoal('')
-    } catch { toast('Failed to book session') }
-    finally { setSendingBooking(false) }
+      toast('Help request posted!'); setShowRequestForm(false)
+      setReqForm({ title: '', description: '', subject: 'Mathematics', budget: 0 }); fetchRequests()
+    } catch (err: any) { toast(err.message || 'Failed') } finally { setSubmitting(false) }
   }
 
-  const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-  const formatDate = (d: string) => { const date = new Date(d); const now = new Date(); const diff = now.getTime() - date.getTime(); if (diff < 86400000) return 'Today'; if (diff < 172800000) return 'Yesterday'; return date.toLocaleDateString('en-KE', { day: 'numeric', month: 'short' }) }
+  const handleAssign = async (requestId: string) => {
+    if (!profile) { toast('Sign in first'); return }
+    setAssigning(requestId)
+    try {
+      const { error } = await supabase.from('student_help_requests').update({ assigned_to: profile.id, status: 'assigned' }).eq('id', requestId)
+      if (error) throw error
+      const { error: sErr } = await supabase.from('student_sessions').insert({ request_id: requestId, expert_id: profile.id, student_id: requests.find(r => r.id === requestId)?.student_id, status: 'active' })
+      if (sErr) throw sErr
+      toast('Session started! Help the student.'); fetchRequests(); fetchSessions()
+    } catch (err: any) { toast(err.message || 'Failed') } finally { setAssigning(null) }
+  }
 
-  if (userLoading || loading) return <div className="flex items-center justify-center min-h-[80vh]"><div className="animate-spin w-8 h-8 border-2" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent', borderRadius: '50%' }} /></div>
+  const handleEndSession = async () => {
+    if (!activeSession || !sessionStart) return
+    const duration = Math.floor((Date.now() - sessionStart.getTime()) / 60000)
+    try {
+      const { error } = await supabase.from('student_sessions').update({
+        ended_at: new Date().toISOString(), duration_minutes: duration, status: 'completed',
+      }).eq('id', activeSession.id)
+      if (error) throw error
+      toast(`Session completed! ${duration} min — Heshima awarded.`)
+      setActiveSession(null); setSessionStart(null); setElapsed(0)
+      if (timerRef.current) clearInterval(timerRef.current)
+      fetchSessions()
+    } catch (err: any) { toast(err.message || 'Failed') }
+  }
+
+  const formatTime = (secs: number) => { const m = Math.floor(secs / 60); const s = secs % 60; return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}` }
+
+  if (userLoading) return <div className="flex items-center justify-center min-h-[80vh]"><div className="animate-spin w-8 h-8 border-2" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent', borderRadius: '50%' }} /></div>
 
   return (
     <div className="pb-8 animate-fade-in-up">
       {/* Hero */}
-      <section className="rounded-[20px] p-6 mb-8 animate-rise" style={{ background: 'linear-gradient(135deg, var(--raised), var(--surface))', border: '1px solid', borderColor: 'color-mix(in oklab, var(--green) 30%, transparent)' }}>
+      <section className="rounded-[20px] p-6 mb-6" style={{ background: 'linear-gradient(135deg, var(--raised), var(--surface))', border: '1px solid', borderColor: 'color-mix(in oklab, var(--green) 30%, transparent)' }}>
         <div className="flex items-start gap-4">
           <div className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--green), var(--gold))', color: 'var(--night)' }}>
             <GraduationCap className="w-7 h-7" />
           </div>
           <div className="flex-1">
-            <h1 className="text-2xl font-extrabold tracking-tight" style={{ color: 'var(--ink)' }}>Your Learning Loop</h1>
-            <p className="text-sm mt-1 leading-relaxed" style={{ color: 'var(--muted)' }}>Ask questions, earn Heshima, grow your knowledge. Every answer is a step forward.</p>
-            <div className="flex flex-wrap items-center gap-4 mt-4">
-              <Link href="/create" style={{ ...style.btn, ...style.primaryBtn }}>
-                <MessageCircle className="w-4 h-4" /> Ask the Circle
-              </Link>
-              <Link href="/professionals" style={style.secondaryBtn}>
-                <Zap className="w-4 h-4" /> Find a Mentor
-              </Link>
+            <h1 className="text-2xl font-extrabold tracking-tight" style={{ color: 'var(--ink)' }}>Student Learning Loop</h1>
+            <p className="text-sm mt-1 leading-relaxed" style={{ color: 'var(--muted)' }}>Ask for homework help, earn Heshima points helping others, and grow together. Experts get tipped for their time.</p>
+            <div className="flex flex-wrap items-center gap-3 mt-4">
+              {profile && <button onClick={() => setShowRequestForm(true)} style={{ ...s.btn, ...s.primary }}><HelpCircle className="w-4 h-4" /> Ask for Help</button>}
+              <Link href="/quizzes" style={s.secondary}><Award className="w-4 h-4" /> Practice Quizzes</Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-        <div style={style.statCard}>
-          <div className="flex items-center gap-2 mb-2">
-            <BarChart3 className="w-4 h-4" style={{ color: 'var(--green)' }} />
-            <span className="text-xs" style={{ color: 'var(--muted)' }}>Progress</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>68%</div>
-          <div className="w-full rounded-full h-1.5 mt-2 overflow-hidden" style={{ background: 'var(--raised)' }}>
-            <div className="h-full rounded-full" style={{ width: '68%', background: 'linear-gradient(90deg, var(--green), var(--gold))' }} />
-          </div>
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div style={s.cardSm}>
+          <BarChart3 className="w-4 h-4 mb-1" style={{ color: 'var(--green)' }} />
+          <div className="text-xl font-bold" style={{ color: 'var(--ink)' }}>{profile?.heshima_rating || 0}</div>
+          <p className="text-[10px]" style={{ color: 'var(--muted)' }}>Heshima Points</p>
         </div>
-        <div style={style.statCard}>
-          <div className="flex items-center gap-2 mb-2">
-            <Flame className="w-4 h-4" style={{ color: 'var(--gold)' }} />
-            <span className="text-xs" style={{ color: 'var(--muted)' }}>Streak</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: 'var(--gold)' }}>7 days</div>
-          <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>Keep it going!</p>
+        <div style={s.cardSm}>
+          <Flame className="w-4 h-4 mb-1" style={{ color: 'var(--gold)' }} />
+          <div className="text-xl font-bold" style={{ color: 'var(--gold)' }}>{profile?.streak_days || 0}</div>
+          <p className="text-[10px]" style={{ color: 'var(--muted)' }}>Day Streak</p>
         </div>
-        <div style={style.statCard}>
-          <div className="flex items-center gap-2 mb-2">
-            <Award className="w-4 h-4" style={{ color: 'var(--green)' }} />
-            <span className="text-xs" style={{ color: 'var(--muted)' }}>Heshima</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: 'var(--green)' }}>{profile?.heshima_rating || 0}</div>
-          <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>Earned from answers</p>
+        <div style={s.cardSm}>
+          <Award className="w-4 h-4 mb-1" style={{ color: 'var(--green)' }} />
+          <div className="text-xl font-bold" style={{ color: 'var(--green)' }}>{sessions.filter(s => s.status === 'completed').length}</div>
+          <p className="text-[10px]" style={{ color: 'var(--muted)' }}>Sessions Done</p>
         </div>
-        <div style={style.statCard}>
-          <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-4 h-4" style={{ color: 'var(--earth)' }} />
-            <span className="text-xs" style={{ color: 'var(--muted)' }}>Sessions</span>
-          </div>
-          <div className="text-2xl font-bold" style={{ color: 'var(--earth)' }}>0</div>
-          <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>Book a mentor</p>
+        <div style={s.cardSm}>
+          <Clock className="w-4 h-4 mb-1" style={{ color: 'var(--earth)' }} />
+          <div className="text-xl font-bold" style={{ color: 'var(--earth)' }}>{profile?.quizzes_completed || 0}</div>
+          <p className="text-[10px]" style={{ color: 'var(--muted)' }}>Quizzes</p>
         </div>
       </div>
 
-      {/* Open Questions */}
-      <section className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold" style={{ color: 'var(--ink)' }}>Open Questions</h2>
-          <Link href="/create" className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--gold)' }}><MessageCircle className="w-3 h-3" /> Ask a question</Link>
+      {/* Active Session Timer */}
+      {activeSession && (
+        <div style={{ ...s.card, marginBottom: 16, textAlign: 'center', borderColor: 'var(--green)' }}>
+          <p className="text-[10px] font-semibold mb-2" style={{ color: 'var(--green)' }}>Active Session</p>
+          <div className="text-[36px] font-mono font-bold" style={{ color: 'var(--ink)', letterSpacing: 2 }}>{formatTime(elapsed)}</div>
+          <p className="text-[11px] mb-4" style={{ color: 'var(--muted)' }}>Helping a student — you earn 2 Heshima per minute</p>
+          <button onClick={handleEndSession} style={{ ...s.btn, ...s.green, justifyContent: 'center' }}>
+            <StopCircle className="w-4 h-4" /> End Session
+          </button>
         </div>
-        {questions.length === 0 ? (
-          <div style={style.card} className="text-center py-8">
-            <MessageCircle className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--muted)', opacity: 0.3 }} />
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>No open questions yet</p>
-            <Link href="/create" style={{ ...style.btn, ...style.primaryBtn, marginTop: 12 }}>Be the first to ask</Link>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {questions.map(q => {
-              const author = q.profiles
-              return (
-                <Link key={q.id} href={`/posts/${q.id}`} style={style.miniCard} className="card-hover block transition-colors">
-                  <div className="flex items-start gap-3">
-                    {author && (
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--green), var(--gold))', color: 'var(--night)' }}>
-                        {getInitials(author.full_name || author.username)}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-sm" style={{ color: 'var(--ink)' }}>{q.title || q.content.slice(0, 80)}</h3>
-                      <p className="text-xs mt-1 line-clamp-1" style={{ color: 'var(--muted)' }}>{q.content.slice(0, 120)}</p>
-                      <div className="flex items-center gap-4 mt-2.5 text-[10px]" style={{ color: 'var(--muted)' }}>
-                        <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" />{q.answers_count} answers</span>
-                        <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" />{q.upvotes_count} views</span>
-                        {q.bounty_tokens > 0 && <span className="flex items-center gap-1 font-medium" style={{ color: 'var(--gold)' }}>🎯 {q.bounty_tokens} tokens</span>}
-                        <span>{formatDate(q.created_at)}</span>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 flex-shrink-0 mt-1" style={{ color: 'var(--muted)' }} />
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        )}
-      </section>
+      )}
 
-      {/* Recommended Quizzes */}
-      <section className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold" style={{ color: 'var(--ink)' }}>Recommended Quizzes</h2>
-          <Link href="/quizzes" className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--gold)' }}>View all <ChevronRight className="w-3 h-3" /></Link>
-        </div>
-        {quizzes.length === 0 ? (
-          <div style={style.card} className="text-center py-8">
-            <BookOpen className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--muted)', opacity: 0.3 }} />
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>No quizzes yet</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {quizzes.map(q => (
-              <div key={q.id} style={style.miniCard}>
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-[10px] flex items-center justify-center flex-shrink-0" style={{ background: 'color-mix(in oklab, var(--green) 20%, transparent)' }}>
-                    <Award className="w-5 h-5" style={{ color: 'var(--green)' }} />
-                  </div>
+      {/* Tabs */}
+      <div className="flex gap-1 mb-5 p-1 rounded-[12px]" style={{ background: 'var(--raised)' }}>
+        {(['help', 'sessions'] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)} className="flex-1 py-2 px-3 rounded-[10px] text-[11px] font-semibold transition-all"
+            style={tab === t ? { background: 'var(--surface)', color: 'var(--ink)', boxShadow: 'var(--card-shadow)' } : { color: 'var(--muted)' }}>
+            {t === 'help' ? `Open Help (${requests.length})` : `My Sessions (${sessions.length})`}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'help' && (
+        <section>
+          {requests.length === 0 ? (
+            <div style={s.card} className="text-center py-12">
+              <HelpCircle className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--muted)', opacity: 0.3 }} />
+              <p className="text-sm font-medium mb-1" style={{ color: 'var(--ink)' }}>No open requests</p>
+              <p className="text-xs mb-4" style={{ color: 'var(--muted)' }}>Be the first to ask for help</p>
+              {profile && <button onClick={() => setShowRequestForm(true)} style={{ ...s.btn, ...s.primary }}><Plus className="w-4 h-4" /> Ask for Help</button>}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {requests.map(r => (
+                <div key={r.id} style={s.card} className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-sm" style={{ color: 'var(--ink)' }}>{q.title}</h3>
-                    <p className="text-xs mt-0.5 line-clamp-2" style={{ color: 'var(--muted)' }}>{q.description}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: 'color-mix(in oklab, var(--green) 15%, var(--surface))', color: 'var(--green)' }}>{r.subject}</span>
+                      {r.budget_heshima > 0 && <span className="text-[10px] font-medium" style={{ color: 'var(--gold)' }}>🎯 {r.budget_heshima} Heshima</span>}
+                    </div>
+                    <h3 className="text-[13px] font-bold" style={{ color: 'var(--ink)' }}>{r.title}</h3>
+                    <p className="text-[11px] mt-1 line-clamp-2" style={{ color: 'var(--muted)' }}>{r.description}</p>
                     <div className="flex items-center gap-3 mt-2 text-[10px]" style={{ color: 'var(--muted)' }}>
-                      <span>{q.question_count} questions</span>
-                      <span>{q.estimated_time_minutes} min</span>
-                      <span className="font-medium" style={{ color: 'var(--green)' }}>+{q.heshima_reward} Heshima</span>
+                      <span>by {r.profiles?.full_name || r.profiles?.username || 'Student'}</span>
+                      <span>{new Date(r.created_at).toLocaleDateString()}</span>
                     </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Professional Recommendations */}
-      <section className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold" style={{ color: 'var(--ink)' }}>Recommended Professionals</h2>
-          <Link href="/professionals" className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--gold)' }}>View all <ChevronRight className="w-3 h-3" /></Link>
-        </div>
-        {professionals.length === 0 ? (
-          <div style={style.card} className="text-center py-8">
-            <Users className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--muted)', opacity: 0.3 }} />
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>No professionals available</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {professionals.map(pro => {
-              const p = pro.profiles
-              if (!p) return null
-              return (
-                <div key={pro.id} style={style.miniCard}>
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--green), var(--gold))', color: 'var(--night)' }}>
-                      {getInitials(p.full_name || p.username)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <Link href={`/profile/${p.username}`} className="font-bold text-sm truncate" style={{ color: 'var(--ink)' }}>{p.full_name || p.username}</Link>
-                        {p.is_verified_expert && <Zap className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--green)' }} />}
-                      </div>
-                      <p className="text-[11px] mt-0.5" style={{ color: 'var(--gold)' }}>{pro.title}</p>
-                      <div className="flex items-center gap-2 mt-1.5 text-[10px]" style={{ color: 'var(--muted)' }}>
-                        <span>{pro.county}</span>
-                        <span className="flex items-center gap-0.5"><Star className="w-3 h-3" style={{ color: 'var(--gold)' }} />{pro.rating.toFixed(1)}</span>
-                      </div>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {pro.expertise.slice(0, 2).map(e => <span key={e} className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>{e}</span>)}
-                      </div>
-                      <button onClick={() => setBookingPro(pro)} style={{ ...style.btn, ...style.primaryBtn, width: '100%', justifyContent: 'center', marginTop: 8, fontSize: 10, padding: '8px 12px' }}
-                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = 'var(--card-shadow-hover)' }}
-                        onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
-                        <Calendar className="w-3 h-3" /> Book Session
+                    {profile && profile.id !== r.student_id && (
+                      <button onClick={() => handleAssign(r.id)} disabled={assigning === r.id}
+                        style={{ ...s.btn, padding: '6px 14px', fontSize: 10, marginTop: 8, ...s.primary }}>
+                        {assigning === r.id ? '...' : <><Zap className="w-3 h-3" /> Help Student</>}
                       </button>
-                    </div>
+                    )}
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        )}
-      </section>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
-      {/* Session Booking Modal */}
-      {bookingPro && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'color-mix(in oklab, var(--night) 80%, transparent)' }}>
-          <div className="animate-rise" style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(480px, 100%)' }}>
-            <div className="flex items-center justify-between mb-4">
+      {tab === 'sessions' && (
+        <section>
+          {sessions.length === 0 ? (
+            <div style={s.card} className="text-center py-12">
+              <Clock className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--muted)', opacity: 0.3 }} />
+              <p className="text-sm" style={{ color: 'var(--muted)' }}>No sessions yet. Help a student to start one!</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {sessions.map(ses => {
+                const isExpert = ses.expert_id === profile?.id
+                return (
+                  <div key={ses.id} style={s.card}>
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="text-[12px] font-semibold" style={{ color: 'var(--ink)' }}>
+                          {isExpert ? `With ${ses.student?.full_name || ses.student?.username || 'Student'}` : `With ${ses.expert?.full_name || ses.expert?.username || 'Expert'}`}
+                        </p>
+                        <p className="text-[10px]" style={{ color: 'var(--muted)' }}>
+                          {new Date(ses.started_at).toLocaleDateString()} · {ses.duration_minutes ? `${ses.duration_minutes} min` : 'In progress'}
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
+                        style={{ background: ses.status === 'completed' ? 'color-mix(in oklab, var(--green) 20%, var(--surface))' : 'color-mix(in oklab, var(--gold) 20%, var(--surface))', color: ses.status === 'completed' ? 'var(--green)' : 'var(--gold)' }}>
+                        {ses.status}
+                      </span>
+                    </div>
+                    {ses.heshima_earned > 0 && <p className="text-[11px] font-semibold" style={{ color: 'var(--green)' }}>+{ses.heshima_earned} Heshima earned</p>}
+                    {ses.expert_notes && <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>Notes: {ses.expert_notes}</p>}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Create Help Request Modal */}
+      {showRequestForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }} onClick={() => setShowRequestForm(false)}>
+          <div style={{ ...s.card, width: 'min(480px, 100%)' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold text-base" style={{ color: 'var(--ink)' }}>Ask for Help</h3>
+              <button onClick={() => setShowRequestForm(false)} style={{ background: 'none', border: 0, color: 'var(--muted)', cursor: 'pointer' }}><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-3">
               <div>
-                <h2 className="font-bold text-lg" style={{ color: 'var(--ink)' }}>Book a Session</h2>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>with {bookingPro.profiles?.full_name || 'Professional'}</p>
+                <label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>Subject</label>
+                <select value={reqForm.subject} onChange={e => setReqForm(p => ({ ...p, subject: e.target.value }))} style={s.input}>
+                  {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
               </div>
-              <button onClick={() => setBookingPro(null)} className="w-8 h-8 rounded-full grid place-items-center" style={{ background: 'var(--raised)', color: 'var(--muted)', border: 0, cursor: 'pointer' }}>&times;</button>
-            </div>
-            <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>What do you want to learn?</label>
-            <input type="text" placeholder="e.g. M-Pesa API integration" value={bookingTopic} onChange={e => setBookingTopic(e.target.value)} style={style.input} className="!mb-3" />
-            <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Your goal (optional)</label>
-            <textarea placeholder="What do you hope to achieve?" value={bookingGoal} onChange={e => setBookingGoal(e.target.value)} rows={3}
-              style={{ ...style.input, resize: 'none' }} className="!mb-4" />
-            <div className="flex items-center justify-between mb-4 text-xs" style={{ color: 'var(--muted)' }}>
-              <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Flexibly scheduled</span>
-              <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> 45 min session</span>
-              <span className="font-medium" style={{ color: 'var(--gold)' }}>KSh {bookingPro.rate}</span>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setBookingPro(null)} style={{ ...style.btn, ...style.secondaryBtn, flex: 1, justifyContent: 'center' }}>Cancel</button>
-              <button onClick={handleBookSession} disabled={sendingBooking || !bookingTopic.trim()}
-                style={{ ...style.btn, ...style.primaryBtn, flex: 1, justifyContent: 'center', opacity: (sendingBooking || !bookingTopic.trim()) ? 0.5 : 1 }}>
-                {sendingBooking ? 'Sending...' : 'Request Session'}
+              <div><label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>Title</label><input value={reqForm.title} onChange={e => setReqForm(p => ({ ...p, title: e.target.value }))} style={s.input} placeholder="What do you need help with?" /></div>
+              <div><label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>Description</label><textarea value={reqForm.description} onChange={e => setReqForm(p => ({ ...p, description: e.target.value }))} style={{ ...s.input, minHeight: 80, resize: 'vertical' }} placeholder="Explain what you're stuck on..." rows={3} /></div>
+              <div><label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>Heshima Tip Offer (optional)</label><input type="number" value={reqForm.budget || ''} onChange={e => setReqForm(p => ({ ...p, budget: parseInt(e.target.value) || 0 }))} style={s.input} placeholder="0" /></div>
+              <button onClick={handleCreateRequest} disabled={submitting} style={{ ...s.btn, ...s.primary, width: '100%', justifyContent: 'center' }}>
+                {submitting ? 'Posting...' : 'Post Help Request'}
               </button>
+              <p className="text-[9px] text-center" style={{ color: 'var(--muted)' }}>Offering Heshima points attracts experienced helpers faster</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* CTA */}
-      <div className="rounded-[18px] p-5" style={{ background: 'linear-gradient(135deg, var(--raised), var(--surface))', border: '1px solid', borderColor: 'color-mix(in oklab, var(--gold) 30%, transparent)' }}>
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'color-mix(in oklab, var(--gold) 20%, transparent)' }}>
-            <MessageCircle className="w-6 h-6" style={{ color: 'var(--gold)' }} />
-          </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-sm" style={{ color: 'var(--ink)' }}>Stuck on something?</h3>
-            <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>Ask the circle — get answers from verified experts and peers</p>
-            <Link href="/create" style={{ ...style.btn, ...style.primaryBtn, marginTop: 8 }}>
-              Ask the Circle
-            </Link>
+      {/* Empty state CTA */}
+      {requests.length === 0 && (
+        <div className="rounded-[18px] p-5 mt-6" style={{ background: 'linear-gradient(135deg, var(--raised), var(--surface))', border: '1px solid', borderColor: 'color-mix(in oklab, var(--gold) 30%, transparent)' }}>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'color-mix(in oklab, var(--gold) 20%, transparent)' }}>
+              <GraduationCap className="w-6 h-6" style={{ color: 'var(--gold)' }} />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-sm" style={{ color: 'var(--ink)' }}>Knowledge is power — share it</h3>
+              <p className="text-[11px] mt-1" style={{ color: 'var(--muted)' }}>Helping classmates earns you Heshima points and builds your reputation. Experts get tipped for their time.</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

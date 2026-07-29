@@ -62,18 +62,18 @@ export default function QuizzesPage() {
 
   const fetchProgress = async () => {
     if (!user) return
-    const { data: results } = await supabase.from('quiz_results').select('score, total, completed_at').eq('user_id', user.id)
+    const { data: results } = await supabase.from('quiz_attempts').select('score, total_questions, completed_at').eq('user_id', user.id)
     if (results && results.length > 0) {
-      const totalScore = (results as any[]).reduce((s: number, r: any) => s + r.score, 0)
+      const totalScore = (results as any[]).reduce((s: number, r: any) => s + (r.score || 0), 0)
       const completed = results.length
       const today = new Date().toDateString()
-      const recent = (results as any[]).filter(r => new Date(r.completed_at).toDateString() === today).length
+      const recent = (results as any[]).filter(r => r.completed_at && new Date(r.completed_at).toDateString() === today).length
       setProgress({ streak: recent > 0 ? 1 : 0, totalScore, completed })
     }
   }
 
   const fetchLeaderboard = async () => {
-    const { data } = await supabase.from('quiz_results').select('user_id, score').order('score', { ascending: false }).limit(50)
+    const { data } = await supabase.from('quiz_attempts').select('user_id, score').order('score', { ascending: false }).limit(50)
     if (!data || data.length === 0) return
     const grouped: Record<string, { total_score: number; count: number }> = {}
     ;(data as any[]).forEach(r => {
@@ -99,13 +99,12 @@ export default function QuizzesPage() {
     if (!selectedQuiz || !user) return
     const correct = questions.reduce((c, q, i) => c + (selectedAnswers[i] === q.correct_index ? 1 : 0), 0)
     setScore(correct); setQuizComplete(true)
-    await supabase.from('quiz_results').insert({ user_id: user.id, quiz_id: selectedQuiz.id, score: correct, total: questions.length })
-    if (selectedQuiz.heshima_reward > 0) {
-      const { data: curr } = await supabase.from('profiles').select('heshima_rating').eq('id', user.id).maybeSingle()
-      const nr = (curr?.heshima_rating ?? 0) + (correct === questions.length ? selectedQuiz.heshima_reward : Math.round(selectedQuiz.heshima_reward * correct / questions.length))
-      await supabase.from('profiles').update({ heshima_rating: nr }).eq('id', user.id)
-      toast(`+${correct === questions.length ? selectedQuiz.heshima_reward : Math.round(selectedQuiz.heshima_reward * correct / questions.length)} Heshima`)
-    }
+    const { error } = await supabase.from('quiz_attempts').insert({
+      user_id: user.id, quiz_id: selectedQuiz.id, score: correct, total_questions: questions.length,
+      answers: selectedAnswers.map((a, i) => ({ question: questions[i]?.question, selected: a, correct: questions[i]?.correct_index })),
+    })
+    if (error) { console.error('Quiz submission error:', error); toast('Failed to save results') }
+    else { toast(`+${selectedQuiz.heshima_reward || 10} Heshima earned!`) }
     fetchProgress(); fetchLeaderboard()
   }
 

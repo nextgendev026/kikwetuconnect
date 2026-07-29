@@ -71,7 +71,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Main */}
         <main className="main">
           <header className="topbar">
-            <div className="search">⌕ <input placeholder="Search Baraza, spaces, people..." /></div>
+            <Link href="/feed" className="topbar-brand">
+              <span className="mark" style={{ width: 30, height: 30, fontSize: 15, transform: 'rotate(-6deg)' }}>K</span>
+              <span className="topbar-brand-text">KikwetuConnect</span>
+            </Link>
+            <div className="search" id="global-search">
+              <button className="search-toggle" onClick={() => document.getElementById('global-search')?.classList.toggle('expanded')}>⌕</button>
+              <input placeholder="Search Baraza, spaces, people..." />
+            </div>
             <div className="top-actions">
               <Link href="/notifications" className="icon" title="Notifications">♡</Link>
               <button className="icon" onClick={() => setChatOpen(!chatOpen)} title="Messages">◍</button>
