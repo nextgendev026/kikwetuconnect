@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Plus_Jakarta_Sans, DM_Sans } from 'next/font/google'
+import { Analytics } from "@vercel/analytics/next"
 import './globals.css'
 import { Providers, ShellRouter } from './providers'
 import PwaSetup from '@/components/PwaSetup'
@@ -50,6 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ShellRouter>{children}</ShellRouter>
           <PwaSetup />
         </Providers>
+        <Analytics />
       </body>
     </html>
   )
