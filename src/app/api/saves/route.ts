@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
 
     const { target_type, target_id } = await request.json()
     if (!target_type || !target_id) return NextResponse.json({ error: 'Missing target_type or target_id' }, { status: 400 })
-    if (!['post', 'answer'].includes(target_type)) return NextResponse.json({ error: 'Invalid target type' }, { status: 400 })
+    if (!['post', 'answer', 'listing'].includes(target_type)) return NextResponse.json({ error: 'Invalid target type' }, { status: 400 })
 
     const { data, error } = await supabase.rpc('toggle_save', {
       p_target_type: target_type,

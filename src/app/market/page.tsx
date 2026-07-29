@@ -197,7 +197,20 @@ export default function MarketPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to order')
-      toast('Order placed! The seller will contact you.'); setBuyItem(null)
+      toast('Order placed!')
+      // Initiate payment
+      const payRes = await fetch('/api/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: data.order_id, phone: buyForm.phone.trim() }),
+      })
+      const payData = await payRes.json()
+      if (payRes.ok) {
+        toast('Check your phone to complete M-PESA payment')
+      } else {
+        toast('Order created. Pay on delivery or contact seller.')
+      }
+      setBuyItem(null)
       setBuyForm({ quantity: 1, phone: '', address: '', notes: '' }); fetchOrders()
     } catch (err: any) { toast(err.message || 'Failed to order') } finally { setBuying(false) }
   }
