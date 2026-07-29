@@ -198,11 +198,11 @@ export default function MarketPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to order')
       toast('Order placed!')
-      // Initiate payment
+      // Initiate STK push payment
       const payRes = await fetch('/api/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: data.order_id, phone: buyForm.phone.trim() }),
+        body: JSON.stringify({ action: 'stk-push', order_id: data.order_id, phone: buyForm.phone.trim() }),
       })
       const payData = await payRes.json()
       if (payRes.ok) {
