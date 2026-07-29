@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSupabase, useUser, toast } from '@/app/providers'
 import { X, PenSquare, HelpCircle, BarChart3, ShoppingBag, Shield, Image, Video, Mic, Trash2, Upload } from 'lucide-react'
 
@@ -28,6 +28,8 @@ export default function CreateModal() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
   const audioInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const modalRef = useRef<HTMLDivElement>(null)
   const supabase = useSupabase()
   const { user } = useUser()
 
@@ -36,6 +38,23 @@ export default function CreateModal() {
     document.addEventListener('open-create-modal', handler)
     return () => document.removeEventListener('open-create-modal', handler)
   }, [])
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') setOpen(false)
+    if (e.key !== 'Tab' || !modalRef.current) return
+    const focusable = modalRef.current.querySelectorAll<HTMLElement>('button, textarea, select, input, [tabindex]:not([tabindex="-1"])')
+    if (!focusable.length) return
+    const first = focusable[0], last = focusable[focusable.length - 1]
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const timer = setTimeout(() => textareaRef.current?.focus(), 50)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => { clearTimeout(timer); document.removeEventListener('keydown', handleKeyDown) }
+  }, [open, handleKeyDown])
 
   const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>, mediaType: string) => {
     const files = Array.from(e.target.files || [])
@@ -56,10 +75,11 @@ export default function CreateModal() {
     if (!text.trim()) { toast('Add a little context first'); return }
     if (!user) { toast('Please sign in first'); return }
     setUploading(true)
+    const currentMedia = [...mediaFiles]
     try {
       const mediaUrls: string[] = []
-      for (const m of mediaFiles) {
-        const ext = m.file.name.split('.').pop()
+      for (const m of currentMedia) {
+        const ext = (m.file.name.split('.').pop() || 'bin').replace(/[^a-zA-Z0-9]/g, '')
         const path = `posts/${user.id}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
         const { error: upErr } = await supabase.storage.from('public-media').upload(path, m.file, { upsert: true })
         if (upErr) throw upErr
@@ -71,18 +91,18 @@ export default function CreateModal() {
         user_id: user.id, post_type: postType, content: text,
         title: text.split('\n')[0].slice(0, 100),
         media_url: mediaUrls[0] || null,
-        media_type: mediaFiles[0]?.type || null,
+        media_type: currentMedia[0]?.type || null,
       })
       if (error) throw error
       setOpen(false); setText(''); setMediaFiles([])
-      mediaFiles.forEach(m => URL.revokeObjectURL(m.preview))
+      currentMedia.forEach(m => URL.revokeObjectURL(m.preview))
       toast('Published!')
-    } catch { toast('Failed to publish') }
+    } catch (e: any) { toast(e?.message || 'Failed to publish') }
     finally { setUploading(false) }
   }
 
   return (
-    <div style={{
+    <div ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="create-modal-title" tabIndex={-1} style={{
       display: open ? 'flex' : 'none',
       position: 'fixed', inset: 0, zIndex: 50,
       background: 'color-mix(in oklab, var(--night) 70%, transparent)',
@@ -96,7 +116,7 @@ export default function CreateModal() {
       }} onClick={e => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h2 style={{ font: '800 20px var(--jakarta)', letterSpacing: '-.04em', color: 'var(--ink)', margin: 0 }}>
+            <h2 id="create-modal-title" style={{ font: '800 20px var(--jakarta)', letterSpacing: '-.04em', color: 'var(--ink)', margin: 0 }}>
               Share something useful
             </h2>
             <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 4 }}>Choose a format, type your thought, and share it.</p>
@@ -130,9 +150,9 @@ export default function CreateModal() {
           <label style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
             {LABELS[type] || 'What is on your mind?'}
           </label>
-          <textarea value={text} onChange={e => setText(e.target.value)}
+          <textarea ref={textareaRef} value={text} onChange={e => setText(e.target.value)}
             placeholder="Share a useful thought, update, or local insight..."
-            rows={4}
+            rows={4} aria-label="Post content"
             style={{
               width: '100%', minHeight: 100, padding: 12,
               background: 'var(--raised)', border: '1px solid var(--line)',
@@ -185,7 +205,7 @@ export default function CreateModal() {
 
         <div className="mb-4">
           <label style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, display: 'block', marginBottom: 6 }}>Topic</label>
-          <select style={{
+          <select aria-label="Topic" style={{
             width: '100%', padding: '10px 12px', background: 'var(--raised)',
             border: '1px solid var(--line)', borderRadius: 11, fontFamily: 'inherit',
             color: 'var(--ink)', outline: 'none', fontSize: 12,

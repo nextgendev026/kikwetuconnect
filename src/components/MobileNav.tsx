@@ -59,7 +59,7 @@ export default function MobileNav() {
           const Icon = i.icon
           if (i.isPlus) {
             return (
-              <button key={i.href} className="plus"
+              <button key={i.href} className="plus" aria-label="Create new post"
                 onClick={() => document.dispatchEvent(new CustomEvent('open-create-modal'))}
                 style={{
                   height: 46, width: 46, borderRadius: 15,
@@ -75,7 +75,7 @@ export default function MobileNav() {
           if (i.isMenu) {
             const active = menuOpen
             return (
-              <button key={i.href} onClick={() => setMenuOpen(!menuOpen)}
+              <button key={i.href} onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? 'Close menu' : 'Open menu'}
                 style={{
                   background: 'none', border: 0, cursor: 'pointer', display: 'grid',
                   placeItems: 'center', gap: 4, minWidth: 45, fontSize: 9,

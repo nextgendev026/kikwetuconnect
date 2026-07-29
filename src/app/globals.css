@@ -347,3 +347,13 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 
 .card-glow { box-shadow: 0 0 0 1px var(--line), 0 8px 30px color-mix(in oklab, var(--night) 6%, transparent); }
 .card-glow:hover { box-shadow: 0 0 0 1px color-mix(in oklab, var(--gold) 30%, transparent), 0 12px 40px color-mix(in oklab, var(--night) 10%, transparent); }
+
+.animate-rise { animation: rise .3s var(--ease); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  html { scroll-behavior: auto; }
+}
+@media (max-width: 760px) {
+  body, .main, .right-panel { background-attachment: scroll; }
+}

@@ -84,9 +84,7 @@ export default function Sidebar({ initials, profile, theme, toggleTheme }: { ini
               const Icon = i.icon
               const isActive = path === i.href || (i.href !== '/feed' && path.startsWith(i.href))
               return (
-                <Link key={i.href} href={i.href} style={navLinkStyle(isActive)}
-                  onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'color-mix(in oklab, var(--night) 40%, transparent)'; e.currentTarget.style.color = 'var(--ink)'; e.currentTarget.style.transform = 'translateX(2px)' } }}
-                  onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--faint)'; e.currentTarget.style.transform = 'none' } }}>
+                <Link key={i.href} href={i.href} style={navLinkStyle(isActive)}>
                   <Icon className="w-4 h-4" />
                   <span style={{ flex: 1 }}>{i.label}</span>
                 </Link>

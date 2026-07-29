@@ -28,11 +28,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!supabase) return
-    supabase.from('profiles').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count) setUserCount(count) })
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setUserCount(count ?? 0) })
     supabase.from('profiles').select('id, username, full_name').limit(5).then(({ data }: { data: any }) => { if (data) setRecentProfiles(data) })
-    supabase.from('posts').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count) setPostCount(count) })
+    supabase.from('posts').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setPostCount(count ?? 0) })
     supabase.from('topics').select('name').order('follower_count', { ascending: false }).limit(3).then(({ data }: { data: any }) => { if (data) setTrendingTopics(data) })
-    supabase.from('moderation').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count) setModerationCount(count) })
+    supabase.from('moderation').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setModerationCount(count ?? 0) })
   }, [supabase])
 
   useEffect(() => {
@@ -77,12 +77,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
             <div className="search" id="global-search">
               <button className="search-toggle" onClick={() => document.getElementById('global-search')?.classList.toggle('expanded')}>⌕</button>
-              <input placeholder="Search Baraza, spaces, people..." />
+              <input aria-label="Search Baraza, spaces, people..." placeholder="Search Baraza, spaces, people..." />
             </div>
             <div className="top-actions">
-              <Link href="/notifications" className="icon" title="Notifications">♡</Link>
-              <button className="icon" onClick={() => setChatOpen(!chatOpen)} title="Messages">◍</button>
-              <Link href="/profile" className="icon" title="Profile">
+              <Link href="/notifications" className="icon" aria-label="Notifications" title="Notifications">♡</Link>
+              <button className="icon" onClick={() => setChatOpen(!chatOpen)} aria-label={chatOpen ? 'Close chat' : 'Open chat'} title="Messages">◍</button>
+              <Link href="/profile" className="icon" aria-label="Profile" title="Profile">
                 <span className="avatar" style={{ width: 30, height: 30, fontSize: 10 }}>{initials}</span>
               </Link>
             </div>
@@ -143,7 +143,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Chat widget */}
-      <div className={`chat${chatOpen ? ' open' : ''}`}>
+      <div className={`chat${chatOpen ? ' open' : ''}`} role="dialog" aria-label="Support chat" aria-live="polite">
         <div className="chat-head">
           <span className="avatar g" style={{ width: 32, height: 32, fontSize: 10 }}>{initials}</span>
           <div className="chat-head-main">
@@ -164,8 +164,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* Create modal */}
       <CreateModal />
 
-      {/* Toast */}
-      <div className="toast" id="global-toast"></div>
+
     </>
   )
 }
