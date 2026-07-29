@@ -4,8 +4,9 @@ import { useUser, useSupabase, useTheme, toast } from './providers'
 import Sidebar from '@/components/Sidebar'
 import MobileNav from '@/components/MobileNav'
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import CreateModal from '@/components/CreateModal'
+import { Send, MessageSquare } from 'lucide-react'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { profile, loading } = useUser()
@@ -22,6 +23,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [userCount, setUserCount] = useState(0)
   const [moderationCount, setModerationCount] = useState(0)
   const [unreadNotifCount, setUnreadNotifCount] = useState(0)
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0)
+  const [chatConvId, setChatConvId] = useState<string | null>(null)
+  const [chatMessages, setChatMessages] = useState<any[]>([])
+  const chatChannelRef = useRef<any>(null)
+  const chatEndRef = useRef<HTMLDivElement>(null)
+  const [chatSending, setChatSending] = useState(false)
 
   const fetchUnreadCount = useCallback(async () => {
     if (!profile || !supabase) return
@@ -29,6 +36,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       .from('notifications').select('id', { count: 'exact', head: true })
       .eq('user_id', profile.id).eq('is_read', false)
     if (count !== null) setUnreadNotifCount(count)
+    const { data: msgCount } = await supabase.rpc('unread_message_count')
+    if (msgCount !== null) setUnreadMsgCount(msgCount)
   }, [profile, supabase])
 
   useEffect(() => {
@@ -84,10 +93,87 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const noLayout = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email'].includes(path) || path.startsWith('/auth')
   if (noLayout) return <>{children}</>
 
-  const handleChatSend = () => {
-    if (!chatInput.trim()) return
-    toast('Message delivered')
+  // Fetch or create support conversation + fetch messages
+  const openSupportChat = useCallback(async () => {
+    if (!profile || !supabase) return
+    setChatOpen(true)
+    if (chatConvId) {
+      // Re-fetch messages
+      const res = await fetch(`/api/messages?conversation_id=${chatConvId}`)
+      if (res.ok) setChatMessages(await res.json())
+      return
+    }
+    // Find existing support conversation
+    const { data: convs } = await supabase
+      .from('conversation_participants')
+      .select('conversation_id')
+      .eq('user_id', profile.id)
+    if (convs && convs.length > 0) {
+      const cIds = convs.map((c: any) => c.conversation_id)
+      const { data: supportConvs } = await supabase
+        .from('conversations')
+        .select('id')
+        .in('id', cIds)
+        .eq('type', 'support')
+        .limit(1)
+      if (supportConvs && supportConvs.length > 0) {
+        setChatConvId(supportConvs[0].id)
+        const res = await fetch(`/api/messages?conversation_id=${supportConvs[0].id}`)
+        if (res.ok) setChatMessages(await res.json())
+        return
+      }
+    }
+    // Create support conversation
+    const res = await fetch('/api/conversations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'support', title: 'KikwetuConnect Support', member_ids: [] }),
+    })
+    if (res.ok) {
+      const { conversation_id } = await res.json()
+      setChatConvId(conversation_id)
+      setChatMessages([])
+    }
+  }, [profile, supabase, chatConvId])
+
+  // Realtime subscription for open chat
+  useEffect(() => {
+    if (!chatConvId || !supabase) return
+    if (chatChannelRef.current) supabase.removeChannel(chatChannelRef.current)
+    chatChannelRef.current = supabase.channel(`chat-${chatConvId}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'messages',
+        filter: `conversation_id=eq.${chatConvId}`,
+      }, (payload: any) => {
+        setChatMessages(prev => prev.some(m => m.id === payload.new.id) ? prev : [...prev, payload.new])
+      })
+      .subscribe()
+    return () => {
+      if (chatChannelRef.current) supabase.removeChannel(chatChannelRef.current)
+    }
+  }, [chatConvId, supabase])
+
+  // Scroll chat
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chatMessages])
+
+  const handleChatSend = async () => {
+    if (!chatInput.trim() || !chatConvId || chatSending) return
+    setChatSending(true)
+    const content = chatInput.trim()
     setChatInput('')
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversation_id: chatConvId, content }),
+      })
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error) }
+    } catch (e: any) {
+      toast(e.message || 'Failed to send')
+    }
+    setChatSending(false)
   }
 
   return (
@@ -120,7 +206,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   }}>{unreadNotifCount > 99 ? '99+' : unreadNotifCount}</span>
                 )}
               </Link>
-              <button className="icon" onClick={() => setChatOpen(!chatOpen)} aria-label={chatOpen ? 'Close chat' : 'Open chat'} title="Messages">◍</button>
+              <button className="icon" style={{ position: 'relative' }} onClick={() => { if (chatOpen) { setChatOpen(false) } else { openSupportChat() } }} aria-label={chatOpen ? 'Close chat' : 'Open chat'} title="Messages">
+                ◍
+                {unreadMsgCount > 0 && !chatOpen && (
+                  <span style={{
+                    position: 'absolute', top: -2, right: -2,
+                    background: 'var(--red)', color: '#fff',
+                    fontSize: 8, fontWeight: 700, minWidth: 16, height: 16,
+                    borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '0 3px', lineHeight: 1,
+                  }}>{unreadMsgCount > 99 ? '99+' : unreadMsgCount}</span>
+                )}
+              </button>
               <Link href="/profile" className="icon" aria-label="Profile" title="Profile">
                 <span className="avatar" style={{ width: 30, height: 30, fontSize: 10, overflow: 'hidden' }}>
                   {profile.avatar_url ? (
@@ -186,22 +283,39 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </aside>
       </div>
 
-      {/* Chat widget */}
+      {/* Chat widget — support conversation */}
       <div className={`chat${chatOpen ? ' open' : ''}`} role="dialog" aria-label="Support chat" aria-live="polite">
         <div className="chat-head">
-          <span className="avatar g" style={{ width: 32, height: 32, fontSize: 10 }}>{initials}</span>
+          <span className="avatar g" style={{ width: 32, height: 32, fontSize: 10 }}>KC</span>
           <div className="chat-head-main">
-            <b>Support Chat</b>
-            <small>Ask us anything</small>
+            <b>KikwetuConnect</b>
+            <small>Support &amp; updates</small>
           </div>
-          <button className="chat-close" onClick={() => setChatOpen(false)}>×</button>
+          <button className="chat-close" onClick={() => { setChatOpen(false); setChatConvId(null) }}>×</button>
         </div>
-        <div className="chat-list">
-          <div className="chat-msg"><div className="bubble">Welcome to KikwetuConnect! How can we help?</div></div>
+        <div className="chat-list" style={{ overflowY: 'auto', flex: 1 }}>
+          {chatMessages.length === 0 ? (
+            <div className="chat-msg">
+              <div className="bubble">Welcome to KikwetuConnect! How can we help?</div>
+            </div>
+          ) : chatMessages.map((msg: any) => {
+            const isMe = msg.sender_id === profile?.id
+            return (
+              <div key={msg.id} className={`chat-msg ${isMe ? 'me' : ''}`}>
+                <div className="bubble" style={{
+                  background: isMe ? 'var(--gold)' : 'var(--raised)',
+                  color: isMe ? 'var(--night)' : 'var(--ink)',
+                }}>{msg.content}</div>
+              </div>
+            )
+          })}
+          <div ref={chatEndRef} />
         </div>
         <div className="chat-input">
-          <input value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleChatSend()} placeholder="Write a message..." />
-          <button onClick={handleChatSend}>↗</button>
+          <input value={chatInput} onChange={e => setChatInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleChatSend() } }}
+            placeholder="Write a message..." disabled={!chatConvId} />
+          <button onClick={handleChatSend} disabled={!chatConvId || !chatInput.trim() || chatSending}>↗</button>
         </div>
       </div>
 

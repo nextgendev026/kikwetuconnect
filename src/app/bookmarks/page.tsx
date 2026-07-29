@@ -1,24 +1,40 @@
 'use client'
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Bookmark } from 'lucide-react'
 import { useUser, useSupabase } from '@/app/providers'
-
-interface Post {
-  id: string; title: string; content: string; post_type: string; created_at: string
-}
 
 export default function BookmarksPage() {
   const { profile, loading } = useUser()
   const supabase = useSupabase()
-  const [savedPosts, setSavedPosts] = useState<Post[]>([])
+  const [savedPosts, setSavedPosts] = useState<any[]>([])
   const [bookmarksLoading, setBookmarksLoading] = useState(false)
 
   useEffect(() => {
     if (!profile) return
     const fetchBookmarks = async () => {
       setBookmarksLoading(true)
-      const { data: posts } = await supabase.from('posts').select('*').order('created_at', { ascending: false }).limit(10)
-      if (posts) setSavedPosts(posts)
+      const { data: saves } = await supabase
+        .from('saves')
+        .select('target_id, created_at')
+        .eq('user_id', profile.id)
+        .eq('target_type', 'post')
+        .order('created_at', { ascending: false })
+
+      if (saves && saves.length > 0) {
+        const ids = saves.map((s: any) => s.target_id)
+        const { data: posts } = await supabase
+          .from('posts')
+          .select('id, title, content, post_type, created_at')
+          .in('id', ids)
+
+        if (posts) {
+          const ordered = ids.map((id: string) => posts.find((p: any) => p.id === id)).filter((p: any) => p)
+          setSavedPosts(ordered)
+        }
+      } else {
+        setSavedPosts([])
+      }
       setBookmarksLoading(false)
     }
     fetchBookmarks()
@@ -49,8 +65,9 @@ export default function BookmarksPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {savedPosts.map(post => (
-              <div key={post.id} className="p-4 rounded-xl transition-colors cursor-pointer" style={{ border: '1px solid var(--line)' }}>
+            {savedPosts.map((post: any) => (
+              <Link key={post.id} href={`/posts/${post.id}`}
+                className="block p-4 rounded-xl transition-colors" style={{ border: '1px solid var(--line)', textDecoration: 'none' }}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--green)' }}>{post.post_type}</p>
@@ -59,7 +76,7 @@ export default function BookmarksPage() {
                   </div>
                   <Bookmark className="w-4 h-4 flex-shrink-0 mt-1" style={{ color: 'var(--gold)' }} fill="currentColor" />
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

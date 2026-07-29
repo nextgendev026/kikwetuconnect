@@ -2,7 +2,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { Home, Search, User, Plus, Grid3X3, Trophy, Store, Shield, X, Menu as MenuIcon, GraduationCap, Briefcase, Building2 } from 'lucide-react'
+import { Home, Search, User, Plus, Grid3X3, Trophy, Store, Shield, X, Menu as MenuIcon, GraduationCap, Briefcase, Building2, MessageSquare } from 'lucide-react'
 
 const mainItems = [
   { href: '/feed', label: 'Home', icon: Home },
@@ -20,6 +20,7 @@ const menuItems = [
   { href: '/nyumba', label: 'Nyumba Kumi', icon: Shield, desc: 'Neighbourhood safety' },
   { href: '/students', label: 'Students', icon: GraduationCap, desc: 'Learning resources' },
   { href: '/professionals', label: 'Professionals', icon: Briefcase, desc: 'Find experts' },
+  { href: '/messages', label: 'Messages', icon: MessageSquare, desc: 'Chat with people' },
 ]
 
 export default function MobileNav() {
