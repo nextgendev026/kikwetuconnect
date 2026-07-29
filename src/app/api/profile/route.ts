@@ -87,6 +87,16 @@ export async function POST(request: NextRequest) {
       await supabase.rpc('increment_follower_count', { user_id: target_user_id })
       await supabase.rpc('increment_following_count', { user_id: user.id })
 
+      // Create follow notification
+      await supabase.rpc('create_notification', {
+        p_user_id: target_user_id,
+        p_actor_id: user.id,
+        p_type: 'follow',
+        p_target_id: target_user_id,
+        p_target_type: 'profile',
+        p_content: 'started following you',
+      })
+
       return NextResponse.json({ following: true })
     }
 

@@ -58,6 +58,7 @@ export default function UserProfilePage() {
     if (!res.ok) { toast('Follow failed'); return }
     const { following } = await res.json()
     setIsFollowing(following)
+    setProfile((prev: any) => ({ ...prev, follower_count: Math.max(0, (prev?.follower_count || 0) + (following ? 1 : -1)) }))
   }
 
   const handleMessage = async () => {
@@ -68,7 +69,8 @@ export default function UserProfilePage() {
       body: JSON.stringify({ type: 'dm', member_ids: [profile.id] }),
     })
     if (!res.ok) { toast('Failed to open chat'); return }
-    router.push('/messages')
+    const { conversation_id } = await res.json()
+    router.push(`/messages?conversation_id=${conversation_id}`)
   }
 
   useEffect(() => {

@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSupabase, useUser, toast } from '@/app/providers'
 import { MessageSquare, Search, ArrowLeft, Send, Check, CheckCheck, Clock } from 'lucide-react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 interface Conversation {
   id: string
@@ -33,6 +34,7 @@ interface Message {
 export default function MessagesPage() {
   const { user, profile } = useUser()
   const supabase = useSupabase()
+  const searchParams = useSearchParams()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
   const [activeConv, setActiveConv] = useState<string | null>(null)
@@ -50,6 +52,17 @@ export default function MessagesPage() {
   }
 
   useEffect(() => { scrollToBottom() }, [messages])
+
+  // Auto-select conversation from URL param after conversations load
+  useEffect(() => {
+    const convId = searchParams.get('conversation_id')
+    if (convId && conversations.length > 0) {
+      const exists = conversations.some(c => c.id === convId)
+      if (exists) { setActiveConv(convId); return }
+      // Newly created — refetch to include it
+      fetchConversations().then(() => setActiveConv(convId))
+    }
+  }, [searchParams, conversations])
 
   const fetchConversations = useCallback(async () => {
     if (!user) return
