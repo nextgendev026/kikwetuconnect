@@ -1,26 +1,13 @@
 'use client'
 import Link from 'next/link'
 import { MapPin, Users, TrendingUp, ArrowRight, Compass, Clock, Sparkles } from 'lucide-react'
-import { useUser, useSupabase } from '@/app/providers'
+import { useUser } from '@/app/providers'
 import { useEffect, useState, useCallback } from 'react'
 
 interface CountyHub {
   id: string; slug: string; name: string; county: string; description: string | null
-  member_count: number; post_count: number; active_member_count: number; category: string; trend: number; topTopics: string[]
+  member_count: number; post_count: number; active_member_count: number; category: string; trend: number
 }
-
-const DEFAULT_HUBS: CountyHub[] = [
-  { id: '1', slug: 'nairobi', name: 'Nairobi Hub', county: 'Nairobi', description: 'Discover conversations from your region', member_count: 8934, post_count: 2450, active_member_count: 8934, category: 'county_hub', trend: 12, topTopics: ['Tech & Startups', 'Biashara', 'County Politics'] },
-  { id: '2', slug: 'mombasa', name: 'Mombasa Hub', county: 'Mombasa', description: 'Coastal conversations', member_count: 6234, post_count: 1820, active_member_count: 6234, category: 'county_hub', trend: 8, topTopics: ['Tourism', 'Biashara', 'Culture'] },
-  { id: '3', slug: 'kisumu', name: 'Kisumu Hub', county: 'Kisumu', description: 'Lake Victoria region hub', member_count: 4567, post_count: 1456, active_member_count: 4567, category: 'county_hub', trend: 15, topTopics: ['Agriculture', 'Biashara', 'Culture'] },
-  { id: '4', slug: 'eldoret', name: 'Eldoret Hub', county: 'Eldoret', description: 'Heartland agricultural hub', member_count: 3245, post_count: 987, active_member_count: 3245, category: 'county_hub', trend: 6, topTopics: ['Agriculture', 'Sports', 'Tech'] },
-  { id: '5', slug: 'nakuru', name: 'Nakuru Hub', county: 'Nakuru', description: 'Rift Valley conversations', member_count: 2890, post_count: 856, active_member_count: 2890, category: 'county_hub', trend: 9, topTopics: ['Agriculture', 'Tech', 'Biashara'] },
-  { id: '6', slug: 'kakamega', name: 'Kakamega Hub', county: 'Kakamega', description: 'Western Kenya cultural center', member_count: 2876, post_count: 823, active_member_count: 2876, category: 'county_hub', trend: 11, topTopics: ['Agriculture', 'Culture', 'Education'] },
-  { id: '7', slug: 'nyeri', name: 'Nyeri Hub', county: 'Nyeri', description: 'Coffee country heartland', member_count: 2456, post_count: 745, active_member_count: 2456, category: 'county_hub', trend: 7, topTopics: ['Agriculture', 'Biashara', 'Education'] },
-  { id: '8', slug: 'kericho', name: 'Kericho Hub', county: 'Kericho', description: 'Tea capital highlands', member_count: 2123, post_count: 654, active_member_count: 2123, category: 'county_hub', trend: 5, topTopics: ['Agriculture', 'Health', 'Culture'] },
-  { id: '9', slug: 'kisii', name: 'Kisii Hub', county: 'Kisii', description: 'Highlands cultural center', member_count: 2234, post_count: 698, active_member_count: 2234, category: 'county_hub', trend: 4, topTopics: ['Agriculture', 'Tech', 'Culture'] },
-  { id: '10', slug: 'machakos', name: 'Machakos Hub', county: 'Machakos', description: 'Gateway to the east', member_count: 1876, post_count: 567, active_member_count: 1876, category: 'county_hub', trend: 3, topTopics: ['Agriculture', 'Biashara', 'Health'] },
-]
 
 const s = {
   card: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: 20, boxShadow: 'var(--card-shadow)' },
@@ -28,40 +15,55 @@ const s = {
   tagActive: { background: 'var(--green)', color: 'var(--surface)', borderColor: 'var(--green)' },
 }
 
+const Skeleton = ({ style }: { style?: React.CSSProperties }) => (
+  <div style={{ height: 16, borderRadius: 8, background: 'var(--line)', opacity: 0.3, animation: 'pulse 1.5s ease-in-out infinite', ...style }} />
+)
+
 export default function BarazaPage() {
-  const supabase = useSupabase()
   const { profile } = useUser()
-  const [hubs, setHubs] = useState<CountyHub[]>(DEFAULT_HUBS)
+  const [hubs, setHubs] = useState<CountyHub[]>([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [hasMore, setHasMore] = useState(false)
+  const [total, setTotal] = useState(0)
   const [activeFilter, setActiveFilter] = useState<'all' | 'trending' | 'county'>('all')
 
-  const fetchHubs = useCallback(async () => {
+  const fetchHubs = useCallback(async (p: number, append: boolean) => {
     try {
-      const { data } = await supabase.from('barazas').select('*').order('member_count', { ascending: false })
-      if (data) {
-        setHubs((data as any[]).map((h: any) => ({
-          id: h.id, slug: h.slug, name: h.name, county: h.county,
-          description: h.description, member_count: h.member_count ?? 0,
-          post_count: h.post_count ?? 0, active_member_count: h.active_member_count ?? 0,
-          category: h.category ?? 'county_hub', trend: Math.floor(Math.random() * 15) + 1, topTopics: [],
-        })))
+      const params = new URLSearchParams({ page: p.toString(), page_size: '20', sort: 'trend' })
+      if (activeFilter === 'trending') params.set('sort', 'trend')
+      if (activeFilter === 'county') params.set('category', 'county_hub')
+      const res = await fetch(`/api/barazas?${params}`)
+      if (!res.ok) throw new Error('Failed to fetch')
+      const data = await res.json()
+      if (append) {
+        setHubs(prev => [...prev, ...data.items])
+      } else {
+        setHubs(data.items || [])
       }
+      setTotal(data.total || 0)
+      setHasMore(data.has_more || false)
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
-  }, [supabase])
+  }, [activeFilter])
 
-  useEffect(() => { fetchHubs() }, [fetchHubs])
+  useEffect(() => {
+    setLoading(true)
+    setPage(1)
+    fetchHubs(1, false)
+  }, [fetchHubs])
 
-  const filtered = hubs.filter(h => {
-    if (activeFilter === 'trending') return h.trend >= 10
-    if (activeFilter === 'county') return h.category === 'county_hub'
-    return true
-  })
+  const loadMore = () => {
+    const next = page + 1
+    setPage(next)
+    fetchHubs(next, true)
+  }
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin w-8 h-8 border-2 rounded-full" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent' }} /></div>
+  const filtered = hubs
 
   return (
     <>
+      <style>{`@keyframes pulse{0%,100%{opacity:0.3}50%{opacity:0.6}}`}</style>
       <section className="page-head pb-4">
         <div className="flex items-center gap-3 mb-2">
           <Compass className="w-8 h-8" style={{ color: 'var(--green)' }} />
@@ -104,45 +106,81 @@ export default function BarazaPage() {
           <TrendingUp className="w-5 h-5" style={{ color: 'var(--green)' }} /> Trending Hubs
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.sort((a, b) => b.trend - a.trend).slice(0, 6).map(hub => (
-            <Link key={hub.id} href={`/baraza/${hub.slug}`}
-              className="baraza-hub-card"
-              style={{ ...s.card, display: 'block', textDecoration: 'none', transition: 'all 0.3s var(--ease)' }}>
-              <div className="flex items-start justify-between mb-3">
-                <span style={{ padding: '2px 10px', borderRadius: 99, fontSize: 10, fontWeight: 600, background: 'color-mix(in oklab, var(--green) 20%, var(--surface))', color: 'var(--green)' }}>County Hub</span>
-                <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600 }}><TrendingUp className="w-3 h-3" /> +{hub.trend}%</span>
+          {loading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} style={{ ...s.card, display: 'block' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <Skeleton style={{ width: 70 }} />
+                  <Skeleton style={{ width: 50 }} />
+                </div>
+                <Skeleton style={{ width: '70%', marginBottom: 8 }} />
+                <Skeleton style={{ width: '100%', marginBottom: 12, height: 32 }} />
+                <div style={{ display: 'flex', gap: 16, paddingTop: 12, borderTop: '1px solid var(--line)' }}>
+                  <Skeleton style={{ width: 60 }} />
+                  <Skeleton style={{ width: 60 }} />
+                </div>
               </div>
-              <h3 className="font-bold text-lg mb-1" style={{ color: 'var(--ink)' }}>{hub.name}</h3>
-              <p className="text-xs mb-3 line-clamp-2" style={{ color: 'var(--muted)' }}>{hub.description || 'Discover local conversations in your region'}</p>
-              <div className="flex items-center gap-4 text-xs pt-3" style={{ color: 'var(--muted)', borderTop: '1px solid var(--line)' }}>
-                <span className="flex items-center gap-1"><Users className="w-3 h-3" />{hub.member_count.toLocaleString()}</span>
-                <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{hub.post_count.toLocaleString()} posts</span>
-              </div>
-            </Link>
-          ))}
+            ))
+          ) : (
+            filtered.sort((a, b) => b.trend - a.trend).slice(0, 6).map(hub => (
+              <Link key={hub.id} href={`/baraza/${hub.slug}`}
+                className="baraza-hub-card"
+                style={{ ...s.card, display: 'block', textDecoration: 'none', transition: 'all 0.3s var(--ease)' }}>
+                <div className="flex items-start justify-between mb-3">
+                  <span style={{ padding: '2px 10px', borderRadius: 99, fontSize: 10, fontWeight: 600, background: 'color-mix(in oklab, var(--green) 20%, var(--surface))', color: 'var(--green)' }}>County Hub</span>
+                  <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600 }}><TrendingUp className="w-3 h-3" /> +{hub.trend}%</span>
+                </div>
+                <h3 className="font-bold text-lg mb-1" style={{ color: 'var(--ink)' }}>{hub.name}</h3>
+                <p className="text-xs mb-3 line-clamp-2" style={{ color: 'var(--muted)' }}>{hub.description || 'Discover local conversations in your region'}</p>
+                <div className="flex items-center gap-4 text-xs pt-3" style={{ color: 'var(--muted)', borderTop: '1px solid var(--line)' }}>
+                  <span className="flex items-center gap-1"><Users className="w-3 h-3" />{hub.member_count.toLocaleString()}</span>
+                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{hub.post_count.toLocaleString()} posts</span>
+                </div>
+              </Link>
+            ))
+          )}
         </div>
       </section>
 
       <section>
         <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--ink)' }}>
-          <MapPin className="w-5 h-5" style={{ color: 'var(--green)' }} /> All Regional Hubs
+          <MapPin className="w-5 h-5" style={{ color: 'var(--green)' }} /> All Regional Hubs <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--muted)' }}>({total})</span>
         </h2>
         <div className="space-y-2">
-          {filtered.map(hub => (
-            <Link key={hub.id} href={`/baraza/${hub.slug}`}
-              className="baraza-row-card"
-              style={{ ...s.card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none', transition: 'all 0.2s var(--ease)' }}>
-              <div className="flex items-center gap-4 flex-1">
-                <div className="baraza-row-icon w-10 h-10 rounded-full flex items-center justify-center text-lg transition-transform" style={{ background: 'color-mix(in oklab, var(--green) 20%, var(--gold) 20%, var(--surface))', fontSize: 18 }}>📍</div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold" style={{ color: 'var(--ink)' }}>{hub.name}</h3>
-                  <p className="text-xs" style={{ color: 'var(--muted)' }}>{hub.county} · {hub.post_count.toLocaleString()} posts · {hub.member_count.toLocaleString()} active</p>
+          {loading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} style={{ ...s.card, display: 'flex', alignItems: 'center', gap: 16 }}>
+                <Skeleton style={{ width: 40, height: 40, borderRadius: '50%' }} />
+                <div style={{ flex: 1 }}>
+                  <Skeleton style={{ width: '40%', marginBottom: 6 }} />
+                  <Skeleton style={{ width: '60%' }} />
                 </div>
               </div>
-              <ArrowRight className="baraza-row-arrow w-5 h-5 transition-all" style={{ color: 'var(--muted)' }} />
-            </Link>
-          ))}
+            ))
+          ) : (
+            filtered.map(hub => (
+              <Link key={hub.id} href={`/baraza/${hub.slug}`}
+                className="baraza-row-card"
+                style={{ ...s.card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none', transition: 'all 0.2s var(--ease)' }}>
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="baraza-row-icon w-10 h-10 rounded-full flex items-center justify-center text-lg transition-transform" style={{ background: 'color-mix(in oklab, var(--green) 20%, var(--gold) 20%, var(--surface))', fontSize: 18 }}>📍</div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold" style={{ color: 'var(--ink)' }}>{hub.name}</h3>
+                    <p className="text-xs" style={{ color: 'var(--muted)' }}>{hub.county} · {hub.post_count.toLocaleString()} posts · {hub.member_count.toLocaleString()} active</p>
+                  </div>
+                </div>
+                <ArrowRight className="baraza-row-arrow w-5 h-5 transition-all" style={{ color: 'var(--muted)' }} />
+              </Link>
+            ))
+          )}
         </div>
+        {hasMore && (
+          <div style={{ textAlign: 'center', marginTop: 20 }}>
+            <button onClick={loadMore} style={{ height: 42, padding: '0 20px', borderRadius: 10, background: 'var(--raised)', border: '1px solid var(--line)', color: 'var(--ink)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+              Load more hubs
+            </button>
+          </div>
+        )}
       </section>
     </>
   )
