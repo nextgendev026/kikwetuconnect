@@ -2,6 +2,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { useUser, useSupabase } from '@/app/providers'
 import { Home, Search, User, Plus, Grid3X3, Trophy, Store, Shield, X, Menu as MenuIcon, GraduationCap, Briefcase, Building2, MessageSquare } from 'lucide-react'
 
 const mainItems = [
@@ -25,9 +26,12 @@ const menuItems = [
 
 export default function MobileNav() {
   const path = usePathname()
+  const { user } = useUser()
+  const supabase = useSupabase()
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [unreadMsg, setUnreadMsg] = useState(0)
 
   useEffect(() => {
     setMounted(true)
@@ -36,6 +40,19 @@ export default function MobileNav() {
     window.addEventListener('resize', check)
     return () => window.removeEventListener('resize', check)
   }, [])
+
+  useEffect(() => {
+    if (!user || !supabase) return
+    const fetchUnread = async () => {
+      const { data } = await supabase.rpc('unread_message_count')
+      if (data !== null) setUnreadMsg(data)
+    }
+    fetchUnread()
+    const channel = supabase.channel('mobile-msg-count')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => fetchUnread())
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [user, supabase])
 
   if (!mounted || !isMobile) return null
 
@@ -80,11 +97,20 @@ export default function MobileNav() {
               <button key={i.href} onClick={() => setMenuOpen(!menuOpen)} aria-label={menuOpen ? 'Close menu' : 'Open menu'}
                 style={{
                   background: 'none', border: 0, cursor: 'pointer', display: 'grid',
-                  placeItems: 'center', gap: 4, minWidth: 45, fontSize: 9,
+                  placeItems: 'center', gap: 4, minWidth: 45, fontSize: 9, position: 'relative',
                   color: active ? 'var(--gold)' : 'var(--muted)',
                 }}>
                 <Icon className="w-5 h-5" />
                 <span>{i.label}</span>
+                {unreadMsg > 0 && (
+                  <span style={{
+                    position: 'absolute', top: -2, right: 2,
+                    background: 'var(--red)', color: '#fff',
+                    fontSize: 7, fontWeight: 700, minWidth: 14, height: 14,
+                    borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '0 2px', lineHeight: 1,
+                  }}>{unreadMsg > 99 ? '99+' : unreadMsg}</span>
+                )}
               </button>
             )
           }
@@ -130,7 +156,18 @@ export default function MobileNav() {
                   <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}
                     className="flex flex-col items-start gap-1.5 p-3.5 rounded-xl transition-all"
                     style={active ? { background: 'var(--gold)', color: 'var(--night)' } : { background: 'var(--raised)', color: 'var(--ink)' }}>
-                    <Icon className="w-5 h-5" />
+                    <div style={{ position: 'relative' }}>
+                      <Icon className="w-5 h-5" />
+                      {item.href === '/messages' && unreadMsg > 0 && (
+                        <span style={{
+                          position: 'absolute', top: -4, right: -6,
+                          background: 'var(--red)', color: '#fff',
+                          fontSize: 8, fontWeight: 700, minWidth: 16, height: 16,
+                          borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          padding: '0 3px', lineHeight: 1,
+                        }}>{unreadMsg > 99 ? '99+' : unreadMsg}</span>
+                      )}
+                    </div>
                     <span className="font-bold text-xs">{item.label}</span>
                     <span className="text-[9px]" style={{ color: active ? 'var(--night)' : 'var(--muted)' }}>{item.desc}</span>
                   </Link>
