@@ -1,22 +1,12 @@
 'use client'
-
 import Link from 'next/link'
 import { MapPin, Users, TrendingUp, ArrowRight, Compass, Clock, Sparkles } from 'lucide-react'
 import { useUser, useSupabase } from '@/app/providers'
 import { useEffect, useState, useCallback } from 'react'
 
 interface CountyHub {
-  id: string
-  slug: string
-  name: string
-  county: string
-  description: string | null
-  member_count: number
-  post_count: number
-  active_member_count: number
-  category: string
-  trend: number
-  topTopics: string[]
+  id: string; slug: string; name: string; county: string; description: string | null
+  member_count: number; post_count: number; active_member_count: number; category: string; trend: number; topTopics: string[]
 }
 
 const DEFAULT_HUBS: CountyHub[] = [
@@ -32,6 +22,12 @@ const DEFAULT_HUBS: CountyHub[] = [
   { id: '10', slug: 'machakos', name: 'Machakos Hub', county: 'Machakos', description: 'Gateway to the east', member_count: 1876, post_count: 567, active_member_count: 1876, category: 'county_hub', trend: 3, topTopics: ['Agriculture', 'Biashara', 'Health'] },
 ]
 
+const s = {
+  card: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: 20, boxShadow: 'var(--card-shadow)' },
+  tag: { padding: '8px 16px', borderRadius: 99, fontSize: 12, fontWeight: 600, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--muted)', cursor: 'pointer', transition: 'all .2s var(--ease)' },
+  tagActive: { background: 'var(--green)', color: 'var(--surface)', borderColor: 'var(--green)' },
+}
+
 export default function BarazaPage() {
   const supabase = useSupabase()
   const { profile } = useUser()
@@ -43,15 +39,14 @@ export default function BarazaPage() {
     try {
       const { data } = await supabase.from('barazas').select('*').order('member_count', { ascending: false })
       if (data) {
-        const mapped = (data as any[]).map((h: any) => ({
+        setHubs((data as any[]).map((h: any) => ({
           id: h.id, slug: h.slug, name: h.name, county: h.county,
           description: h.description, member_count: h.member_count ?? 0,
           post_count: h.post_count ?? 0, active_member_count: h.active_member_count ?? 0,
           category: h.category ?? 'county_hub', trend: Math.floor(Math.random() * 15) + 1, topTopics: [],
-        }))
-        setHubs(mapped)
+        })))
       }
-    } catch (e) { console.error('Error fetching hubs:', e) }
+    } catch (e) { console.error(e) }
     finally { setLoading(false) }
   }, [supabase])
 
@@ -63,36 +58,40 @@ export default function BarazaPage() {
     return true
   })
 
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin w-8 h-8 border-2 border-green border-t-transparent rounded-full" /></div>
+  if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin w-8 h-8 border-2 rounded-full" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent' }} /></div>
 
   return (
     <>
       <section className="page-head pb-4">
         <div className="flex items-center gap-3 mb-2">
-          <Compass className="w-8 h-8 text-green" />
+          <Compass className="w-8 h-8" style={{ color: 'var(--green)' }} />
           <div>
-            <h1 className="page-title mb-0">Baraza Hubs</h1>
-            <p className="text-muted text-sm">Discover conversations from your region</p>
+            <h1 className="page-title mb-0" style={{ color: 'var(--ink)' }}>Baraza Hubs</h1>
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>Discover conversations from your region</p>
           </div>
         </div>
       </section>
 
       {profile?.county_hub && (
-        <section className="mb-6 card section border-l-4 border-l-green flex items-center justify-between gap-4">
+        <section style={{ ...s.card, borderLeft: '4px solid var(--green)', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div className="flex items-center gap-3">
-            <Sparkles className="w-5 h-5 text-green" />
+            <Sparkles className="w-5 h-5" style={{ color: 'var(--green)' }} />
             <div>
-              <p className="text-xs text-green uppercase tracking-wider font-medium">Your County Hub</p>
-              <p className="text-lg font-bold">{profile.county_hub}</p>
+              <p className="text-xs font-medium uppercase tracking-wider" style={{ color: 'var(--green)' }}>Your County Hub</p>
+              <p className="text-lg font-bold" style={{ color: 'var(--ink)' }}>{profile.county_hub}</p>
             </div>
           </div>
-          <Link href={`/baraza/${profile.county_hub.toLowerCase().replace(/\s+/g, '-')}`} className="btn btn-primary text-sm py-2 px-4">View Hub →</Link>
+          <Link href={`/baraza/${profile.county_hub.toLowerCase().replace(/\s+/g, '-')}`}
+            style={{ padding: '8px 16px', borderRadius: 11, fontWeight: 700, fontSize: 12, background: 'var(--gold)', color: 'var(--night)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+            View Hub →
+          </Link>
         </section>
       )}
 
       <section className="flex gap-2 mb-6 overflow-x-auto pb-2">
         {(['all', 'trending', 'county'] as const).map(f => (
-          <button key={f} onClick={() => setActiveFilter(f)} className={`flex-none px-4 py-2 rounded-full text-xs font-medium transition-all ${activeFilter === f ? 'bg-green text-night' : 'bg-night2 text-muted border border-line hover:text-cream'}`}>
+          <button key={f} onClick={() => setActiveFilter(f)}
+            style={{ ...s.tag, ...(activeFilter === f ? s.tagActive : {}) }}>
             {f === 'all' && 'All Hubs'}
             {f === 'trending' && '🔥 Trending'}
             {f === 'county' && '📍 County Hubs'}
@@ -101,19 +100,22 @@ export default function BarazaPage() {
       </section>
 
       <section className="mb-8">
-        <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-green" /> Trending Hubs
+        <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--ink)' }}>
+          <TrendingUp className="w-5 h-5" style={{ color: 'var(--green)' }} /> Trending Hubs
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.sort((a, b) => b.trend - a.trend).slice(0, 6).map(hub => (
-            <Link key={hub.id} href={`/baraza/${hub.slug}`} className="card section group hover:border-green/50 transition-all duration-300 hover:shadow-lg hover:shadow-green/10 hover:-translate-y-1">
+            <Link key={hub.id} href={`/baraza/${hub.slug}`}
+              style={{ ...s.card, display: 'block', textDecoration: 'none', transition: 'all 0.3s var(--ease)' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = 'var(--card-shadow-hover)'; e.currentTarget.style.borderColor = 'color-mix(in oklab, var(--green) 50%, transparent)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = ''; e.currentTarget.style.borderColor = 'var(--line)' }}>
               <div className="flex items-start justify-between mb-3">
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green/20 text-green">County Hub</span>
-                <span className="text-xs text-green font-medium flex items-center gap-1"><TrendingUp className="w-3 h-3" /> +{hub.trend}%</span>
+                <span style={{ padding: '2px 10px', borderRadius: 99, fontSize: 10, fontWeight: 600, background: 'color-mix(in oklab, var(--green) 20%, var(--surface))', color: 'var(--green)' }}>County Hub</span>
+                <span className="flex items-center gap-1" style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600 }}><TrendingUp className="w-3 h-3" /> +{hub.trend}%</span>
               </div>
-              <h3 className="font-bold text-lg mb-1 group-hover:text-green transition-colors">{hub.name}</h3>
-              <p className="text-xs text-muted mb-3 line-clamp-2">{hub.description || 'Discover local conversations in your region'}</p>
-              <div className="flex items-center gap-4 text-xs text-muted pt-3 border-t border-line">
+              <h3 className="font-bold text-lg mb-1" style={{ color: 'var(--ink)' }}>{hub.name}</h3>
+              <p className="text-xs mb-3 line-clamp-2" style={{ color: 'var(--muted)' }}>{hub.description || 'Discover local conversations in your region'}</p>
+              <div className="flex items-center gap-4 text-xs pt-3" style={{ color: 'var(--muted)', borderTop: '1px solid var(--line)' }}>
                 <span className="flex items-center gap-1"><Users className="w-3 h-3" />{hub.member_count.toLocaleString()}</span>
                 <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{hub.post_count.toLocaleString()} posts</span>
               </div>
@@ -123,20 +125,27 @@ export default function BarazaPage() {
       </section>
 
       <section>
-        <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-green" /> All Regional Hubs
+        <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--ink)' }}>
+          <MapPin className="w-5 h-5" style={{ color: 'var(--green)' }} /> All Regional Hubs
         </h2>
         <div className="space-y-2">
           {filtered.map(hub => (
-            <Link key={hub.id} href={`/baraza/${hub.slug}`} className="card section flex items-center justify-between hover:bg-surface-2 transition-all duration-200 group">
+            <Link key={hub.id} href={`/baraza/${hub.slug}`}
+              style={{ ...s.card, display: 'flex', alignItems: 'center', justifyContent: 'space-between', textDecoration: 'none', transition: 'all 0.2s var(--ease)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--raised)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)' }}>
               <div className="flex items-center gap-4 flex-1">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green/20 to-gold/20 flex items-center justify-center text-lg group-hover:scale-110 transition-transform">📍</div>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg transition-transform" style={{ background: 'color-mix(in oklab, var(--green) 20%, var(--gold) 20%, var(--surface))', fontSize: 18 }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = ''}>📍</div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold group-hover:text-green transition-colors">{hub.name}</h3>
-                  <p className="text-xs text-muted">{hub.county} · {hub.post_count.toLocaleString()} posts · {hub.member_count.toLocaleString()} active</p>
+                  <h3 className="font-bold" style={{ color: 'var(--ink)' }}>{hub.name}</h3>
+                  <p className="text-xs" style={{ color: 'var(--muted)' }}>{hub.county} · {hub.post_count.toLocaleString()} posts · {hub.member_count.toLocaleString()} active</p>
                 </div>
               </div>
-              <ArrowRight className="w-5 h-5 text-muted group-hover:text-green group-hover:translate-x-1 transition-all" />
+              <ArrowRight className="w-5 h-5 transition-all" style={{ color: 'var(--muted)' }}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--green)'; e.currentTarget.style.transform = 'translateX(4px)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--muted)'; e.currentTarget.style.transform = '' }} />
             </Link>
           ))}
         </div>

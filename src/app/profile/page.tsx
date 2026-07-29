@@ -55,6 +55,7 @@ export default function ProfilePage() {
   const [recentPosts, setRecentPosts] = useState<RecentPost[]>([])
   const [savedItems, setSavedItems] = useState<SavedItem[]>([])
   const [loadingData, setLoadingData] = useState(true)
+  const [avatarUploading, setAvatarUploading] = useState(false)
 
   useEffect(() => {
     if (!profile) return
@@ -99,6 +100,25 @@ export default function ProfilePage() {
     }
   }
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !profile) return
+    if (!file.type.startsWith('image/')) { toast('Please select an image'); return }
+    if (file.size > 5 * 1024 * 1024) { toast('Image must be under 5MB'); return }
+    setAvatarUploading(true)
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `avatars/${profile.id}-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('public-media').upload(path, file, { upsert: true })
+      if (upErr) throw upErr
+      const { data: { publicUrl } } = supabase.storage.from('public-media').getPublicUrl(path)
+      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', profile.id)
+      await refreshProfile()
+      toast('Profile photo updated!')
+    } catch { toast('Failed to upload') }
+    finally { setAvatarUploading(false); e.target.value = '' }
+  }
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.push('/login')
@@ -133,8 +153,22 @@ export default function ProfilePage() {
       {/* Profile Header */}
       <section className="card section mb-6">
         <div className="flex items-start gap-4">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green to-gold flex items-center justify-center text-2xl font-bold text-night flex-shrink-0">
-            {initials}
+          <div className="relative group flex-shrink-0">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green to-gold flex items-center justify-center text-2xl font-bold text-night overflow-hidden">
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                initials
+              )}
+            </div>
+            <label className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+              {avatarUploading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Edit3 className="w-5 h-5 text-white" />
+              )}
+              <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" disabled={avatarUploading} />
+            </label>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -164,9 +198,9 @@ export default function ProfilePage() {
         <div className="flex items-center gap-6">
           <div className="relative w-24 h-24 flex-shrink-0">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="42" fill="none" stroke="oklch(29%_.025_151)" strokeWidth="8" />
+              <circle cx="50" cy="50" r="42" fill="none" stroke="var(--line)" strokeWidth="8" />
               <circle
-                cx="50" cy="50" r="42" fill="none" stroke="oklch(55%_.13_151)" strokeWidth="8"
+                cx="50" cy="50" r="42" fill="none" stroke="var(--green)" strokeWidth="8"
                 strokeDasharray={263.89} strokeDashoffset={263.89 - (263.89 * Math.min(profile.heshima_rating, 1000)) / 1000}
                 strokeLinecap="round" className="transition-all duration-700"
               />
@@ -219,7 +253,7 @@ export default function ProfilePage() {
           <h3 className="font-bold text-sm mb-3">Badges</h3>
           <div className="flex flex-wrap gap-3">
             {badges.map(badge => (
-              <div key={badge.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-night2 border border-[oklch(29%_.025_151)]">
+              <div key={badge.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-night2 border border-[var(--line)]">
                 <span className="text-xl">{badge.icon}</span>
                 <div>
                   <p className="text-xs font-medium">{badge.name}</p>
@@ -233,7 +267,7 @@ export default function ProfilePage() {
 
       {/* Tabs */}
       <section className="card section mb-6">
-        <div className="flex border-b border-[oklch(29%_.025_151)] mb-4">
+        <div className="flex border-b border-[var(--line)] mb-4">
           {(['overview', 'posts', 'answers', 'badges'] as Tab[]).map(tab => (
             <button
               key={tab}
@@ -323,7 +357,7 @@ export default function ProfilePage() {
                       <Link key={post.id} href={`/posts/${post.id}`} className="block p-3 rounded-lg hover:bg-night2 transition-colors">
                         <p className="text-sm font-medium">{post.title || post.content.slice(0, 80)}</p>
                         <div className="flex items-center gap-3 text-xs text-muted mt-1">
-                          <span className="capitalize text-[10px] px-2 py-0.5 rounded-full bg-night2 border border-[oklch(29%_.025_151)]">{post.post_type}</span>
+                          <span className="capitalize text-[10px] px-2 py-0.5 rounded-full bg-night2 border border-[var(--line)]">{post.post_type}</span>
                           <span>{new Date(post.created_at).toLocaleDateString()}</span>
                         </div>
                       </Link>
@@ -348,7 +382,7 @@ export default function ProfilePage() {
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {badges.map(badge => (
-                      <div key={badge.id} className="text-center p-4 rounded-lg bg-night2 border border-[oklch(29%_.025_151)]">
+                      <div key={badge.id} className="text-center p-4 rounded-lg bg-night2 border border-[var(--line)]">
                         <span className="text-3xl block mb-2">{badge.icon}</span>
                         <p className="text-xs font-medium">{badge.name}</p>
                         <p className="text-[10px] text-muted mt-1">{badge.description}</p>

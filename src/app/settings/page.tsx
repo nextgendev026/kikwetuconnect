@@ -1,19 +1,20 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useSupabase, useUser, toast } from '@/app/providers'
+import { useSupabase, useUser, useTheme, toast } from '@/app/providers'
+import { useTranslation } from 'react-i18next'
 import {
   User, Globe, Moon, Sun, Eye, Bell, Clock, AlertTriangle, Shield, MapPin,
   Users, Ban, Wallet, Download, AlertCircle, LogOut, HelpCircle
 } from 'lucide-react'
 
-const languages = [
+const LANGUAGES = [
   { code: 'en', label: 'English', native: 'English' },
   { code: 'sw', label: 'Kiswahili', native: 'Kiswahili' },
   { code: 'sheng', label: 'Sheng', native: 'Sheng' },
 ]
 
-const notifTypes = [
+const NOTIF_TYPES = [
   { key: 'upvote', label: 'Upvotes' },
   { key: 'answer', label: 'Answers' },
   { key: 'reply', label: 'Replies' },
@@ -27,9 +28,33 @@ const notifTypes = [
   { key: 'system', label: 'System' },
 ]
 
+const s = {
+  card: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: 20, boxShadow: 'var(--card-shadow)' },
+  input: { width: '100%', background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 11, padding: '10px 14px', fontSize: 13, color: 'var(--ink)', outline: 'none' },
+  btn: { padding: '10px 20px', borderRadius: 11, fontWeight: 700, fontSize: 12, border: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, transition: 'all .2s var(--ease)' },
+  primaryBtn: { background: 'var(--gold)', color: 'var(--night)' },
+  secondaryBtn: { background: 'var(--raised)', color: 'var(--ink)', border: '1px solid var(--line)' },
+  smallBtn: { padding: '6px 14px', borderRadius: 9, fontSize: 11, fontWeight: 600, border: 0, cursor: 'pointer', transition: 'all .2s var(--ease)' },
+  tag: { padding: '8px 16px', borderRadius: 9, fontSize: 12, fontWeight: 600, border: '1px solid var(--line)', background: 'var(--raised)', color: 'var(--muted)', cursor: 'pointer', transition: 'all .2s var(--ease)' },
+  tagActive: { background: 'var(--green)', color: 'var(--surface)', borderColor: 'var(--green)' },
+}
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button onClick={() => onChange(!checked)}
+      className="w-11 h-6 rounded-full transition-colors relative flex-shrink-0 cursor-pointer"
+      style={{ background: checked ? 'var(--green)' : 'var(--line)' }}>
+      <div className="w-4 h-4 rounded-full absolute top-1 transition-transform"
+        style={{ background: 'var(--surface)', transform: checked ? 'translateX(24px)' : 'translateX(4px)', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+    </button>
+  )
+}
+
 export default function SettingsPage() {
   const { user, profile, loading: userLoading, refreshProfile } = useUser()
   const supabase = useSupabase()
+  const { theme, toggleTheme } = useTheme()
+  const { i18n } = useTranslation()
   const [saving, setSaving] = useState(false)
   const [loadPrefs, setLoadPrefs] = useState(true)
 
@@ -39,7 +64,6 @@ export default function SettingsPage() {
   const [bio, setBio] = useState('')
   const [language, setLanguage] = useState('en')
   const [translationHelper, setTranslationHelper] = useState(false)
-  const [darkMode, setDarkMode] = useState(true)
   const [reducedMotion, setReducedMotion] = useState(false)
   const [dataSaver, setDataSaver] = useState(false)
   const [notifPrefs, setNotifPrefs] = useState<Record<string, boolean>>({})
@@ -70,7 +94,6 @@ export default function SettingsPage() {
       if (raw) {
         const p = JSON.parse(raw)
         setTranslationHelper(p.translationHelper ?? false)
-        setDarkMode(p.darkMode ?? true)
         setReducedMotion(p.reducedMotion ?? false)
         setDataSaver(p.dataSaver ?? false)
         setNotifPrefs(p.notifPrefs ?? {})
@@ -96,19 +119,23 @@ export default function SettingsPage() {
     } catch {}
   }
 
+  const handleLanguageChange = async (code: string) => {
+    setLanguage(code)
+    i18n.changeLanguage(code)
+    if (user) {
+      await supabase.from('profiles').update({ preferred_language: code }).eq('id', user.id)
+    }
+    persistPrefs({ language: code })
+    toast(`Language set to ${LANGUAGES.find(l => l.code === code)?.label || code}`)
+  }
+
   const saveProfile = async () => {
     if (!user) return
     setSaving(true)
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({
-          full_name: fullName,
-          username,
-          county_hub: county,
-          bio,
-          preferred_language: language,
-        })
+        .update({ full_name: fullName, username, county_hub: county, bio, preferred_language: language })
         .eq('id', user.id)
       if (error) throw error
       await refreshProfile()
@@ -137,7 +164,7 @@ export default function SettingsPage() {
   if (userLoading || loadPrefs) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin w-8 h-8 border-2 border-green border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 rounded-full" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent' }} />
       </div>
     )
   }
@@ -145,83 +172,68 @@ export default function SettingsPage() {
   if (!user || !profile) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <p className="text-muted mb-4">Sign in to manage settings</p>
+        <p className="mb-4 text-sm" style={{ color: 'var(--muted)' }}>Sign in to manage settings</p>
         <Link href="/login" className="btn btn-primary">Sign in</Link>
       </div>
     )
   }
 
-  const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
-    <button
-      onClick={() => onChange(!checked)}
-      className={`w-11 h-6 rounded-full transition-colors relative flex-shrink-0 cursor-pointer ${
-        checked ? 'bg-green' : 'bg-[oklch(29%_.025_151)]'
-      }`}
-    >
-      <div className={`w-4 h-4 rounded-full bg-cream absolute top-1 transition-transform ${
-        checked ? 'translate-x-6' : 'translate-x-1'
-      }`} />
-    </button>
-  )
-
   return (
-    <>
+    <div className="pb-8 animate-fade-in-up" style={{ maxWidth: 640 }}>
       <section className="page-head">
-        <h1 className="page-title">Settings</h1>
-        <p className="text-muted text-sm">Manage your account and preferences</p>
+        <div>
+          <h1 className="page-title" style={{ color: 'var(--ink)' }}>Settings</h1>
+          <p className="text-sm" style={{ color: 'var(--muted)' }}>Manage your account and preferences</p>
+        </div>
       </section>
 
       {/* Profile */}
-      <section className="card section mb-6">
-        <h2 className="font-bold text-sm mb-4 flex items-center gap-2">
-          <User className="w-4 h-4 text-green" /> Profile
+      <section style={s.card} className="mb-5">
+        <h2 className="font-bold text-sm mb-4 flex items-center gap-2" style={{ color: 'var(--ink)' }}>
+          <User className="w-4 h-4" style={{ color: 'var(--green)' }} /> Profile
         </h2>
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Full Name</label>
-            <input value={fullName} onChange={e => setFullName(e.target.value)} className="input w-full" />
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>Full Name</label>
+            <input value={fullName} onChange={e => setFullName(e.target.value)} style={s.input} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Username</label>
-            <input value={username} onChange={e => setUsername(e.target.value)} className="input w-full" />
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>Username</label>
+            <input value={username} onChange={e => setUsername(e.target.value)} style={s.input} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">County</label>
-            <input value={county} onChange={e => setCounty(e.target.value)} className="input w-full" placeholder="e.g. Nairobi, Uasin Gishu" />
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>County</label>
+            <input value={county} onChange={e => setCounty(e.target.value)} style={s.input} placeholder="e.g. Nairobi, Uasin Gishu" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted mb-1">Bio</label>
-            <textarea value={bio} onChange={e => setBio(e.target.value)} className="input w-full resize-y min-h-[80px]" rows={3} />
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>Bio</label>
+            <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} style={{ ...s.input, resize: 'none', minHeight: 80 }} />
           </div>
-          <button onClick={saveProfile} disabled={saving} className="btn btn-primary">
+          <button onClick={saveProfile} disabled={saving} style={{ ...s.btn, ...s.primaryBtn }}>
             {saving ? 'Saving...' : 'Save Profile'}
           </button>
         </div>
       </section>
 
       {/* Language */}
-      <section className="card section mb-6">
-        <h2 className="font-bold text-sm mb-4 flex items-center gap-2">
-          <Globe className="w-4 h-4 text-gold" /> Language
+      <section style={s.card} className="mb-5">
+        <h2 className="font-bold text-sm mb-4 flex items-center gap-2" style={{ color: 'var(--ink)' }}>
+          <Globe className="w-4 h-4" style={{ color: 'var(--gold)' }} /> Language
         </h2>
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            {languages.map(l => (
-              <button
-                key={l.code}
-                onClick={() => { setLanguage(l.code); refreshProfile() }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  language === l.code ? 'bg-green text-night' : 'bg-night2 text-muted border border-[oklch(29%_.025_151)] hover:text-cream'
-                }`}
-              >
+            {LANGUAGES.map(l => (
+              <button key={l.code}
+                onClick={() => handleLanguageChange(l.code)}
+                style={{ ...s.tag, ...(language === l.code ? s.tagActive : {}) }}>
                 {l.native}
               </button>
             ))}
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between py-2 px-3 rounded-xl" style={{ background: 'var(--raised)' }}>
             <div>
-              <p className="text-sm">Translation Helper</p>
-              <p className="text-xs text-muted">Auto-translate posts to your language</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Translation Helper</p>
+              <p className="text-xs" style={{ color: 'var(--muted)' }}>Auto-translate posts to your language</p>
             </div>
             <Toggle checked={translationHelper} onChange={v => { setTranslationHelper(v); persistPrefs({ translationHelper: v }) }} />
           </div>
@@ -229,32 +241,32 @@ export default function SettingsPage() {
       </section>
 
       {/* Display */}
-      <section className="card section mb-6">
-        <h2 className="font-bold text-sm mb-4 flex items-center gap-2">
-          <Eye className="w-4 h-4 text-blue" /> Display
+      <section style={s.card} className="mb-5">
+        <h2 className="font-bold text-sm mb-4 flex items-center gap-2" style={{ color: 'var(--ink)' }}>
+          <Eye className="w-4 h-4" style={{ color: 'var(--blue)' }} /> Display
         </h2>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between py-2 px-3 rounded-xl" style={{ background: 'var(--raised)' }}>
             <div className="flex items-center gap-2">
-              {darkMode ? <Moon className="w-4 h-4 text-muted" /> : <Sun className="w-4 h-4 text-gold" />}
+              {theme === 'dark' ? <Moon className="w-4 h-4" style={{ color: 'var(--muted)' }} /> : <Sun className="w-4 h-4" style={{ color: 'var(--gold)' }} />}
               <div>
-                <p className="text-sm">Dark Mode</p>
-                <p className="text-xs text-muted">Toggle dark/light theme</p>
+                <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Dark Mode</p>
+                <p className="text-xs" style={{ color: 'var(--muted)' }}>Toggle dark/light theme</p>
               </div>
             </div>
-            <Toggle checked={darkMode} onChange={v => { setDarkMode(v); persistPrefs({ darkMode: v }) }} />
+            <Toggle checked={theme === 'dark'} onChange={toggleTheme} />
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between py-2 px-3 rounded-xl" style={{ background: 'var(--raised)' }}>
             <div>
-              <p className="text-sm">Reduced Motion</p>
-              <p className="text-xs text-muted">Minimize animations</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Reduced Motion</p>
+              <p className="text-xs" style={{ color: 'var(--muted)' }}>Minimize animations</p>
             </div>
             <Toggle checked={reducedMotion} onChange={v => { setReducedMotion(v); persistPrefs({ reducedMotion: v }) }} />
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between py-2 px-3 rounded-xl" style={{ background: 'var(--raised)' }}>
             <div>
-              <p className="text-sm">Data Saver</p>
-              <p className="text-xs text-muted">Reduce image quality and auto-play</p>
+              <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Data Saver</p>
+              <p className="text-xs" style={{ color: 'var(--muted)' }}>Reduce image quality and auto-play</p>
             </div>
             <Toggle checked={dataSaver} onChange={v => { setDataSaver(v); persistPrefs({ dataSaver: v }) }} />
           </div>
@@ -262,43 +274,37 @@ export default function SettingsPage() {
       </section>
 
       {/* Notifications */}
-      <section className="card section mb-6">
-        <h2 className="font-bold text-sm mb-4 flex items-center gap-2">
-          <Bell className="w-4 h-4 text-gold" /> Notifications
+      <section style={s.card} className="mb-5">
+        <h2 className="font-bold text-sm mb-4 flex items-center gap-2" style={{ color: 'var(--ink)' }}>
+          <Bell className="w-4 h-4" style={{ color: 'var(--gold)' }} /> Notifications
         </h2>
         <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {notifTypes.map(nt => (
-              <div key={nt.key} className="flex items-center justify-between px-3 py-2 rounded-lg bg-night2">
-                <span className="text-sm">{nt.label}</span>
-                <Toggle
-                  checked={notifPrefs[nt.key] !== false}
-                  onChange={v => {
-                    const updated = { ...notifPrefs, [nt.key]: v }
-                    setNotifPrefs(updated)
-                    persistPrefs({ notifPrefs: updated })
-                  }}
-                />
+            {NOTIF_TYPES.map(nt => (
+              <div key={nt.key} className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ background: 'var(--raised)' }}>
+                <span className="text-sm" style={{ color: 'var(--ink)' }}>{nt.label}</span>
+                <Toggle checked={notifPrefs[nt.key] !== false}
+                  onChange={v => { const u = { ...notifPrefs, [nt.key]: v }; setNotifPrefs(u); persistPrefs({ notifPrefs: u }) }} />
               </div>
             ))}
           </div>
-          <div className="border-t border-[oklch(29%_.025_151)] pt-3 mt-3 space-y-3">
-            <div className="flex items-center justify-between">
+          <div style={{ borderTop: '1px solid var(--line)', paddingTop: 12, marginTop: 12 }}>
+            <div className="flex items-center justify-between py-2 px-3 rounded-lg mb-2" style={{ background: 'var(--raised)' }}>
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-muted" />
+                <Clock className="w-4 h-4" style={{ color: 'var(--muted)' }} />
                 <div>
-                  <p className="text-sm">Session Reminders</p>
-                  <p className="text-xs text-muted">Reminders before scheduled sessions</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Session Reminders</p>
+                  <p className="text-xs" style={{ color: 'var(--muted)' }}>Reminders before scheduled sessions</p>
                 </div>
               </div>
               <Toggle checked={sessionReminders} onChange={v => { setSessionReminders(v); persistPrefs({ sessionReminders: v }) }} />
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between py-2 px-3 rounded-lg" style={{ background: 'var(--raised)' }}>
               <div className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-earth" />
+                <AlertTriangle className="w-4 h-4" style={{ color: 'var(--earth)' }} />
                 <div>
-                  <p className="text-sm">Nyumba Kumi Alerts</p>
-                  <p className="text-xs text-muted">Community safety alerts</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Nyumba Kumi Alerts</p>
+                  <p className="text-xs" style={{ color: 'var(--muted)' }}>Community safety alerts</p>
                 </div>
               </div>
               <Toggle checked={nyumbaKumiAlerts} onChange={v => { setNyumbaKumiAlerts(v); persistPrefs({ nyumbaKumiAlerts: v }) }} />
@@ -308,42 +314,37 @@ export default function SettingsPage() {
       </section>
 
       {/* Privacy */}
-      <section className="card section mb-6">
-        <h2 className="font-bold text-sm mb-4 flex items-center gap-2">
-          <Shield className="w-4 h-4 text-green" /> Privacy
+      <section style={s.card} className="mb-5">
+        <h2 className="font-bold text-sm mb-4 flex items-center gap-2" style={{ color: 'var(--ink)' }}>
+          <Shield className="w-4 h-4" style={{ color: 'var(--green)' }} /> Privacy
         </h2>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between py-2 px-3 rounded-lg" style={{ background: 'var(--raised)' }}>
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-muted" />
+              <Users className="w-4 h-4" style={{ color: 'var(--muted)' }} />
               <div>
-                <p className="text-sm">Discoverability</p>
-                <p className="text-xs text-muted">Allow others to find you</p>
+                <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Discoverability</p>
+                <p className="text-xs" style={{ color: 'var(--muted)' }}>Allow others to find you</p>
               </div>
             </div>
             <Toggle checked={discoverable} onChange={v => { setDiscoverable(v); persistPrefs({ discoverable: v }) }} />
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between py-2 px-3 rounded-lg" style={{ background: 'var(--raised)' }}>
             <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-muted" />
+              <MapPin className="w-4 h-4" style={{ color: 'var(--muted)' }} />
               <div>
-                <p className="text-sm">Approximate Location</p>
-                <p className="text-xs text-muted">Show your county on profile</p>
+                <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Approximate Location</p>
+                <p className="text-xs" style={{ color: 'var(--muted)' }}>Show your county on profile</p>
               </div>
             </div>
             <Toggle checked={approxLocation} onChange={v => { setApproxLocation(v); persistPrefs({ approxLocation: v }) }} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted mb-2">Message Privacy</label>
+            <label className="block text-xs font-medium mb-2" style={{ color: 'var(--muted)' }}>Message Privacy</label>
             <div className="flex gap-2">
               {(['everyone', 'followers', 'none'] as const).map(opt => (
-                <button
-                  key={opt}
-                  onClick={() => { setMsgPrivacy(opt); persistPrefs({ msgPrivacy: opt }) }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${
-                    msgPrivacy === opt ? 'bg-green text-night' : 'bg-night2 text-muted border border-[oklch(29%_.025_151)]'
-                  }`}
-                >
+                <button key={opt} onClick={() => { setMsgPrivacy(opt); persistPrefs({ msgPrivacy: opt }) }}
+                  style={{ ...s.smallBtn, ...(msgPrivacy === opt ? { background: 'var(--green)', color: 'var(--surface)' } : { background: 'var(--raised)', color: 'var(--muted)', border: '1px solid var(--line)' }) }}>
                   {opt === 'everyone' ? 'Everyone' : opt === 'followers' ? 'Followers Only' : 'No One'}
                 </button>
               ))}
@@ -353,60 +354,60 @@ export default function SettingsPage() {
       </section>
 
       {/* M-Pesa */}
-      <section className="card section mb-6">
-        <h2 className="font-bold text-sm mb-4 flex items-center gap-2">
-          <Wallet className="w-4 h-4 text-green" /> M-Pesa
+      <section style={s.card} className="mb-5">
+        <h2 className="font-bold text-sm mb-4 flex items-center gap-2" style={{ color: 'var(--ink)' }}>
+          <Wallet className="w-4 h-4" style={{ color: 'var(--green)' }} /> M-Pesa
         </h2>
         <div>
-          <label className="block text-xs font-medium text-muted mb-1">Linked M-Pesa Number</label>
+          <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>Linked M-Pesa Number</label>
           <div className="flex gap-2">
-            <input value={mpesaNumber} onChange={e => setMpesaNumber(e.target.value)} className="input flex-1" placeholder="07XX XXX XXX" />
-            <button onClick={() => { persistPrefs({ mpesaNumber }); toast('M-Pesa number saved') }} className="btn btn-primary btn-sm">Save</button>
+            <input value={mpesaNumber} onChange={e => setMpesaNumber(e.target.value)} style={s.input} className="flex-1" placeholder="07XX XXX XXX" />
+            <button onClick={() => { persistPrefs({ mpesaNumber }); toast('M-Pesa number saved') }} style={{ ...s.smallBtn, ...s.primaryBtn }}>Save</button>
           </div>
         </div>
       </section>
 
       {/* Offline */}
-      <section className="card section mb-6">
-        <h2 className="font-bold text-sm mb-4 flex items-center gap-2">
-          <Download className="w-4 h-4 text-blue" /> Offline
+      <section style={s.card} className="mb-5">
+        <h2 className="font-bold text-sm mb-4 flex items-center gap-2" style={{ color: 'var(--ink)' }}>
+          <Download className="w-4 h-4" style={{ color: 'var(--blue)' }} /> Offline
         </h2>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between py-2 px-3 rounded-lg" style={{ background: 'var(--raised)' }}>
           <div>
-            <p className="text-sm">Offline Sync</p>
-            <p className="text-xs text-muted">Keep recent posts available offline</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--ink)' }}>Offline Sync</p>
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>Keep recent posts available offline</p>
           </div>
           <Toggle checked={offlineSync} onChange={v => { setOfflineSync(v); persistPrefs({ offlineSync: v }) }} />
         </div>
       </section>
 
       {/* Account */}
-      <section className="card section mb-6">
-        <h2 className="font-bold text-sm mb-4 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-red" /> Account
+      <section style={{ ...s.card, borderColor: 'color-mix(in oklab, var(--red) 30%, transparent)' }} className="mb-5">
+        <h2 className="font-bold text-sm mb-4 flex items-center gap-2" style={{ color: 'var(--red)' }}>
+          <AlertCircle className="w-4 h-4" /> Account
         </h2>
         <div className="space-y-3">
           {!showDeactivate ? (
-            <button onClick={() => setShowDeactivate(true)} className="text-sm text-red hover:underline">
+            <button onClick={() => setShowDeactivate(true)} className="text-sm" style={{ color: 'var(--red)', textDecoration: 'underline', background: 'none', border: 0, cursor: 'pointer' }}>
               Deactivate Account
             </button>
           ) : (
-            <div className="p-3 rounded-lg bg-red/10 border border-red/30">
-              <p className="text-sm text-red mb-2">This can be reversed by contacting support.</p>
+            <div className="p-3 rounded-lg" style={{ background: 'color-mix(in oklab, var(--red) 15%, var(--surface))', border: '1px solid color-mix(in oklab, var(--red) 30%, transparent)' }}>
+              <p className="text-sm mb-2" style={{ color: 'var(--red)' }}>This can be reversed by contacting support.</p>
               <div className="flex gap-2">
-                <button onClick={handleDeactivate} className="btn btn-danger btn-sm">Confirm</button>
-                <button onClick={() => setShowDeactivate(false)} className="btn btn-secondary btn-sm">Cancel</button>
+                <button onClick={handleDeactivate} style={{ ...s.smallBtn, background: 'var(--red)', color: '#fff' }}>Confirm</button>
+                <button onClick={() => setShowDeactivate(false)} style={{ ...s.smallBtn, background: 'var(--raised)', color: 'var(--ink)', border: '1px solid var(--line)' }}>Cancel</button>
               </div>
             </div>
           )}
-          <button onClick={handleSignOutAll} className="flex items-center gap-2 text-sm text-muted hover:text-cream transition-colors">
+          <button onClick={handleSignOutAll} className="flex items-center gap-2 text-sm transition-colors" style={{ color: 'var(--muted)', background: 'none', border: 0, cursor: 'pointer' }}>
             <LogOut className="w-4 h-4" /> Sign out of all devices
           </button>
-          <Link href="/support" className="flex items-center gap-2 text-sm text-muted hover:text-cream transition-colors">
+          <Link href="/support" className="flex items-center gap-2 text-sm transition-colors" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
             <HelpCircle className="w-4 h-4" /> Contact Support
           </Link>
         </div>
       </section>
-    </>
+    </div>
   )
 }

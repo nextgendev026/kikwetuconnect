@@ -36,14 +36,14 @@ interface Session {
 }
 
 const STATUS_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  requested: { bg: 'bg-[oklch(75%_.14_84)]/15', text: 'text-[oklch(75%_.14_84)]', label: 'Requested' },
-  accepted: { bg: 'bg-[oklch(55%_.13_151)]/15', text: 'text-[oklch(55%_.13_151)]', label: 'Accepted' },
-  rescheduled: { bg: 'bg-[oklch(48%_.10_55)]/15', text: 'text-[oklch(48%_.10_55)]', label: 'Rescheduled' },
-  active: { bg: 'bg-[oklch(55%_.13_151)]/20', text: 'text-[oklch(55%_.13_151)]', label: 'Active' },
-  completed: { bg: 'bg-[oklch(55%_.13_151)]/10', text: 'text-[oklch(55%_.13_151)]', label: 'Completed' },
-  cancelled: { bg: 'bg-[oklch(62%_.15_28)]/10', text: 'text-[oklch(62%_.15_28)]', label: 'Cancelled' },
-  'no-show': { bg: 'bg-[oklch(62%_.15_28)]/15', text: 'text-[oklch(62%_.15_28)]', label: 'No-show' },
-  disputed: { bg: 'bg-[oklch(62%_.15_28)]/20', text: 'text-[oklch(62%_.15_28)]', label: 'Disputed' },
+  requested: { bg: 'bg-[var(--gold)]/15', text: 'text-[var(--gold)]', label: 'Requested' },
+  accepted: { bg: 'bg-[var(--green)]/15', text: 'text-[var(--green)]', label: 'Accepted' },
+  rescheduled: { bg: 'bg-[var(--earth)]/15', text: 'text-[var(--earth)]', label: 'Rescheduled' },
+  active: { bg: 'bg-[var(--green)]/20', text: 'text-[var(--green)]', label: 'Active' },
+  completed: { bg: 'bg-[var(--green)]/10', text: 'text-[var(--green)]', label: 'Completed' },
+  cancelled: { bg: 'bg-[var(--red)]/10', text: 'text-[var(--red)]', label: 'Cancelled' },
+  'no-show': { bg: 'bg-[var(--red)]/15', text: 'text-[var(--red)]', label: 'No-show' },
+  disputed: { bg: 'bg-[var(--red)]/20', text: 'text-[var(--red)]', label: 'Disputed' },
 }
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -201,13 +201,13 @@ export default function SessionsPage() {
         <div className="flex gap-1">
           <button
             onClick={() => setView('list')}
-            className={`px-3 py-1.5 rounded-[10px] text-xs font-medium transition-colors ${view === 'list' ? 'bg-[oklch(55%_.13_151)] text-[oklch(14%_.025_151)]' : 'bg-[oklch(18%_.028_151)] text-[oklch(65%_.028_151)] border border-[oklch(29%_.025_151)]'}`}
+            className={`px-3 py-1.5 rounded-[10px] text-xs font-medium transition-colors ${view === 'list' ? 'bg-[var(--green)] text-[var(--night)]' : 'bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)]'}`}
           >
             List
           </button>
           <button
             onClick={() => setView('calendar')}
-            className={`px-3 py-1.5 rounded-[10px] text-xs font-medium transition-colors ${view === 'calendar' ? 'bg-[oklch(55%_.13_151)] text-[oklch(14%_.025_151)]' : 'bg-[oklch(18%_.028_151)] text-[oklch(65%_.028_151)] border border-[oklch(29%_.025_151)]'}`}
+            className={`px-3 py-1.5 rounded-[10px] text-xs font-medium transition-colors ${view === 'calendar' ? 'bg-[var(--green)] text-[var(--night)]' : 'bg-[var(--surface)] text-[var(--muted)] border border-[var(--line)]'}`}
           >
             Calendar
           </button>
@@ -222,8 +222,8 @@ export default function SessionsPage() {
             onClick={() => setStatusFilter(st)}
             className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
               statusFilter === st
-                ? 'bg-[oklch(55%_.13_151)] text-[oklch(14%_.025_151)]'
-                : 'bg-[oklch(18%_.028_151)] text-[oklch(65%_.028_151)] hover:text-cream border border-[oklch(29%_.025_151)]'
+                ? 'bg-[var(--green)] text-[var(--night)]'
+                : 'bg-[var(--surface)] text-[var(--muted)] hover:text-cream border border-[var(--line)]'
             }`}
           >
             {st === 'all' ? 'All' : st.charAt(0).toUpperCase() + st.slice(1).replace('-', ' ')}
@@ -235,15 +235,15 @@ export default function SessionsPage() {
         /* Calendar View */
         <div className="card section">
           <div className="flex items-center justify-between mb-4">
-            <button onClick={() => setCalDate(new Date(calYear, calMonth - 1, 1))} className="p-1.5 rounded-[8px] text-[oklch(65%_.028_151)] hover:text-cream hover:bg-[oklch(21%_.03_151)]">
+            <button onClick={() => setCalDate(new Date(calYear, calMonth - 1, 1))} className="p-1.5 rounded-[8px] text-[var(--muted)] hover:text-cream hover:bg-[var(--raised)]">
               <ChevronLeft className="w-4 h-4" />
             </button>
             <span className="font-bold text-sm">{MONTHS[calMonth]} {calYear}</span>
-            <button onClick={() => setCalDate(new Date(calYear, calMonth + 1, 1))} className="p-1.5 rounded-[8px] text-[oklch(65%_.028_151)] hover:text-cream hover:bg-[oklch(21%_.03_151)]">
+            <button onClick={() => setCalDate(new Date(calYear, calMonth + 1, 1))} className="p-1.5 rounded-[8px] text-[var(--muted)] hover:text-cream hover:bg-[var(--raised)]">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-          <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-[oklch(65%_.028_151)] font-medium mb-1">
+          <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-[var(--muted)] font-medium mb-1">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="py-1">{d}</div>)}
           </div>
           <div className="grid grid-cols-7 gap-1">
@@ -251,15 +251,15 @@ export default function SessionsPage() {
             {calDays.map(day => {
               const daySessions = sessionsOnDay(day)
               return (
-                <div key={day} className={`min-h-[60px] rounded-[8px] p-1 ${daySessions.length > 0 ? 'bg-[oklch(55%_.13_151)]/10 border border-[oklch(55%_.13_151)]/30' : 'border border-transparent'}`}>
+                <div key={day} className={`min-h-[60px] rounded-[8px] p-1 ${daySessions.length > 0 ? 'bg-[var(--green)]/10 border border-[var(--green)]/30' : 'border border-transparent'}`}>
                   <span className="text-[10px] font-medium">{day}</span>
                   {daySessions.slice(0, 2).map(s => (
-                    <div key={s.id} className="mt-0.5 text-[8px] leading-tight truncate rounded-[4px] px-1 py-0.5 bg-[oklch(18%_.028_151)]" title={s.topic}>
+                    <div key={s.id} className="mt-0.5 text-[8px] leading-tight truncate rounded-[4px] px-1 py-0.5 bg-[var(--surface)]" title={s.topic}>
                       {s.topic}
                     </div>
                   ))}
                   {daySessions.length > 2 && (
-                    <span className="text-[8px] text-[oklch(65%_.028_151)]">+{daySessions.length - 2} more</span>
+                    <span className="text-[8px] text-[var(--muted)]">+{daySessions.length - 2} more</span>
                   )}
                 </div>
               )
@@ -275,9 +275,9 @@ export default function SessionsPage() {
             </div>
           ) : filteredSessions.length === 0 ? (
             <div className="card section text-center py-12">
-              <Calendar className="w-12 h-12 text-[oklch(65%_.028_151)] mx-auto mb-4 opacity-50" />
-              <p className="text-[oklch(65%_.028_151)] mb-2">No sessions found</p>
-              <p className="text-xs text-[oklch(65%_.028_151)]">Book a session with a professional to get started</p>
+              <Calendar className="w-12 h-12 text-[var(--muted)] mx-auto mb-4 opacity-50" />
+              <p className="text-[var(--muted)] mb-2">No sessions found</p>
+              <p className="text-xs text-[var(--muted)]">Book a session with a professional to get started</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -291,7 +291,7 @@ export default function SessionsPage() {
                   <div key={session.id} className="card section">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-start gap-3 flex-1">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[oklch(55%_.13_151)] to-[oklch(75%_.14_84)] flex items-center justify-center text-xs font-bold text-[oklch(14%_.025_151)] flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--green)] to-[var(--gold)] flex items-center justify-center text-xs font-bold text-[var(--night)] flex-shrink-0">
                           {otherUser?.avatar_url ? (
                             <img src={otherUser.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
                           ) : (
@@ -303,12 +303,12 @@ export default function SessionsPage() {
                             <Link href={`/profile/${otherUser?.username || ''}`} className="font-bold text-sm hover:underline truncate">
                               {otherUser?.full_name || otherUser?.username || 'Unknown'}
                             </Link>
-                            <span className="text-[10px] text-[oklch(65%_.028_151)]">
+                            <span className="text-[10px] text-[var(--muted)]">
                               ({isStudent ? 'Professional' : 'Student'})
                             </span>
                           </div>
                           <h3 className="text-sm font-semibold text-cream mt-0.5">{session.topic}</h3>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-[oklch(65%_.028_151)]">
+                          <div className="flex items-center gap-3 mt-1 text-xs text-[var(--muted)]">
                             {session.scheduled_at && (
                               <>
                                 <span className="flex items-center gap-1">
@@ -327,7 +327,7 @@ export default function SessionsPage() {
                             </span>
                           </div>
                           {session.goal && (
-                            <p className="text-xs text-[oklch(65%_.028_151)] mt-2 italic">
+                            <p className="text-xs text-[var(--muted)] mt-2 italic">
                               Goal: {session.goal}
                             </p>
                           )}
@@ -340,7 +340,7 @@ export default function SessionsPage() {
 
                     {/* Action buttons */}
                     {isActionable && (
-                      <div className="flex flex-wrap gap-2 pt-4 border-t border-[oklch(29%_.025_151)]">
+                      <div className="flex flex-wrap gap-2 pt-4 border-t border-[var(--line)]">
                         {(session.status === 'requested' || session.status === 'accepted') && (
                           <>
                             <Button variant="danger" size="sm" onClick={() => updateStatus(session.id, 'cancelled')}>
@@ -377,10 +377,10 @@ export default function SessionsPage() {
                     )}
 
                     {/* Notes section */}
-                    <div className="mt-4 pt-4 border-t border-[oklch(29%_.025_151)]">
+                    <div className="mt-4 pt-4 border-t border-[var(--line)]">
                       <div className="flex items-center gap-2 mb-2">
-                        <BookOpen className="w-4 h-4 text-[oklch(65%_.028_151)]" />
-                        <span className="text-xs font-medium text-[oklch(65%_.028_151)]">Session Notes</span>
+                        <BookOpen className="w-4 h-4 text-[var(--muted)]" />
+                        <span className="text-xs font-medium text-[var(--muted)]">Session Notes</span>
                       </div>
                       <div className="flex gap-2">
                         <input
@@ -388,7 +388,7 @@ export default function SessionsPage() {
                           value={notes[session.id] ?? session.notes ?? ''}
                           onChange={e => setNotes(prev => ({ ...prev, [session.id]: e.target.value }))}
                           placeholder="Add notes about this session..."
-                          className="flex-1 bg-[oklch(18%_.028_151)] border border-[oklch(29%_.025_151)] rounded-[11px] px-3 py-2 text-sm text-cream placeholder-[oklch(65%_.028_151)] focus:outline-none focus:border-[oklch(55%_.13_151)]"
+                          className="flex-1 bg-[var(--surface)] border border-[var(--line)] rounded-[11px] px-3 py-2 text-sm text-cream placeholder-[var(--muted)] focus:outline-none focus:border-[var(--green)]"
                         />
                         <Button
                           size="sm"
@@ -411,18 +411,18 @@ export default function SessionsPage() {
       {/* Rate Modal */}
       {rateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[oklch(18%_.028_151)] border border-[oklch(29%_.025_151)] rounded-[18px] p-6 w-full max-w-md animate-sheet">
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[18px] p-6 w-full max-w-md animate-sheet">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-cream">Rate Session</h3>
-              <button onClick={() => setRateModal(null)} className="p-1 text-[oklch(65%_.028_151)] hover:text-cream">
+              <button onClick={() => setRateModal(null)} className="p-1 text-[var(--muted)] hover:text-cream">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-sm text-[oklch(65%_.028_151)] mb-4">How was your session with {rateModal.professional?.full_name}?</p>
+            <p className="text-sm text-[var(--muted)] mb-4">How was your session with {rateModal.professional?.full_name}?</p>
             <div className="flex items-center gap-2 mb-4">
               {[1, 2, 3, 4, 5].map(n => (
                 <button key={n} onClick={() => setRating(n)} className="p-1">
-                  <Star className={`w-8 h-8 ${n <= rating ? 'text-[oklch(75%_.14_84)]' : 'text-[oklch(29%_.025_151)]'}`} fill={n <= rating ? 'oklch(75%_.14_84)' : 'none'} />
+                  <Star className={`w-8 h-8 ${n <= rating ? 'text-[var(--gold)]' : 'text-[var(--line)]'}`} fill={n <= rating ? 'var(--gold)' : 'none'} />
                 </button>
               ))}
             </div>
@@ -443,14 +443,14 @@ export default function SessionsPage() {
       {/* Tip Modal */}
       {tipModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[oklch(18%_.028_151)] border border-[oklch(29%_.025_151)] rounded-[18px] p-6 w-full max-w-md animate-sheet">
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[18px] p-6 w-full max-w-md animate-sheet">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-cream">Send Tip</h3>
-              <button onClick={() => setTipModal(null)} className="p-1 text-[oklch(65%_.028_151)] hover:text-cream">
+              <button onClick={() => setTipModal(null)} className="p-1 text-[var(--muted)] hover:text-cream">
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <p className="text-sm text-[oklch(65%_.028_151)] mb-4">
+            <p className="text-sm text-[var(--muted)] mb-4">
               Show appreciation to {tipModal.professional?.full_name} for their help
             </p>
             <div className="flex gap-2 mb-4">
@@ -460,8 +460,8 @@ export default function SessionsPage() {
                   onClick={() => setTipAmount(amt)}
                   className={`flex-1 py-3 rounded-[11px] text-sm font-bold transition-colors ${
                     tipAmount === amt
-                      ? 'bg-[oklch(75%_.14_84)] text-[oklch(14%_.025_151)]'
-                      : 'bg-[oklch(21%_.03_151)] text-cream border border-[oklch(29%_.025_151)] hover:border-[oklch(75%_.14_84)]'
+                      ? 'bg-[var(--gold)] text-[var(--night)]'
+                      : 'bg-[var(--raised)] text-cream border border-[var(--line)] hover:border-[var(--gold)]'
                   }`}
                 >
                   KSh {amt}
@@ -469,15 +469,15 @@ export default function SessionsPage() {
               ))}
             </div>
             <div className="mb-4">
-              <label className="text-xs text-[oklch(65%_.028_151)] block mb-1">Custom amount</label>
+              <label className="text-xs text-[var(--muted)] block mb-1">Custom amount</label>
               <input
                 type="number"
                 value={tipAmount}
                 onChange={e => setTipAmount(Number(e.target.value))}
-                className="w-full bg-[oklch(14%_.025_151)] border border-[oklch(29%_.025_151)] rounded-[11px] px-4 py-2.5 text-sm text-cream focus:outline-none focus:border-[oklch(55%_.13_151)]"
+                className="w-full bg-[var(--night)] border border-[var(--line)] rounded-[11px] px-4 py-2.5 text-sm text-cream focus:outline-none focus:border-[var(--green)]"
               />
             </div>
-            <p className="text-xs text-[oklch(65%_.028_151)] mb-4">A 10% platform fee of KSh {Math.round(tipAmount * 0.1)} will be deducted</p>
+            <p className="text-xs text-[var(--muted)] mb-4">A 10% platform fee of KSh {Math.round(tipAmount * 0.1)} will be deducted</p>
             <div className="flex gap-2">
               <Button variant="secondary" className="flex-1" onClick={() => setTipModal(null)}>Cancel</Button>
               <Button className="flex-1" onClick={handleTip}>Send KSh {tipAmount}</Button>

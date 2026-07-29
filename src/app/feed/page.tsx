@@ -87,7 +87,7 @@ function getInitials(name: string | null | undefined): string {
 
 function SkeletonCard() {
   return (
-    <div className="bg-night2 border border-[oklch(29%_.025_151)] rounded-[16px] p-[18px] mb-[12px] animate-rise">
+    <div className="bg-night2 border border-[var(--line)] rounded-[16px] p-[18px] mb-[12px] animate-rise">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-[40px] h-[40px] rounded-full skeleton" />
         <div className="flex-1">
@@ -119,10 +119,10 @@ function EmptyState({ tab, hasCountyFilter }: { tab: TabId; hasCountyFilter: boo
   }
   const m = messages[tab]
   return (
-    <div className="bg-night2 border border-[oklch(29%_.025_151)] rounded-[16px] p-[32px_18px] text-center animate-rise">
+    <div className="bg-night2 border border-[var(--line)] rounded-[16px] p-[32px_18px] text-center animate-rise">
       <div className="text-[32px] mb-3 opacity-50">🌿</div>
       <p className="text-cream font-semibold text-[14px] mb-1">{m.title}</p>
-      <p className="text-[oklch(65%_.028_151)] text-[12px] mb-4">{m.desc}</p>
+      <p className="text-[var(--muted)] text-[12px] mb-4">{m.desc}</p>
       {tab !== 'saved' && (
         <button onClick={() => document.getElementById('composer-input')?.focus()} className="bg-gold text-night text-[12px] font-bold px-[18px] py-[10px] rounded-full transition-opacity hover:opacity-90">
           Create your first post
@@ -138,7 +138,7 @@ function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => voi
       <span className="text-red text-[18px]">⚠️</span>
       <div className="flex-1 min-w-0">
         <p className="text-cream text-[13px] font-semibold mb-1">Something went wrong</p>
-        <p className="text-[oklch(65%_.028_151)] text-[11px] mb-2">{message}</p>
+        <p className="text-[var(--muted)] text-[11px] mb-2">{message}</p>
         <button onClick={onRetry} className="text-[11px] font-bold text-gold hover:underline">Try again</button>
       </div>
     </div>
@@ -177,7 +177,7 @@ function PostCardComponent({
   }
 
   return (
-    <div className="bg-night2 border border-[oklch(29%_.025_151)] rounded-[16px] p-[18px] mb-[12px] animate-rise">
+    <div className="bg-night2 border border-[var(--line)] rounded-[16px] p-[18px] mb-[12px] animate-rise">
       {/* Header */}
       <div className="flex items-start gap-3 mb-[12px]">
         <Link href={`/profile/${author?.username || ''}`} className="flex-shrink-0 relative">
@@ -198,22 +198,21 @@ function PostCardComponent({
             {author?.is_verified_expert && <span className="text-[10px] font-bold text-green">Expert</span>}
           </div>
           <div className="flex items-center gap-[8px] mt-[2px]">
-            <span className="text-[oklch(65%_.028_151)] text-[11px]">@{author?.username || 'unknown'}</span>
+            <span className="text-[var(--muted)] text-[11px]">@{author?.username || 'unknown'}</span>
             {author && author.heshima_rating > 0 && (
               <span className="text-[10px] font-semibold text-gold">{author.heshima_rating} Heshima</span>
             )}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="px-[8px] py-[3px] rounded-full text-[10px] font-bold uppercase tracking-wide"
-            style={{
-              backgroundColor: post.post_type === 'inquiry' ? 'oklch(22% .08 240 / .4)' : post.post_type === 'article' ? 'oklch(30% .1 84 / .4)' : 'oklch(22% .08 151 / .4)',
-              color: post.post_type === 'inquiry' ? 'oklch(65% .14 240)' : post.post_type === 'article' ? 'oklch(75% .14 84)' : 'oklch(65% .13 151)',
-            }}
-          >
-            {post.post_type === 'baraza' ? 'Baraza' : post.post_type === 'inquiry' ? 'Inquiry' : post.post_type === 'article' ? 'Article' : post.post_type === 'poll' ? 'Poll' : post.post_type}
+          <span style={{
+            padding: '3px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+            background: post.post_type === 'inquiry' ? 'color-mix(in oklab, var(--blue) 20%, transparent)' : post.post_type === 'article' ? 'color-mix(in oklab, var(--gold) 20%, transparent)' : 'color-mix(in oklab, var(--green) 20%, transparent)',
+            color: post.post_type === 'inquiry' ? 'var(--blue)' : post.post_type === 'article' ? 'var(--gold)' : 'var(--green)',
+          }}>
+            {post.post_type === 'baraza' ? 'Post' : post.post_type === 'inquiry' ? 'Question' : post.post_type === 'article' ? 'Article' : post.post_type === 'poll' ? 'Poll' : post.post_type}
           </span>
-          <span className="text-[oklch(65%_.028_151)] text-[11px] whitespace-nowrap">{timeAgo(post.created_at)}</span>
+          <span className="text-[var(--muted)] text-[11px] whitespace-nowrap">{timeAgo(post.created_at)}</span>
         </div>
       </div>
 
@@ -227,7 +226,7 @@ function PostCardComponent({
 
       {/* Media */}
       {post.media_url && (
-        <div className="mb-[12px] rounded-[12px] overflow-hidden bg-deep border border-[oklch(29%_.025_151)]">
+        <div className="mb-[12px] rounded-[12px] overflow-hidden bg-deep border border-[var(--line)]">
           {post.media_type?.startsWith('video/') ? (
             <div className="h-[200px] flex items-center justify-center bg-deep">
               <span className="text-[40px] opacity-50">🎥</span>
@@ -241,7 +240,7 @@ function PostCardComponent({
       {/* County & Bounty */}
       <div className="flex flex-wrap items-center gap-[8px] mb-[12px]">
         {post.county_tag && (
-          <span className="flex items-center gap-1 text-[oklch(65%_.028_151)] text-[11px]">
+          <span className="flex items-center gap-1 text-[var(--muted)] text-[11px]">
             📍 {post.county_tag}
           </span>
         )}
@@ -253,10 +252,10 @@ function PostCardComponent({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center gap-[4px] pt-[12px] border-t border-[oklch(29%_.025_151)]">
+      <div className="flex items-center gap-[4px] pt-[12px] border-t border-[var(--line)]">
         <button
           onClick={() => onVote(post.id, post.user_vote === 1 ? null : 1)}
-          className={`flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold transition-all ${post.user_vote === 1 ? 'bg-green/20 text-green' : 'text-[oklch(65%_.028_151)] hover:bg-deep hover:text-cream'}`}
+          className={`flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold transition-all ${post.user_vote === 1 ? 'bg-green/20 text-green' : 'text-[var(--muted)] hover:bg-deep hover:text-cream'}`}
         >
           <span className={post.user_vote === 1 ? 'text-green' : ''}>▲</span>
           <span>{post.upvotes_count || 0}</span>
@@ -264,16 +263,20 @@ function PostCardComponent({
 
         <Link
           href={`/posts/${post.id}`}
-          className="flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold text-[oklch(65%_.028_151)] hover:bg-deep hover:text-cream transition-all"
+          className="flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold transition-all"
+          style={{ color: 'var(--muted)' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--raised)'; e.currentTarget.style.color = 'var(--gold)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--muted)' }}
         >
-          <span>💬</span>
+          <span>{post.post_type === 'inquiry' ? '✏️' : '💬'}</span>
           <span>{post.answers_count || 0}</span>
+          <span style={{ fontSize: 10, marginLeft: 2 }}>{post.post_type === 'inquiry' ? 'Answer' : 'Comment'}</span>
         </Link>
 
         <div className="relative">
           <button
             onClick={() => setShowReactions(!showReactions)}
-            className="flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold text-[oklch(65%_.028_151)] hover:bg-deep hover:text-cream transition-all"
+            className="flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all"
           >
             <span>😊</span>
             {Object.keys(reactions).length > 0 && <span className="text-[10px]">{Object.values(reactions).reduce((a, b) => a + b, 0)}</span>}
@@ -281,7 +284,7 @@ function PostCardComponent({
           {showReactions && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowReactions(false)} />
-              <div className="absolute bottom-full left-0 mb-1 flex gap-[3px] p-[6px] bg-deep border border-[oklch(29%_.025_151)] rounded-full shadow-xl z-20 animate-rise">
+              <div className="absolute bottom-full left-0 mb-1 flex gap-[3px] p-[6px] bg-deep border border-[var(--line)] rounded-full shadow-xl z-20 animate-rise">
                 {EMOJI_REACTIONS.map(emoji => (
                   <button key={emoji} onClick={() => handleReact(emoji)} className="w-[30px] h-[30px] flex items-center justify-center hover:scale-125 transition-transform text-[16px]">{emoji}</button>
                 ))}
@@ -292,28 +295,28 @@ function PostCardComponent({
 
         <button
           onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`); toast('Link copied to clipboard') }}
-          className="flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold text-[oklch(65%_.028_151)] hover:bg-deep hover:text-cream transition-all"
+          className="flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all"
         >
           <span>↗</span>
         </button>
 
         <button
           onClick={() => toast('Tafsiri — Kiswahili translation coming soon')}
-          className="flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold text-[oklch(65%_.028_151)] hover:bg-deep hover:text-cream transition-all"
+          className="flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all"
         >
           <span>🌐</span>
         </button>
 
         <button
           onClick={() => onSave(post.id)}
-          className={`flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold transition-all ${post.user_saved ? 'bg-gold/20 text-gold' : 'text-[oklch(65%_.028_151)] hover:bg-deep hover:text-cream'}`}
+          className={`flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold transition-all ${post.user_saved ? 'bg-gold/20 text-gold' : 'text-[var(--muted)] hover:bg-deep hover:text-cream'}`}
         >
           <span>{post.user_saved ? '★' : '☆'}</span>
         </button>
 
         <button
           onClick={() => toast('Report submitted. Moderators will review.')}
-          className="flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold text-[oklch(65%_.028_151)] hover:bg-deep hover:text-cream transition-all ml-auto"
+          className="flex items-center gap-1 px-[12px] py-[6px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all ml-auto"
         >
           <span>⚑</span>
         </button>
@@ -321,9 +324,9 @@ function PostCardComponent({
 
       {/* Emoji reaction chips */}
       {Object.keys(reactions).length > 0 && (
-        <div className="flex flex-wrap gap-[4px] mt-[8px] pt-[8px] border-t border-[oklch(29%_.025_151)]">
+        <div className="flex flex-wrap gap-[4px] mt-[8px] pt-[8px] border-t border-[var(--line)]">
           {Object.entries(reactions).map(([emoji, count]) => (
-            <button key={emoji} onClick={() => handleReact(emoji)} className="flex items-center gap-1 px-[8px] py-[3px] rounded-full bg-deep text-[11px] text-[oklch(65%_.028_151)] hover:bg-[oklch(21%_.03_151)] transition-colors">
+            <button key={emoji} onClick={() => handleReact(emoji)} className="flex items-center gap-1 px-[8px] py-[3px] rounded-full text-[11px] transition-colors" style={{ background: 'var(--raised)', color: 'var(--muted)' }} onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--gold)' }} onMouseLeave={e => { e.currentTarget.style.background = 'var(--raised)'; e.currentTarget.style.color = 'var(--muted)' }}>
               <span>{emoji}</span>
               <span className="font-semibold">{count}</span>
             </button>
@@ -660,7 +663,7 @@ export default function FeedPage() {
       <div className="flex items-center justify-between mb-[18px]">
         <div>
           <h1 className="text-cream text-[20px] font-extrabold tracking-[-.03em]" style={{ fontFamily: "'Plus Jakarta Sans'" }}>Baraza</h1>
-          <p className="text-[oklch(65%_.028_151)] text-[11px] mt-[2px]">The people's square</p>
+          <p className="text-[var(--muted)] text-[11px] mt-[2px]">The people's square</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
@@ -680,7 +683,7 @@ export default function FeedPage() {
             className={`flex-shrink-0 px-[14px] py-[7px] rounded-full text-[12px] font-semibold transition-all ${
               activeTab === tab.id
                 ? 'bg-gold text-night'
-                : 'text-[oklch(65%_.028_151)] hover:bg-deep hover:text-cream'
+                : 'text-[var(--muted)] hover:bg-deep hover:text-cream'
             }`}
           >
             {tab.label}
@@ -691,7 +694,7 @@ export default function FeedPage() {
       {/* Composer */}
       <div
         onClick={() => setShowCreateModal(true)}
-        className="bg-night2 border border-[oklch(29%_.025_151)] rounded-[16px] p-[14px] mb-[12px] cursor-pointer hover:bg-deep transition-colors"
+        className="bg-night2 border border-[var(--line)] rounded-[16px] p-[14px] mb-[12px] cursor-pointer hover:bg-deep transition-colors"
       >
         <div className="flex items-center gap-3">
           {profile ? (
@@ -703,11 +706,11 @@ export default function FeedPage() {
               </div>
             )
           ) : (
-            <div className="w-[36px] h-[36px] rounded-full bg-deep flex items-center justify-center text-[oklch(65%_.028_151)]">?</div>
+            <div className="w-[36px] h-[36px] rounded-full bg-deep flex items-center justify-center text-[var(--muted)]">?</div>
           )}
-          <div id="composer-input" className="flex-1 text-[13px] text-[oklch(65%_.028_151)]">What's on your mind, {profile?.full_name?.split(' ')[0] || 'Mwananchi'}?</div>
+          <div id="composer-input" className="flex-1 text-[13px] text-[var(--muted)]">What's on your mind, {profile?.full_name?.split(' ')[0] || 'Mwananchi'}?</div>
         </div>
-        <div className="flex gap-[6px] mt-[12px] pt-[12px] border-t border-[oklch(29%_.025_151)]">
+        <div className="flex gap-[6px] mt-[12px] pt-[12px] border-t border-[var(--line)]">
           {[
             { label: 'Ask', icon: '❓', type: 'inquiry' },
             { label: 'Poll', icon: '📊', type: 'poll' },
@@ -716,7 +719,7 @@ export default function FeedPage() {
             <button
               key={action.label}
               onClick={(e) => { e.stopPropagation(); setShowCreateModal(true); setCreateType(action.type) }}
-              className="flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold text-[oklch(65%_.028_151)] hover:bg-[oklch(21%_.03_151)] hover:text-cream transition-all"
+              className="flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-[var(--raised)] hover:text-cream transition-all"
             >
               <span>{action.icon}</span>
               <span>{action.label}</span>
@@ -726,7 +729,7 @@ export default function FeedPage() {
             <button
               onClick={(e) => { e.stopPropagation(); setCountyFilter(countyFilter === profile.county_hub ? null : profile.county_hub) }}
               className={`flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold transition-all ml-auto ${
-                countyFilter === profile.county_hub ? 'bg-green/20 text-green' : 'text-[oklch(65%_.028_151)] hover:bg-[oklch(21%_.03_151)] hover:text-cream'
+                countyFilter === profile.county_hub ? 'bg-green/20 text-green' : 'text-[var(--muted)] hover:bg-[var(--raised)] hover:text-cream'
               }`}
             >
               <span>📍</span>
@@ -745,7 +748,7 @@ export default function FeedPage() {
             className={`flex-shrink-0 px-[12px] py-[5px] rounded-full text-[11px] font-semibold transition-all ${
               typeFilter === f.id
                 ? 'bg-cream text-night'
-                : 'text-[oklch(65%_.028_151)] border border-[oklch(29%_.025_151)] hover:bg-deep hover:text-cream'
+                : 'text-[var(--muted)] border border-[var(--line)] hover:bg-deep hover:text-cream'
             }`}
           >
             {f.label}
@@ -755,7 +758,7 @@ export default function FeedPage() {
           <button
             onClick={() => setShowCountyPicker(!showCountyPicker)}
             className={`flex-shrink-0 flex items-center gap-1 px-[12px] py-[5px] rounded-full text-[11px] font-semibold transition-all ${
-              countyFilter ? 'bg-green/20 text-green border border-green/30' : 'text-[oklch(65%_.028_151)] border border-[oklch(29%_.025_151)] hover:bg-deep hover:text-cream'
+              countyFilter ? 'bg-green/20 text-green border border-green/30' : 'text-[var(--muted)] border border-[var(--line)] hover:bg-deep hover:text-cream'
             }`}
           >
             <span>📍</span>
@@ -764,8 +767,8 @@ export default function FeedPage() {
           {showCountyPicker && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowCountyPicker(false)} />
-              <div className="absolute top-full left-0 mt-1 w-[200px] max-h-[240px] overflow-y-auto bg-night2 border border-[oklch(29%_.025_151)] rounded-[12px] p-[6px] shadow-xl z-20 animate-rise">
-                <button onClick={() => { setCountyFilter(null); setShowCountyPicker(false) }} className="w-full text-left px-[10px] py-[6px] rounded-[8px] text-[12px] text-[oklch(65%_.028_151)] hover:bg-deep transition-colors">All counties</button>
+              <div className="absolute top-full left-0 mt-1 w-[200px] max-h-[240px] overflow-y-auto bg-night2 border border-[var(--line)] rounded-[12px] p-[6px] shadow-xl z-20 animate-rise">
+                <button onClick={() => { setCountyFilter(null); setShowCountyPicker(false) }} className="w-full text-left px-[10px] py-[6px] rounded-[8px] text-[12px] text-[var(--muted)] hover:bg-deep transition-colors">All counties</button>
                 {COUNTIES.map(c => (
                   <button
                     key={c}
@@ -812,12 +815,12 @@ export default function FeedPage() {
         <>
           <div className="fixed inset-0 bg-black/60 z-50 md:flex md:items-center md:justify-center" onClick={() => setShowCreateModal(false)}>
             <div
-              className="fixed bottom-0 left-0 right-0 md:relative md:max-w-[520px] md:w-full bg-night2 border-t md:border border-[oklch(29%_.025_151)] rounded-t-[20px] md:rounded-[16px] max-h-[85vh] overflow-y-auto animate-sheet z-50"
+              className="fixed bottom-0 left-0 right-0 md:relative md:max-w-[520px] md:w-full bg-night2 border-t md:border border-[var(--line)] rounded-t-[20px] md:rounded-[16px] max-h-[85vh] overflow-y-auto animate-sheet z-50"
               onClick={e => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-[16px] border-b border-[oklch(29%_.025_151)] sticky top-0 bg-night2 z-10">
-                <button onClick={() => { if (createStep === 'content') { setCreateStep('type'); setCreateError('') } else setShowCreateModal(false) }} className="text-[oklch(65%_.028_151)] text-[13px] font-semibold hover:text-cream transition-colors">
+              <div className="flex items-center justify-between p-[16px] border-b border-[var(--line)] sticky top-0 bg-night2 z-10">
+                <button onClick={() => { if (createStep === 'content') { setCreateStep('type'); setCreateError('') } else setShowCreateModal(false) }} className="text-[var(--muted)] text-[13px] font-semibold hover:text-cream transition-colors">
                   {createStep === 'content' ? '← Back' : 'Cancel'}
                 </button>
                 <h2 className="text-cream font-bold text-[15px]">Create in Baraza</h2>
@@ -843,7 +846,7 @@ export default function FeedPage() {
               {/* Step 1: Type selection */}
               {createStep === 'type' && (
                 <div className="p-[16px]">
-                  <p className="text-[oklch(65%_.028_151)] text-[12px] mb-[14px]">What kind of post do you want to create?</p>
+                  <p className="text-[var(--muted)] text-[12px] mb-[14px]">What kind of post do you want to create?</p>
                   <div className="grid grid-cols-2 gap-[8px]">
                     {[
                       { id: 'baraza', label: 'Post', icon: '💬', desc: 'Share a thought or update' },
@@ -854,11 +857,11 @@ export default function FeedPage() {
                       <button
                         key={t.id}
                         onClick={() => { setCreateType(t.id); setCreateStep('content') }}
-                        className="flex flex-col items-start gap-[6px] p-[14px] rounded-[12px] border border-[oklch(29%_.025_151)] hover:bg-deep hover:border-gold/30 transition-all text-left"
+                        className="flex flex-col items-start gap-[6px] p-[14px] rounded-[12px] border border-[var(--line)] hover:bg-deep hover:border-gold/30 transition-all text-left"
                       >
                         <span className="text-[22px]">{t.icon}</span>
                         <span className="text-cream font-bold text-[13px]">{t.label}</span>
-                        <span className="text-[oklch(65%_.028_151)] text-[10px]">{t.desc}</span>
+                        <span className="text-[var(--muted)] text-[10px]">{t.desc}</span>
                       </button>
                     ))}
                   </div>
@@ -874,7 +877,7 @@ export default function FeedPage() {
                       value={createTitle}
                       onChange={e => setCreateTitle(e.target.value)}
                       placeholder="What's your question?"
-                      className="w-full bg-transparent text-cream text-[15px] font-bold outline-none placeholder:text-[oklch(65%_.028_151)] mb-[12px]"
+                      className="w-full bg-transparent text-cream text-[15px] font-bold outline-none placeholder:text-[var(--muted)] mb-[12px]"
                     />
                   )}
 
@@ -892,20 +895,20 @@ export default function FeedPage() {
                         : 'What would you like to share?'
                     }
                     rows={5}
-                    className="w-full bg-transparent text-cream text-[13px] outline-none resize-none placeholder:text-[oklch(65%_.028_151)] leading-[1.6] mb-[16px]"
+                    className="w-full bg-transparent text-cream text-[13px] outline-none resize-none placeholder:text-[var(--muted)] leading-[1.6] mb-[16px]"
                   />
 
                   {/* Topics */}
                   {availableTopics.length > 0 && (
                     <div className="mb-[14px]">
-                      <label className="text-[oklch(65%_.028_151)] text-[11px] font-semibold mb-[6px] block">Topics</label>
+                      <label className="text-[var(--muted)] text-[11px] font-semibold mb-[6px] block">Topics</label>
                       <div className="flex flex-wrap gap-[4px]">
                         {availableTopics.map(t => (
                           <button
                             key={t.id}
                             onClick={() => setCreateTopics(prev => prev.includes(t.name) ? prev.filter(x => x !== t.name) : [...prev, t.name])}
                             className={`px-[10px] py-[4px] rounded-full text-[11px] font-medium transition-all ${
-                              createTopics.includes(t.name) ? 'bg-gold text-night' : 'bg-deep text-[oklch(65%_.028_151)] hover:text-cream'
+                              createTopics.includes(t.name) ? 'bg-gold text-night' : 'bg-deep text-[var(--muted)] hover:text-cream'
                             }`}
                           >
                             {t.name}
@@ -917,11 +920,11 @@ export default function FeedPage() {
 
                   {/* County */}
                   <div className="mb-[14px]">
-                    <label className="text-[oklch(65%_.028_151)] text-[11px] font-semibold mb-[6px] block">Location (optional)</label>
+                    <label className="text-[var(--muted)] text-[11px] font-semibold mb-[6px] block">Location (optional)</label>
                     <select
                       value={createCounty}
                       onChange={e => setCreateCounty(e.target.value)}
-                      className="w-full bg-deep text-cream text-[12px] px-[10px] py-[8px] rounded-[10px] border border-[oklch(29%_.025_151)] outline-none focus:border-gold/50 transition-colors appearance-none"
+                      className="w-full bg-deep text-cream text-[12px] px-[10px] py-[8px] rounded-[10px] border border-[var(--line)] outline-none focus:border-gold/50 transition-colors appearance-none"
                     >
                       <option value="">Select a county</option>
                       {COUNTIES.map(c => (
@@ -933,7 +936,7 @@ export default function FeedPage() {
                   {/* Bounty for inquiries */}
                   {createType === 'inquiry' && (
                     <div className="mb-[14px]">
-                      <label className="text-[oklch(65%_.028_151)] text-[11px] font-semibold mb-[6px] block">Bounty (optional)</label>
+                      <label className="text-[var(--muted)] text-[11px] font-semibold mb-[6px] block">Bounty (optional)</label>
                       <div className="flex items-center gap-2">
                         <input
                           type="number"
@@ -942,20 +945,20 @@ export default function FeedPage() {
                           value={createBounty || ''}
                           onChange={e => setCreateBounty(Number(e.target.value) || 0)}
                           placeholder="0"
-                          className="w-[80px] bg-deep text-cream text-[13px] px-[10px] py-[7px] rounded-[10px] border border-[oklch(29%_.025_151)] outline-none focus:border-gold/50 transition-colors"
+                          className="w-[80px] bg-deep text-cream text-[13px] px-[10px] py-[7px] rounded-[10px] border border-[var(--line)] outline-none focus:border-gold/50 transition-colors"
                         />
-                        <span className="text-[oklch(65%_.028_151)] text-[11px]">tokens for the best answer</span>
+                        <span className="text-[var(--muted)] text-[11px]">tokens for the best answer</span>
                       </div>
                     </div>
                   )}
 
                   {/* Post type indicator */}
-                  <div className="flex items-center gap-2 pt-[12px] border-t border-[oklch(29%_.025_151)]">
-                    <span className="text-[10px] font-semibold text-[oklch(65%_.028_151)]">
+                  <div className="flex items-center gap-2 pt-[12px] border-t border-[var(--line)]">
+                    <span className="text-[10px] font-semibold text-[var(--muted)]">
                       Posting as{' '}
                       <span className="text-cream">{profile?.full_name || profile?.username}</span>
                     </span>
-                    <span className="text-[10px] px-[6px] py-[2px] rounded-full bg-deep text-[oklch(65%_.028_151)]">
+                    <span className="text-[10px] px-[6px] py-[2px] rounded-full bg-deep text-[var(--muted)]">
                       {createType === 'baraza' ? 'Baraza' : createType === 'inquiry' ? 'Question' : createType === 'poll' ? 'Poll' : 'Alert'}
                     </span>
                   </div>
@@ -969,7 +972,7 @@ export default function FeedPage() {
       {/* Load more indicator */}
       {!loading && posts.length > 0 && (
         <div className="text-center py-[20px]">
-          <p className="text-[oklch(65%_.028_151)] text-[11px]">You've reached the end... for now</p>
+          <p className="text-[var(--muted)] text-[11px]">You've reached the end... for now</p>
         </div>
       )}
     </div>

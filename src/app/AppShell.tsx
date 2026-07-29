@@ -23,7 +23,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [moderationCount, setModerationCount] = useState(0)
 
   useEffect(() => {
-    if (!loading && !profile) router.push('/login')
+    if (!loading && !profile) router.push('/')
   }, [loading, profile, router])
 
   useEffect(() => {

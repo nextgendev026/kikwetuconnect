@@ -1,13 +1,14 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSupabase, useUser, toast } from '@/app/providers'
+import { X, PenSquare, HelpCircle, BarChart3, ShoppingBag, Shield, Image, Video, Mic, Trash2, Upload } from 'lucide-react'
 
 const TYPES = [
-  { id: 'post', label: 'Post', icon: '✍️' },
-  { id: 'question', label: 'Question', icon: '❓' },
-  { id: 'poll', label: 'Poll', icon: '📊' },
-  { id: 'listing', label: 'Mtaa listing', icon: '🛍️' },
-  { id: 'alert', label: 'Safety update', icon: '🛡️' },
+  { id: 'post', label: 'Post', icon: PenSquare, color: 'var(--green)' },
+  { id: 'question', label: 'Question', icon: HelpCircle, color: 'var(--gold)' },
+  { id: 'poll', label: 'Poll', icon: BarChart3, color: 'var(--blue)' },
+  { id: 'listing', label: 'Mtaa listing', icon: ShoppingBag, color: 'var(--earth)' },
+  { id: 'alert', label: 'Safety update', icon: Shield, color: 'var(--red)' },
 ]
 
 const LABELS: Record<string, string> = {
@@ -22,6 +23,11 @@ export default function CreateModal() {
   const [open, setOpen] = useState(false)
   const [type, setType] = useState('post')
   const [text, setText] = useState('')
+  const [mediaFiles, setMediaFiles] = useState<{ file: File; preview: string; type: string }[]>([])
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
+  const audioInputRef = useRef<HTMLInputElement>(null)
   const supabase = useSupabase()
   const { user } = useUser()
 
@@ -31,51 +37,184 @@ export default function CreateModal() {
     return () => document.removeEventListener('open-create-modal', handler)
   }, [])
 
+  const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>, mediaType: string) => {
+    const files = Array.from(e.target.files || [])
+    files.forEach(file => {
+      if (file.size > 10 * 1024 * 1024) { toast(`${file.name} is too large (max 10MB)`); return }
+      const preview = URL.createObjectURL(file)
+      setMediaFiles(prev => [...prev, { file, preview, type: mediaType }])
+    })
+    e.target.value = ''
+  }
+
+  const removeMedia = (index: number) => {
+    URL.revokeObjectURL(mediaFiles[index].preview)
+    setMediaFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
   const handlePublish = async () => {
     if (!text.trim()) { toast('Add a little context first'); return }
     if (!user) { toast('Please sign in first'); return }
-    const postType = type === 'question' ? 'inquiry' : 'baraza'
-    const { error } = await supabase.from('posts').insert({
-      user_id: user.id, post_type: postType, content: text, title: text.split('\n')[0].slice(0, 100),
-    })
-    if (error) { toast('Failed to publish'); return }
-    setOpen(false); setText(''); toast('Published. Your circle can see it now.')
+    setUploading(true)
+    try {
+      const mediaUrls: string[] = []
+      for (const m of mediaFiles) {
+        const ext = m.file.name.split('.').pop()
+        const path = `posts/${user.id}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const { error: upErr } = await supabase.storage.from('public-media').upload(path, m.file, { upsert: true })
+        if (upErr) throw upErr
+        const { data: { publicUrl } } = supabase.storage.from('public-media').getPublicUrl(path)
+        mediaUrls.push(publicUrl)
+      }
+      const postType = type === 'question' ? 'inquiry' : 'baraza'
+      const { error } = await supabase.from('posts').insert({
+        user_id: user.id, post_type: postType, content: text,
+        title: text.split('\n')[0].slice(0, 100),
+        media_url: mediaUrls[0] || null,
+        media_type: mediaFiles[0]?.type || null,
+      })
+      if (error) throw error
+      setOpen(false); setText(''); setMediaFiles([])
+      mediaFiles.forEach(m => URL.revokeObjectURL(m.preview))
+      toast('Published!')
+    } catch { toast('Failed to publish') }
+    finally { setUploading(false) }
   }
 
   return (
-    <div className={`modal-wrap${open ? ' open' : ''}`} onClick={e => { if (e.target === e.currentTarget) setOpen(false) }}>
-      <div className="modal">
-        <div className="modal-head">
+    <div style={{
+      display: open ? 'flex' : 'none',
+      position: 'fixed', inset: 0, zIndex: 50,
+      background: 'color-mix(in oklab, var(--night) 70%, transparent)',
+      alignItems: 'center', justifyContent: 'center', padding: 18,
+    }} onClick={e => { if (e.target === e.currentTarget) setOpen(false) }}>
+      <div className="animate-rise" style={{
+        width: 'min(540px, 100%)', background: 'var(--surface)',
+        border: '1px solid var(--line)', borderRadius: 22, padding: 24,
+        boxShadow: '0 25px 60px color-mix(in oklab, var(--night) 30%, transparent)',
+        maxHeight: '90vh', overflowY: 'auto',
+      }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-start justify-between mb-5">
           <div>
-            <h2>Put something useful into the circle.</h2>
-            <p>Choose a format, add context, then share it.</p>
+            <h2 style={{ font: '800 20px var(--jakarta)', letterSpacing: '-.04em', color: 'var(--ink)', margin: 0 }}>
+              Share something useful
+            </h2>
+            <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 4 }}>Choose a format, type your thought, and share it.</p>
           </div>
-          <button className="close" onClick={() => setOpen(false)}>×</button>
+          <button onClick={() => setOpen(false)}
+            style={{ background: 'var(--raised)', color: 'var(--muted)', border: 0, cursor: 'pointer', width: 32, height: 32, borderRadius: '50%', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        <div className="chips">
-          {TYPES.map(t => (
-            <button key={t.id} className="chip" style={{ borderColor: type === t.id ? 'var(--gold)' : undefined, background: type === t.id ? 'var(--gold-soft)' : undefined, color: type === t.id ? 'var(--ink)' : undefined }}
-              onClick={() => setType(t.id)}>
-              {t.icon} {t.label}
-            </button>
-          ))}
+
+        <div className="flex gap-2 flex-wrap mb-4">
+          {TYPES.map(t => {
+            const Icon = t.icon; const active = type === t.id
+            return (
+              <button key={t.id} onClick={() => setType(t.id)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '7px 14px', borderRadius: 99, fontSize: 11, fontWeight: 600,
+                  border: active ? '2px solid ' + t.color : '1px solid var(--line)',
+                  background: active ? `color-mix(in oklab, ${t.color} 12%, var(--surface))` : 'var(--surface)',
+                  color: active ? t.color : 'var(--muted)',
+                  cursor: 'pointer', transition: 'all .2s var(--ease)',
+                }}>
+                <Icon className="w-3.5 h-3.5" /> {t.label}
+              </button>
+            )
+          })}
         </div>
-        <div className="field">
-          <label>{LABELS[type] || 'What is on your mind?'}</label>
-          <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Share a useful thought, update, or local insight..." />
+
+        <div className="mb-3">
+          <label style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+            {LABELS[type] || 'What is on your mind?'}
+          </label>
+          <textarea value={text} onChange={e => setText(e.target.value)}
+            placeholder="Share a useful thought, update, or local insight..."
+            rows={4}
+            style={{
+              width: '100%', minHeight: 100, padding: 12,
+              background: 'var(--raised)', border: '1px solid var(--line)',
+              borderRadius: 12, fontFamily: 'inherit', color: 'var(--ink)',
+              outline: 'none', fontSize: 13, resize: 'vertical',
+            }} />
         </div>
-        <div className="field">
-          <label>Topic</label>
-          <select>
+
+        {/* Media upload buttons */}
+        <div className="flex gap-2 mb-3">
+          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={e => handleMediaSelect(e, 'image')} className="hidden" />
+          <input ref={videoInputRef} type="file" accept="video/*" onChange={e => handleMediaSelect(e, 'video')} className="hidden" />
+          <input ref={audioInputRef} type="file" accept="audio/*" onChange={e => handleMediaSelect(e, 'audio')} className="hidden" />
+          <button onClick={() => fileInputRef.current?.click()}
+            style={{ padding: '8px 14px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: 'var(--raised)', color: 'var(--muted)', border: '1px solid var(--line)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Image className="w-3.5 h-3.5" style={{ color: 'var(--green)' }} /> Image
+          </button>
+          <button onClick={() => videoInputRef.current?.click()}
+            style={{ padding: '8px 14px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: 'var(--raised)', color: 'var(--muted)', border: '1px solid var(--line)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Video className="w-3.5 h-3.5" style={{ color: 'var(--blue)' }} /> Video
+          </button>
+          <button onClick={() => audioInputRef.current?.click()}
+            style={{ padding: '8px 14px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: 'var(--raised)', color: 'var(--muted)', border: '1px solid var(--line)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Mic className="w-3.5 h-3.5" style={{ color: 'var(--red)' }} /> Audio
+          </button>
+        </div>
+
+        {/* Media previews */}
+        {mediaFiles.length > 0 && (
+          <div className="flex gap-2 flex-wrap mb-3">
+            {mediaFiles.map((m, i) => (
+              <div key={i} style={{ position: 'relative', width: 80, height: 80, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--line)' }}>
+                {m.type === 'image' ? (
+                  <img src={m.preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : m.type === 'video' ? (
+                  <video src={m.preview} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--raised)', color: 'var(--muted)', fontSize: 10 }}>
+                    <Mic className="w-5 h-5" />
+                  </div>
+                )}
+                <button onClick={() => removeMedia(i)}
+                  style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', border: 0, borderRadius: '50%', width: 20, height: 20, display: 'grid', placeItems: 'center', cursor: 'pointer', color: '#fff' }}>
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="mb-4">
+          <label style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 600, display: 'block', marginBottom: 6 }}>Topic</label>
+          <select style={{
+            width: '100%', padding: '10px 12px', background: 'var(--raised)',
+            border: '1px solid var(--line)', borderRadius: 11, fontFamily: 'inherit',
+            color: 'var(--ink)', outline: 'none', fontSize: 12,
+          }}>
             <option>Biashara & Hustles</option>
             <option>Tech & Startups</option>
             <option>Agriculture & Farming</option>
             <option>Education</option>
           </select>
         </div>
-        <div className="modal-foot">
-          <button className="btn secondary" onClick={() => setOpen(false)}>Cancel</button>
-          <button className="btn primary" onClick={handlePublish}>Publish</button>
+
+        <div className="flex justify-end gap-2" style={{ borderTop: '1px solid var(--line)', paddingTop: 16 }}>
+          <button onClick={() => setOpen(false)}
+            style={{
+              padding: '10px 18px', borderRadius: 11, fontWeight: 600, fontSize: 12,
+              background: 'var(--raised)', color: 'var(--muted)',
+              border: '1px solid var(--line)', cursor: 'pointer',
+            }}>
+            Cancel
+          </button>
+          <button onClick={handlePublish} disabled={uploading}
+            style={{
+              padding: '10px 18px', borderRadius: 11, fontWeight: 700, fontSize: 12,
+              background: 'var(--gold)', color: 'var(--night)',
+              border: 0, cursor: 'pointer', opacity: uploading ? 0.6 : 1,
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+            {uploading ? <><Upload className="w-3.5 h-3.5 animate-spin" /> Uploading...</> : 'Publish'}
+          </button>
         </div>
       </div>
     </div>

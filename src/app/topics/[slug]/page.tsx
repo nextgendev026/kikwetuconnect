@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation'
 import { ArrowLeft, Users, Plus, Check, Tag } from 'lucide-react'
 import { Button } from '@/components/ui/form'
 import { PostCard } from '@/components/ui/post-card-component'
-import { useUser, useSupabase } from '@/providers/supabase-provider'
+import { useUser, useSupabase } from '@/app/providers'
 
 interface Topic {
   id: string

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { BookOpen, MessageCircle, Award, TrendingUp, Zap, Calendar, Clock, Users, Star, ChevronRight, Coins, BarChart3, Flame, X } from 'lucide-react'
+import { BookOpen, MessageCircle, Award, TrendingUp, Zap, Calendar, Clock, Users, Star, ChevronRight, BarChart3, Flame, X, GraduationCap } from 'lucide-react'
 
 interface StudentQuestion {
   id: string; title: string | null; content: string; user_id: string; answers_count: number; upvotes_count: number; bounty_tokens: number; created_at: string
@@ -18,6 +18,16 @@ interface Quiz {
   id: string; title: string; description: string; category: string; difficulty: string; question_count: number; estimated_time_minutes: number; heshima_reward: number
 }
 
+const style = {
+  card: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: 20, boxShadow: 'var(--card-shadow)' },
+  statCard: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 16, boxShadow: 'var(--card-shadow)' },
+  miniCard: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: 16, boxShadow: 'var(--card-shadow)' },
+  input: { width: '100%', background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 11, padding: '10px 14px', fontSize: 13, color: 'var(--ink)', outline: 'none' },
+  btn: { padding: '10px 20px', borderRadius: 11, fontWeight: 700, fontSize: 12, border: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, transition: 'all .2s var(--ease)' },
+  primaryBtn: { background: 'var(--gold)', color: 'var(--night)' },
+  secondaryBtn: { background: 'var(--raised)', color: 'var(--ink)', border: '1px solid var(--line)' },
+}
+
 export default function StudentsPage() {
   const supabase = useSupabase()
   const { profile, loading: userLoading } = useUser()
@@ -30,10 +40,7 @@ export default function StudentsPage() {
   const [bookingGoal, setBookingGoal] = useState('')
   const [sendingBooking, setSendingBooking] = useState(false)
 
-  useEffect(() => {
-    if (userLoading) return
-    fetchStudentData()
-  }, [userLoading])
+  useEffect(() => { if (!userLoading) fetchStudentData() }, [userLoading])
 
   const fetchStudentData = async () => {
     setLoading(true)
@@ -55,15 +62,7 @@ export default function StudentsPage() {
     if (!bookingPro || !bookingTopic.trim()) return toast('Topic is required')
     setSendingBooking(true)
     try {
-      const { error } = await supabase.from('sessions').insert({
-        student_id: profile.id,
-        professional_id: bookingPro.user_id,
-        topic: bookingTopic.trim(),
-        goal: bookingGoal.trim() || null,
-        status: 'requested',
-        format: 'video',
-        language: 'English',
-      })
+      const { error } = await supabase.from('sessions').insert({ student_id: profile.id, professional_id: bookingPro.user_id, topic: bookingTopic.trim(), goal: bookingGoal.trim() || null, status: 'requested', format: 'video', language: 'English' })
       if (error) throw error
       toast('Session requested! The professional will respond shortly.')
       setBookingPro(null); setBookingTopic(''); setBookingGoal('')
@@ -74,24 +73,24 @@ export default function StudentsPage() {
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
   const formatDate = (d: string) => { const date = new Date(d); const now = new Date(); const diff = now.getTime() - date.getTime(); if (diff < 86400000) return 'Today'; if (diff < 172800000) return 'Yesterday'; return date.toLocaleDateString('en-KE', { day: 'numeric', month: 'short' }) }
 
-  if (userLoading || loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin w-8 h-8 border-2 border-green border-t-transparent rounded-full" /></div>
+  if (userLoading || loading) return <div className="flex items-center justify-center min-h-[80vh]"><div className="animate-spin w-8 h-8 border-2" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent', borderRadius: '50%' }} /></div>
 
   return (
-    <div className="pb-8">
+    <div className="pb-8 animate-fade-in-up">
       {/* Hero */}
-      <section className="rounded-[20px] bg-gradient-to-br from-[oklch(21%_.03_151)] to-[oklch(14%_.025_151)] border border-[oklch(55%_.13_151)]/30 p-6 mb-8 animate-rise">
+      <section className="rounded-[20px] p-6 mb-8 animate-rise" style={{ background: 'linear-gradient(135deg, var(--raised), var(--surface))', border: '1px solid', borderColor: 'color-mix(in oklab, var(--green) 30%, transparent)' }}>
         <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[oklch(55%_.13_151)] to-[oklch(75%_.14_84)] flex items-center justify-center flex-shrink-0">
-            <BookOpen className="w-7 h-7 text-[oklch(14%_.025_151)]" />
+          <div className="w-14 h-14 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--green), var(--gold))', color: 'var(--night)' }}>
+            <GraduationCap className="w-7 h-7" />
           </div>
           <div className="flex-1">
-            <h1 className="text-2xl font-extrabold tracking-tight text-cream">Your Learning Loop</h1>
-            <p className="text-sm text-[oklch(65%_.028_151)] mt-1 leading-relaxed">Ask questions, earn Heshima, grow your knowledge. Every answer is a step forward.</p>
+            <h1 className="text-2xl font-extrabold tracking-tight" style={{ color: 'var(--ink)' }}>Your Learning Loop</h1>
+            <p className="text-sm mt-1 leading-relaxed" style={{ color: 'var(--muted)' }}>Ask questions, earn Heshima, grow your knowledge. Every answer is a step forward.</p>
             <div className="flex flex-wrap items-center gap-4 mt-4">
-              <Link href="/create" className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-[11px] bg-[oklch(75%_.14_84)] text-[oklch(14%_.025_151)] text-sm font-bold hover:opacity-90 transition-opacity">
+              <Link href="/create" style={{ ...style.btn, ...style.primaryBtn }}>
                 <MessageCircle className="w-4 h-4" /> Ask the Circle
               </Link>
-              <Link href="/professionals" className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-[11px] border border-[oklch(29%_.025_151)] text-sm font-medium text-[oklch(65%_.028_151)] hover:text-cream transition-colors">
+              <Link href="/professionals" style={style.secondaryBtn}>
                 <Zap className="w-4 h-4" /> Find a Mentor
               </Link>
             </div>
@@ -101,77 +100,77 @@ export default function StudentsPage() {
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-        <div className="rounded-[14px] p-4 bg-[oklch(18%_.028_151)] border border-[oklch(29%_.025_151)]">
+        <div style={style.statCard}>
           <div className="flex items-center gap-2 mb-2">
-            <BarChart3 className="w-4 h-4 text-[oklch(55%_.13_151)]" />
-            <span className="text-xs text-[oklch(65%_.028_151)]">Progress</span>
+            <BarChart3 className="w-4 h-4" style={{ color: 'var(--green)' }} />
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>Progress</span>
           </div>
-          <div className="text-2xl font-bold text-cream">68%</div>
-          <div className="w-full bg-[oklch(29%_.025_151)] rounded-full h-1.5 mt-2 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-[oklch(55%_.13_151)] to-[oklch(75%_.14_84)] rounded-full" style={{ width: '68%' }} />
+          <div className="text-2xl font-bold" style={{ color: 'var(--ink)' }}>68%</div>
+          <div className="w-full rounded-full h-1.5 mt-2 overflow-hidden" style={{ background: 'var(--raised)' }}>
+            <div className="h-full rounded-full" style={{ width: '68%', background: 'linear-gradient(90deg, var(--green), var(--gold))' }} />
           </div>
         </div>
-        <div className="rounded-[14px] p-4 bg-[oklch(18%_.028_151)] border border-[oklch(29%_.025_151)]">
+        <div style={style.statCard}>
           <div className="flex items-center gap-2 mb-2">
-            <Flame className="w-4 h-4 text-[oklch(75%_.14_84)]" />
-            <span className="text-xs text-[oklch(65%_.028_151)]">Streak</span>
+            <Flame className="w-4 h-4" style={{ color: 'var(--gold)' }} />
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>Streak</span>
           </div>
-          <div className="text-2xl font-bold text-[oklch(75%_.14_84)]">7 days</div>
-          <p className="text-[10px] text-[oklch(65%_.028_151)] mt-1">Keep it going!</p>
+          <div className="text-2xl font-bold" style={{ color: 'var(--gold)' }}>7 days</div>
+          <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>Keep it going!</p>
         </div>
-        <div className="rounded-[14px] p-4 bg-[oklch(18%_.028_151)] border border-[oklch(29%_.025_151)]">
+        <div style={style.statCard}>
           <div className="flex items-center gap-2 mb-2">
-            <Award className="w-4 h-4 text-[oklch(55%_.13_151)]" />
-            <span className="text-xs text-[oklch(65%_.028_151)]">Heshima</span>
+            <Award className="w-4 h-4" style={{ color: 'var(--green)' }} />
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>Heshima</span>
           </div>
-          <div className="text-2xl font-bold text-[oklch(55%_.13_151)]">{profile?.heshima_rating || 0}</div>
-          <p className="text-[10px] text-[oklch(65%_.028_151)] mt-1">Earned from answers</p>
+          <div className="text-2xl font-bold" style={{ color: 'var(--green)' }}>{profile?.heshima_rating || 0}</div>
+          <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>Earned from answers</p>
         </div>
-        <div className="rounded-[14px] p-4 bg-[oklch(18%_.028_151)] border border-[oklch(29%_.025_151)]">
+        <div style={style.statCard}>
           <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-4 h-4 text-[oklch(48%_.10_55)]" />
-            <span className="text-xs text-[oklch(65%_.028_151)]">Sessions</span>
+            <Clock className="w-4 h-4" style={{ color: 'var(--earth)' }} />
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>Sessions</span>
           </div>
-          <div className="text-2xl font-bold text-[oklch(48%_.10_55)]">0</div>
-          <p className="text-[10px] text-[oklch(65%_.028_151)] mt-1">Book a mentor</p>
+          <div className="text-2xl font-bold" style={{ color: 'var(--earth)' }}>0</div>
+          <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>Book a mentor</p>
         </div>
       </div>
 
       {/* Open Questions */}
       <section className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold">Open Questions</h2>
-          <Link href="/create" className="text-xs text-[oklch(75%_.14_84)] font-medium flex items-center gap-1 hover:underline"><MessageCircle className="w-3 h-3" /> Ask a question</Link>
+          <h2 className="font-bold" style={{ color: 'var(--ink)' }}>Open Questions</h2>
+          <Link href="/create" className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--gold)' }}><MessageCircle className="w-3 h-3" /> Ask a question</Link>
         </div>
         {questions.length === 0 ? (
-          <div className="card section text-center py-8">
-            <MessageCircle className="w-8 h-8 text-[oklch(30%_.025_151)] mx-auto mb-3" />
-            <p className="text-xs text-muted">No open questions yet</p>
-            <Link href="/create" className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 rounded-[8px] bg-[oklch(55%_.13_151)] text-[oklch(14%_.025_151)] text-xs font-bold">Be the first to ask</Link>
+          <div style={style.card} className="text-center py-8">
+            <MessageCircle className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--muted)', opacity: 0.3 }} />
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>No open questions yet</p>
+            <Link href="/create" style={{ ...style.btn, ...style.primaryBtn, marginTop: 12 }}>Be the first to ask</Link>
           </div>
         ) : (
           <div className="space-y-3">
             {questions.map(q => {
               const author = q.profiles
               return (
-                <Link key={q.id} href={`/posts/${q.id}`} className="block rounded-[14px] p-4 border border-[oklch(29%_.025_151)] bg-[oklch(18%_.028_151)] hover:border-[oklch(75%_.14_84)]/40 transition-all group">
+                <Link key={q.id} href={`/posts/${q.id}`} style={style.miniCard} className="card-hover block transition-colors">
                   <div className="flex items-start gap-3">
                     {author && (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[oklch(55%_.13_151)] to-[oklch(75%_.14_84)] flex items-center justify-center text-[10px] font-bold text-[oklch(14%_.025_151)] flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--green), var(--gold))', color: 'var(--night)' }}>
                         {getInitials(author.full_name || author.username)}
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-sm group-hover:text-[oklch(75%_.14_84)] transition-colors truncate">{q.title || q.content.slice(0, 80)}</h3>
-                      <p className="text-xs text-[oklch(65%_.028_151)] mt-1 line-clamp-1">{q.content.slice(0, 120)}</p>
-                      <div className="flex items-center gap-4 mt-2.5 text-[10px] text-[oklch(65%_.028_151)]">
+                      <h3 className="font-bold text-sm" style={{ color: 'var(--ink)' }}>{q.title || q.content.slice(0, 80)}</h3>
+                      <p className="text-xs mt-1 line-clamp-1" style={{ color: 'var(--muted)' }}>{q.content.slice(0, 120)}</p>
+                      <div className="flex items-center gap-4 mt-2.5 text-[10px]" style={{ color: 'var(--muted)' }}>
                         <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" />{q.answers_count} answers</span>
                         <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" />{q.upvotes_count} views</span>
-                        {q.bounty_tokens > 0 && <span className="flex items-center gap-1 text-[oklch(75%_.14_84)] font-medium"><Coins className="w-3 h-3" />{q.bounty_tokens} tokens</span>}
+                        {q.bounty_tokens > 0 && <span className="flex items-center gap-1 font-medium" style={{ color: 'var(--gold)' }}>🎯 {q.bounty_tokens} tokens</span>}
                         <span>{formatDate(q.created_at)}</span>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-[oklch(65%_.028_151)] group-hover:text-[oklch(75%_.14_84)] transition-colors flex-shrink-0 mt-1" />
+                    <ChevronRight className="w-4 h-4 flex-shrink-0 mt-1" style={{ color: 'var(--muted)' }} />
                   </div>
                 </Link>
               )
@@ -183,29 +182,29 @@ export default function StudentsPage() {
       {/* Recommended Quizzes */}
       <section className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold">Recommended Quizzes</h2>
-          <Link href="/quizzes" className="text-xs text-[oklch(75%_.14_84)] font-medium flex items-center gap-1 hover:underline">View all <ChevronRight className="w-3 h-3" /></Link>
+          <h2 className="font-bold" style={{ color: 'var(--ink)' }}>Recommended Quizzes</h2>
+          <Link href="/quizzes" className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--gold)' }}>View all <ChevronRight className="w-3 h-3" /></Link>
         </div>
         {quizzes.length === 0 ? (
-          <div className="card section text-center py-8">
-            <BookOpen className="w-8 h-8 text-[oklch(30%_.025_151)] mx-auto mb-3" />
-            <p className="text-xs text-muted">No quizzes yet</p>
+          <div style={style.card} className="text-center py-8">
+            <BookOpen className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--muted)', opacity: 0.3 }} />
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>No quizzes yet</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {quizzes.map(q => (
-              <div key={q.id} className="rounded-[14px] p-4 border border-[oklch(29%_.025_151)] bg-[oklch(18%_.028_151)]">
+              <div key={q.id} style={style.miniCard}>
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-[10px] bg-[oklch(55%_.13_151)]/20 flex items-center justify-center flex-shrink-0">
-                    <Award className="w-5 h-5 text-[oklch(55%_.13_151)]" />
+                  <div className="w-10 h-10 rounded-[10px] flex items-center justify-center flex-shrink-0" style={{ background: 'color-mix(in oklab, var(--green) 20%, transparent)' }}>
+                    <Award className="w-5 h-5" style={{ color: 'var(--green)' }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-sm truncate">{q.title}</h3>
-                    <p className="text-xs text-[oklch(65%_.028_151)] mt-0.5 line-clamp-2">{q.description}</p>
-                    <div className="flex items-center gap-3 mt-2 text-[10px] text-[oklch(65%_.028_151)]">
+                    <h3 className="font-bold text-sm" style={{ color: 'var(--ink)' }}>{q.title}</h3>
+                    <p className="text-xs mt-0.5 line-clamp-2" style={{ color: 'var(--muted)' }}>{q.description}</p>
+                    <div className="flex items-center gap-3 mt-2 text-[10px]" style={{ color: 'var(--muted)' }}>
                       <span>{q.question_count} questions</span>
                       <span>{q.estimated_time_minutes} min</span>
-                      <span className="text-[oklch(55%_.13_151)] font-medium">+{q.heshima_reward} Heshima</span>
+                      <span className="font-medium" style={{ color: 'var(--green)' }}>+{q.heshima_reward} Heshima</span>
                     </div>
                   </div>
                 </div>
@@ -218,13 +217,13 @@ export default function StudentsPage() {
       {/* Professional Recommendations */}
       <section className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold">Recommended Professionals</h2>
-          <Link href="/professionals" className="text-xs text-[oklch(75%_.14_84)] font-medium flex items-center gap-1 hover:underline">View all <ChevronRight className="w-3 h-3" /></Link>
+          <h2 className="font-bold" style={{ color: 'var(--ink)' }}>Recommended Professionals</h2>
+          <Link href="/professionals" className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--gold)' }}>View all <ChevronRight className="w-3 h-3" /></Link>
         </div>
         {professionals.length === 0 ? (
-          <div className="card section text-center py-8">
-            <Users className="w-8 h-8 text-[oklch(30%_.025_151)] mx-auto mb-3" />
-            <p className="text-xs text-muted">No professionals available</p>
+          <div style={style.card} className="text-center py-8">
+            <Users className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--muted)', opacity: 0.3 }} />
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>No professionals available</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -232,25 +231,27 @@ export default function StudentsPage() {
               const p = pro.profiles
               if (!p) return null
               return (
-                <div key={pro.id} className="rounded-[14px] p-4 border border-[oklch(29%_.025_151)] bg-[oklch(18%_.028_151)]">
+                <div key={pro.id} style={style.miniCard}>
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[oklch(55%_.13_151)] to-[oklch(75%_.14_84)] flex items-center justify-center text-xs font-bold text-[oklch(14%_.025_151)] flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--green), var(--gold))', color: 'var(--night)' }}>
                       {getInitials(p.full_name || p.username)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <Link href={`/profile/${p.username}`} className="font-bold text-sm hover:underline truncate">{p.full_name || p.username}</Link>
-                        {p.is_verified_expert && <Zap className="w-3.5 h-3.5 text-[oklch(55%_.13_151)] flex-shrink-0" />}
+                        <Link href={`/profile/${p.username}`} className="font-bold text-sm truncate" style={{ color: 'var(--ink)' }}>{p.full_name || p.username}</Link>
+                        {p.is_verified_expert && <Zap className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--green)' }} />}
                       </div>
-                      <p className="text-[11px] text-[oklch(75%_.14_84)] mt-0.5">{pro.title}</p>
-                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[oklch(65%_.028_151)]">
+                      <p className="text-[11px] mt-0.5" style={{ color: 'var(--gold)' }}>{pro.title}</p>
+                      <div className="flex items-center gap-2 mt-1.5 text-[10px]" style={{ color: 'var(--muted)' }}>
                         <span>{pro.county}</span>
-                        <span className="flex items-center gap-0.5"><Star className="w-3 h-3 text-[oklch(75%_.14_84)]" fill="oklch(75%_.14_84)" />{pro.rating.toFixed(1)}</span>
+                        <span className="flex items-center gap-0.5"><Star className="w-3 h-3" style={{ color: 'var(--gold)' }} />{pro.rating.toFixed(1)}</span>
                       </div>
                       <div className="flex flex-wrap gap-1 mt-2">
-                        {pro.expertise.slice(0, 2).map(e => <span key={e} className="text-[9px] px-2 py-0.5 rounded-full bg-[oklch(21%_.03_151)] text-[oklch(65%_.028_151)]">{e}</span>)}
+                        {pro.expertise.slice(0, 2).map(e => <span key={e} className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>{e}</span>)}
                       </div>
-                      <button onClick={() => setBookingPro(pro)} className="mt-3 w-full py-2 rounded-[8px] bg-[oklch(55%_.13_151)] text-[oklch(14%_.025_151)] text-xs font-bold hover:opacity-90 transition-opacity flex items-center justify-center gap-1">
+                      <button onClick={() => setBookingPro(pro)} style={{ ...style.btn, ...style.primaryBtn, width: '100%', justifyContent: 'center', marginTop: 8, fontSize: 10, padding: '8px 12px' }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = 'var(--card-shadow-hover)' }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
                         <Calendar className="w-3 h-3" /> Book Session
                       </button>
                     </div>
@@ -264,33 +265,29 @@ export default function StudentsPage() {
 
       {/* Session Booking Modal */}
       {bookingPro && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setBookingPro(null)} />
-          <div className="relative w-full max-w-md rounded-[18px] bg-[oklch(18%_.028_151)] border border-[oklch(29%_.025_151)] p-6 animate-rise">
-            <button onClick={() => setBookingPro(null)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[oklch(21%_.03_151)] flex items-center justify-center hover:bg-[oklch(29%_.025_151)] transition-colors">
-              <X className="w-4 h-4" />
-            </button>
-            <h2 className="font-bold text-lg mb-1">Book a Session</h2>
-            <p className="text-xs text-[oklch(65%_.028_151)] mb-5">with {bookingPro.profiles?.full_name || 'Professional'}</p>
-
-            <label className="text-xs text-[oklch(65%_.028_151)] font-medium block mb-1.5">What do you want to learn?</label>
-            <input type="text" placeholder="e.g. M-Pesa API integration" value={bookingTopic} onChange={e => setBookingTopic(e.target.value)}
-              className="w-full bg-[oklch(14%_.025_151)] border border-[oklch(29%_.025_151)] rounded-[11px] px-3 py-2.5 text-sm text-cream placeholder-[oklch(65%_.028_151)] focus:outline-none focus:border-[oklch(55%_.13_151)] mb-4" />
-
-            <label className="text-xs text-[oklch(65%_.028_151)] font-medium block mb-1.5">Your goal (optional)</label>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'color-mix(in oklab, var(--night) 80%, transparent)' }}>
+          <div className="animate-rise" style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(480px, 100%)' }}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-bold text-lg" style={{ color: 'var(--ink)' }}>Book a Session</h2>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>with {bookingPro.profiles?.full_name || 'Professional'}</p>
+              </div>
+              <button onClick={() => setBookingPro(null)} className="w-8 h-8 rounded-full grid place-items-center" style={{ background: 'var(--raised)', color: 'var(--muted)', border: 0, cursor: 'pointer' }}>&times;</button>
+            </div>
+            <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>What do you want to learn?</label>
+            <input type="text" placeholder="e.g. M-Pesa API integration" value={bookingTopic} onChange={e => setBookingTopic(e.target.value)} style={style.input} className="!mb-3" />
+            <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Your goal (optional)</label>
             <textarea placeholder="What do you hope to achieve?" value={bookingGoal} onChange={e => setBookingGoal(e.target.value)} rows={3}
-              className="w-full bg-[oklch(14%_.025_151)] border border-[oklch(29%_.025_151)] rounded-[11px] px-3 py-2.5 text-sm text-cream placeholder-[oklch(65%_.028_151)] focus:outline-none focus:border-[oklch(55%_.13_151)] resize-none mb-5" />
-
-            <div className="flex items-center justify-between mb-5 text-xs text-[oklch(65%_.028_151)]">
+              style={{ ...style.input, resize: 'none' }} className="!mb-4" />
+            <div className="flex items-center justify-between mb-4 text-xs" style={{ color: 'var(--muted)' }}>
               <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Flexibly scheduled</span>
               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> 45 min session</span>
-              <span className="text-[oklch(75%_.14_84)] font-medium">KSh {bookingPro.rate}</span>
+              <span className="font-medium" style={{ color: 'var(--gold)' }}>KSh {bookingPro.rate}</span>
             </div>
-
             <div className="flex gap-3">
-              <button onClick={() => setBookingPro(null)} className="flex-1 py-2.5 rounded-[11px] border border-[oklch(29%_.025_151)] text-[oklch(65%_.028_151)] text-sm font-medium hover:text-cream transition-colors">Cancel</button>
+              <button onClick={() => setBookingPro(null)} style={{ ...style.btn, ...style.secondaryBtn, flex: 1, justifyContent: 'center' }}>Cancel</button>
               <button onClick={handleBookSession} disabled={sendingBooking || !bookingTopic.trim()}
-                className="flex-1 py-2.5 rounded-[11px] bg-[oklch(75%_.14_84)] text-[oklch(14%_.025_151)] text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50">
+                style={{ ...style.btn, ...style.primaryBtn, flex: 1, justifyContent: 'center', opacity: (sendingBooking || !bookingTopic.trim()) ? 0.5 : 1 }}>
                 {sendingBooking ? 'Sending...' : 'Request Session'}
               </button>
             </div>
@@ -299,15 +296,15 @@ export default function StudentsPage() {
       )}
 
       {/* CTA */}
-      <div className="rounded-[18px] bg-gradient-to-br from-[oklch(21%_.03_151)] to-[oklch(14%_.025_151)] border border-[oklch(75%_.14_84)]/30 p-5">
+      <div className="rounded-[18px] p-5" style={{ background: 'linear-gradient(135deg, var(--raised), var(--surface))', border: '1px solid', borderColor: 'color-mix(in oklab, var(--gold) 30%, transparent)' }}>
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-[oklch(75%_.14_84)]/20 flex items-center justify-center flex-shrink-0">
-            <MessageCircle className="w-6 h-6 text-[oklch(75%_.14_84)]" />
+          <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'color-mix(in oklab, var(--gold) 20%, transparent)' }}>
+            <MessageCircle className="w-6 h-6" style={{ color: 'var(--gold)' }} />
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-sm">Stuck on something?</h3>
-            <p className="text-xs text-[oklch(65%_.028_151)] mt-1">Ask the circle — get answers from verified experts and peers</p>
-            <Link href="/create" className="inline-flex items-center gap-1.5 mt-3 px-5 py-2 rounded-[8px] bg-[oklch(75%_.14_84)] text-[oklch(14%_.025_151)] text-xs font-bold hover:opacity-90 transition-opacity">
+            <h3 className="font-bold text-sm" style={{ color: 'var(--ink)' }}>Stuck on something?</h3>
+            <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>Ask the circle — get answers from verified experts and peers</p>
+            <Link href="/create" style={{ ...style.btn, ...style.primaryBtn, marginTop: 8 }}>
               Ask the Circle
             </Link>
           </div>

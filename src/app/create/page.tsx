@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button, Textarea, Input } from '@/components/ui/form'
-import { X, Tag, MapPin, Coins, ArrowLeft } from 'lucide-react'
-import { useUser, useSupabase } from '@/providers/supabase-provider'
+import { X, Tag, MapPin, Coins, ArrowLeft, Image, Video, Music } from 'lucide-react'
+import { useUser, useSupabase, toast } from '@/app/providers'
 
 const postTypes = [
   { id: 'baraza', name: 'Baraza Post', description: 'Share a thought, insight, or start a conversation' },
@@ -53,6 +53,8 @@ export default function CreatePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [mediaFiles, setMediaFiles] = useState<{ file: File; preview: string; type: 'image' | 'video' | 'audio' }[]>([])
+  const [uploadingMedia, setUploadingMedia] = useState(false)
 
   useEffect(() => {
     fetchTopics()
@@ -68,6 +70,38 @@ export default function CreatePage() {
     }
   }
 
+  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>, mediaType: 'image' | 'video' | 'audio') => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    const file = files[0]
+    const maxSize = mediaType === 'image' ? 10 * 1024 * 1024 : 50 * 1024 * 1024
+    if (file.size > maxSize) { toast(`${mediaType === 'image' ? 'Image' : 'Media'} must be under ${maxSize / 1024 / 1024}MB`); return }
+    const preview = URL.createObjectURL(file)
+    setMediaFiles(prev => [...prev, { file, preview, type: mediaType }])
+    e.target.value = ''
+  }
+
+  const removeMedia = (index: number) => {
+    setMediaFiles(prev => { const n = [...prev]; URL.revokeObjectURL(n[index].preview); n.splice(index, 1); return n })
+  }
+
+  const uploadMediaToStorage = async (): Promise<string[]> => {
+    if (mediaFiles.length === 0) return []
+    setUploadingMedia(true)
+    try {
+      const urls: string[] = []
+      for (const m of mediaFiles) {
+        const ext = m.file.name.split('.').pop() || 'jpg'
+        const path = `posts/${profile.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const { error: upErr } = await supabase.storage.from('public-media').upload(path, m.file, { upsert: false })
+        if (upErr) throw upErr
+        const { data: { publicUrl } } = supabase.storage.from('public-media').getPublicUrl(path)
+        urls.push(publicUrl)
+      }
+      return urls
+    } finally { setUploadingMedia(false) }
+  }
+
   const toggleTopic = (topicName: string) => {
     setSelectedTopics(prev =>
       prev.includes(topicName)
@@ -80,31 +114,19 @@ export default function CreatePage() {
     setError('')
     setSuccess('')
 
-    // Validation
-    if (!content.trim()) {
-      setError('Please write some content')
-      return
-    }
-
-    if (content.trim().length < 10) {
-      setError('Content must be at least 10 characters')
-      return
-    }
-
-    if (selectedType === 'inquiry' && !title.trim()) {
-      setError('Please add a title for your question')
-      return
-    }
-
-    if (selectedType === 'inquiry' && title.trim().length < 5) {
-      setError('Title must be at least 5 characters')
-      return
-    }
+    if (!content.trim()) { setError('Please write some content'); return }
+    if (content.trim().length < 10) { setError('Content must be at least 10 characters'); return }
+    if (selectedType === 'inquiry' && !title.trim()) { setError('Please add a title for your question'); return }
+    if (selectedType === 'inquiry' && title.trim().length < 5) { setError('Title must be at least 5 characters'); return }
 
     setLoading(true)
 
     try {
-      // Get topic IDs for the selected topics
+      let mediaUrls: string[] = []
+      if (mediaFiles.length > 0) {
+        mediaUrls = await uploadMediaToStorage()
+      }
+
       const selectedTopicIds = topics
         .filter(t => selectedTopics.includes(t.name))
         .map(t => t.id)
@@ -119,6 +141,8 @@ export default function CreatePage() {
           countyTag: selectedCounty || null,
           bountyTokens: selectedType === 'inquiry' ? bountyTokens : 0,
           topics: selectedTopicIds,
+          mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
+          mediaUrl: mediaUrls.length > 0 ? mediaUrls[0] : null,
         }),
       })
 
@@ -312,21 +336,36 @@ export default function CreatePage() {
           )}
         </div>
 
+        {/* Media previews */}
+        {mediaFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {mediaFiles.map((m, i) => (
+              <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden" style={{ border: '1px solid var(--line)' }}>
+                {m.type === 'image' ? <img src={m.preview} alt="" className="w-full h-full object-cover" /> :
+                 m.type === 'video' ? <video src={m.preview} className="w-full h-full object-cover" /> :
+                 <div className="w-full h-full flex items-center justify-center" style={{ background: 'var(--raised)' }}><Music className="w-6 h-6" style={{ color: 'var(--muted)' }} /></div>}
+                <button onClick={() => removeMedia(i)} className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full grid place-items-center text-[9px]" style={{ background: 'var(--night)', color: 'var(--surface)' }}>×</button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Media Actions */}
         <div className="flex items-center justify-between pt-4 border-t border-line">
-          <div className="flex gap-2 opacity-50">
-            <button className="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-muted hover:bg-surface hover:text-text transition-colors" disabled>
-              📷
-            </button>
-            <button className="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-muted hover:bg-surface hover:text-text transition-colors" disabled>
-              🎥
-            </button>
-            <button className="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-muted hover:bg-surface hover:text-text transition-colors" disabled>
-              🎙️
-            </button>
-            <button className="w-9 h-9 rounded-full bg-surface-2 flex items-center justify-center text-muted hover:bg-surface hover:text-text transition-colors" disabled>
-              📍
-            </button>
+          <div className="flex gap-2">
+            <label className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-colors" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+              <Image className="w-4 h-4" />
+              <input type="file" accept="image/*" onChange={e => handleMediaUpload(e, 'image')} className="hidden" disabled={loading || uploadingMedia} />
+            </label>
+            <label className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-colors" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+              <Video className="w-4 h-4" />
+              <input type="file" accept="video/*" onChange={e => handleMediaUpload(e, 'video')} className="hidden" disabled={loading || uploadingMedia} />
+            </label>
+            <label className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-colors" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+              <Music className="w-4 h-4" />
+              <input type="file" accept="audio/*" onChange={e => handleMediaUpload(e, 'audio')} className="hidden" disabled={loading || uploadingMedia} />
+            </label>
+            {uploadingMedia && <span className="text-[10px] animate-pulse" style={{ color: 'var(--muted)' }}>Uploading...</span>}
           </div>
           <div className="flex gap-2">
             <Link href="/feed" className="btn btn-secondary">

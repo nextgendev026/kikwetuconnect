@@ -53,18 +53,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         className={`${mobileOpen ? 'fixed inset-0 z-50 flex' : 'hidden'} md:flex md:static md:z-auto`}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 8px' }}>
           <div style={{ width: 35, height: 35, borderRadius: 11, background: 'var(--gold)', color: 'var(--night)', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 18, transform: 'rotate(-8deg)' }}>K</div>
-          <div><b style={{ fontWeight: 800, fontSize: 15, letterSpacing: '-.05em' }}>KikwetuConnect</b><small style={{ display: 'block', color: 'oklch(68% .025 151)', fontSize: 9, letterSpacing: '.13em', textTransform: 'uppercase', marginTop: 2 }}>Admin console</small></div>
+          <div><b style={{ fontWeight: 800, fontSize: 15, letterSpacing: '-.05em' }}>KikwetuConnect</b><small style={{ display: 'block', color: 'var(--muted)', fontSize: 9, letterSpacing: '.13em', textTransform: 'uppercase', marginTop: 2 }}>Admin console</small></div>
           <button onClick={() => setMobileOpen(false)} className="md:hidden" style={{ marginLeft: 'auto', background: 'none', color: '#fff', fontSize: 22 }}>×</button>
         </div>
-        <div style={{ padding: 12, border: '1px solid oklch(31% .025 151)', borderRadius: 14, background: 'oklch(22% .03 151)' }}>
-          <small style={{ color: 'oklch(66% .025 151)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.12em' }}>Workspace</small>
+        <div style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 14, background: 'var(--raised)' }}>
+          <small style={{ color: 'var(--muted)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.12em' }}>Workspace</small>
           <strong style={{ display: 'block', fontSize: 12, marginTop: 6 }}>Ink master&apos;s Workspace</strong>
-          <div style={{ fontSize: 9, color: 'oklch(68% .02 151)', marginTop: 5 }}>Production · Kenya</div>
+          <div style={{ fontSize: 9, color: 'var(--muted)', marginTop: 5 }}>Production · Kenya</div>
         </div>
         <nav style={{ display: 'grid', gap: 4, flex: 1, overflow: 'auto' }}>
           {Object.entries(NAV).map(([section, items]) => (
             <div key={section}>
-              <div style={{ color: 'oklch(57% .025 151)', fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', margin: '7px 10px 3px' }}>{section}</div>
+              <div style={{ color: 'var(--faint)', fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', margin: '7px 10px 3px' }}>{section}</div>
               {items.map(item => (
                 <button key={item.id} onClick={() => { router.push(`/admin/${item.id}`); setMobileOpen(false) }}
                   style={{
@@ -80,17 +80,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           ))}
         </nav>
-        <div style={{ borderTop: '1px solid oklch(30% .025 151)', paddingTop: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, background: 'oklch(23% .03 151)', padding: 4, borderRadius: 10, marginBottom: 10 }}>
+        <div style={{ borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, background: 'var(--raised)', padding: 4, borderRadius: 10, marginBottom: 10 }}>
             <button onClick={() => { if (theme !== 'light') toggleTheme() }}
               style={{ background: theme === 'light' ? 'var(--gold)' : 'none', color: theme === 'light' ? 'var(--night)' : 'oklch(73% .02 151)', borderRadius: 8, padding: '8px 4px', fontSize: 10, border: 0, cursor: 'pointer', fontWeight: theme === 'light' ? 700 : 400 }}>☼ Light</button>
             <button onClick={() => { if (theme !== 'dark') toggleTheme() }}
               style={{ background: theme === 'dark' ? 'var(--gold)' : 'none', color: theme === 'dark' ? 'var(--night)' : 'oklch(73% .02 151)', borderRadius: 8, padding: '8px 4px', fontSize: 10, border: 0, cursor: 'pointer', fontWeight: theme === 'dark' ? 700 : 400 }}>◐ Dark</button>
           </div>
-          <a href="/feed" style={{ display: 'block', textAlign: 'center', padding: '8px 0', borderRadius: 8, color: 'oklch(68% .02 151)', fontSize: 10, border: '1px solid oklch(30% .025 151)', textDecoration: 'none', marginBottom: 8 }}>← Back to app</a>
+          <a href="/feed" style={{ display: 'block', textAlign: 'center', padding: '8px 0', borderRadius: 8, color: 'var(--muted)', fontSize: 10, border: '1px solid var(--line)', textDecoration: 'none', marginBottom: 8 }}>← Back to app</a>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '6px 5px' }}>
             <div style={{ width: 34, height: 34, borderRadius: '50%', display: 'grid', placeItems: 'center', flex: 'none', background: 'var(--night)', color: 'var(--gold)', fontSize: 10, fontWeight: 800 }}>{initials}</div>
-            <div style={{ flex: 1 }}><strong style={{ fontSize: 11, display: 'block', color: '#fff' }}>{profile?.full_name || 'Admin'}</strong><small style={{ display: 'block', color: 'oklch(68% .02 151)', fontSize: 9, marginTop: 2 }}>Super admin · Online</small></div>
+            <div style={{ flex: 1 }}><strong style={{ fontSize: 11, display: 'block', color: '#fff' }}>{profile?.full_name || 'Admin'}</strong><small style={{ display: 'block', color: 'var(--muted)', fontSize: 9, marginTop: 2 }}>Super admin · Online</small></div>
           </div>
         </div>
       </aside>
@@ -128,7 +128,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Drawer */}
       {drawerOpen && (
-        <div onClick={(e) => { if (e.target === e.currentTarget) setDrawerOpen(false) }} style={{ position: 'fixed', inset: 0, background: 'oklch(10% .02 151 / .6)', zIndex: 20, display: 'flex', justifyContent: 'flex-end' }}>
+        <div onClick={(e) => { if (e.target === e.currentTarget) setDrawerOpen(false) }} style={{ position: 'fixed', inset: 0, background: 'var(--night) / .6', zIndex: 20, display: 'flex', justifyContent: 'flex-end' }}>
           <div style={{ width: 'min(520px,100%)', height: '100%', background: 'var(--surface)', borderLeft: '1px solid var(--line)', padding: 22, overflow: 'auto', animation: 'slide .3s var(--ease)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
               <div>

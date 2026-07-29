@@ -253,13 +253,13 @@ export default function MessagesPage() {
         <div className={`w-full md:w-[340px] flex-shrink-0 ${selectedUserId ? 'hidden md:block' : 'block'}`}>
           <div className="card section mb-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[oklch(65%_.028_151)]" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
               <input
                 type="text"
                 placeholder="Search conversations..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full bg-[oklch(18%_.028_151)] border border-[oklch(29%_.025_151)] rounded-[11px] pl-10 pr-4 py-2 text-sm text-cream placeholder-[oklch(65%_.028_151)] focus:outline-none focus:border-[oklch(55%_.13_151)]"
+                className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-[11px] pl-10 pr-4 py-2 text-sm text-cream placeholder-[var(--muted)] focus:outline-none focus:border-[var(--green)]"
               />
             </div>
           </div>
@@ -271,8 +271,8 @@ export default function MessagesPage() {
                 onClick={() => setFilter(f)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                   filter === f
-                    ? 'bg-[oklch(55%_.13_151)] text-[oklch(14%_.025_151)]'
-                    : 'bg-[oklch(18%_.028_151)] text-[oklch(65%_.028_151)] hover:text-cream border border-[oklch(29%_.025_151)]'
+                    ? 'bg-[var(--green)] text-[var(--night)]'
+                    : 'bg-[var(--surface)] text-[var(--muted)] hover:text-cream border border-[var(--line)]'
                 }`}
               >
                 {f === 'all' && 'All'}
@@ -289,7 +289,7 @@ export default function MessagesPage() {
             </div>
           ) : filteredConversations.length === 0 ? (
             <div className="card section text-center py-8">
-              <p className="text-[oklch(65%_.028_151)] text-sm">No conversations</p>
+              <p className="text-[var(--muted)] text-sm">No conversations</p>
             </div>
           ) : (
             <div className="space-y-1">
@@ -299,12 +299,12 @@ export default function MessagesPage() {
                   onClick={() => setSelectedUserId(conv.otherUser.id)}
                   className={`w-full text-left card section flex items-start gap-3 transition-colors ${
                     selectedUserId === conv.otherUser.id
-                      ? 'border-[oklch(55%_.13_151)]/50 bg-[oklch(55%_.13_151)]/5'
-                      : 'hover:bg-[oklch(21%_.03_151)]'
+                      ? 'border-[var(--green)]/50 bg-[var(--green)]/5'
+                      : 'hover:bg-[var(--raised)]'
                   }`}
                 >
                   <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[oklch(55%_.13_151)] to-[oklch(75%_.14_84)] flex items-center justify-center text-xs font-bold text-[oklch(14%_.025_151)]">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--green)] to-[var(--gold)] flex items-center justify-center text-xs font-bold text-[var(--night)]">
                       {conv.otherUser.avatar_url ? (
                         <img src={conv.otherUser.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
                       ) : (
@@ -312,7 +312,7 @@ export default function MessagesPage() {
                       )}
                     </div>
                     {conv.online && (
-                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[oklch(55%_.13_151)] rounded-full border-2 border-[oklch(14%_.025_151)]" />
+                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[var(--green)] rounded-full border-2 border-[oklch(14%_.025_151)]" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -320,16 +320,16 @@ export default function MessagesPage() {
                       <span className="font-bold text-sm truncate">
                         {conv.otherUser.full_name || conv.otherUser.username}
                       </span>
-                      <span className="text-[10px] text-[oklch(65%_.028_151)] flex-shrink-0 ml-2">
+                      <span className="text-[10px] text-[var(--muted)] flex-shrink-0 ml-2">
                         {formatTime(conv.lastMessage.created_at)}
                       </span>
                     </div>
-                    <p className="text-xs text-[oklch(65%_.028_151)] truncate mt-0.5">
+                    <p className="text-xs text-[var(--muted)] truncate mt-0.5">
                       {conv.lastMessage.sender_id === profile?.id && 'You: '}
                       {conv.lastMessage.content}
                     </p>
                     {conv.unreadCount > 0 && (
-                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[oklch(55%_.13_151)] text-[10px] font-bold text-[oklch(14%_.025_151)] mt-1">
+                      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--green)] text-[10px] font-bold text-[var(--night)] mt-1">
                         {conv.unreadCount}
                       </span>
                     )}
@@ -345,45 +345,45 @@ export default function MessagesPage() {
           {selectedUserId && selectedConv ? (
             <div className="card section flex flex-col h-full md:min-h-[600px]">
               {/* Chat Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-[oklch(29%_.025_151)] mb-4">
+              <div className="flex items-center justify-between pb-4 border-b border-[var(--line)] mb-4">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => setSelectedUserId(null)} className="md:hidden p-1 -ml-1 text-[oklch(65%_.028_151)] hover:text-cream">
+                  <button onClick={() => setSelectedUserId(null)} className="md:hidden p-1 -ml-1 text-[var(--muted)] hover:text-cream">
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                   <div className="relative">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[oklch(55%_.13_151)] to-[oklch(75%_.14_84)] flex items-center justify-center text-xs font-bold text-[oklch(14%_.025_151)]">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--green)] to-[var(--gold)] flex items-center justify-center text-xs font-bold text-[var(--night)]">
                       {selectedConv.otherUser.avatar_url ? (
                         <img src={selectedConv.otherUser.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
                       ) : (
                         getInitials(selectedConv.otherUser.full_name || selectedConv.otherUser.username)
                       )}
                     </div>
-                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[oklch(55%_.13_151)] rounded-full border-2 border-[oklch(18%_.028_151)]" />
+                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[var(--green)] rounded-full border-2 border-[oklch(18%_.028_151)]" />
                   </div>
                   <div>
                     <Link href={`/profile/${selectedConv.otherUser.username}`} className="font-bold text-sm hover:underline">
                       {selectedConv.otherUser.full_name || selectedConv.otherUser.username}
                     </Link>
-                    <p className="text-[10px] text-[oklch(55%_.13_151)]">Online</p>
+                    <p className="text-[10px] text-[var(--green)]">Online</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button className="p-2 rounded-[10px] text-[oklch(65%_.028_151)] hover:text-cream hover:bg-[oklch(21%_.03_151)] transition-colors">
+                  <button className="p-2 rounded-[10px] text-[var(--muted)] hover:text-cream hover:bg-[var(--raised)] transition-colors">
                     <Phone className="w-4 h-4" />
                   </button>
-                  <button className="p-2 rounded-[10px] text-[oklch(65%_.028_151)] hover:text-cream hover:bg-[oklch(21%_.03_151)] transition-colors">
+                  <button className="p-2 rounded-[10px] text-[var(--muted)] hover:text-cream hover:bg-[var(--raised)] transition-colors">
                     <Video className="w-4 h-4" />
                   </button>
                   <div className="relative group">
-                    <button className="p-2 rounded-[10px] text-[oklch(65%_.028_151)] hover:text-cream hover:bg-[oklch(21%_.03_151)] transition-colors">
+                    <button className="p-2 rounded-[10px] text-[var(--muted)] hover:text-cream hover:bg-[var(--raised)] transition-colors">
                       <MoreVertical className="w-4 h-4" />
                     </button>
-                    <div className="absolute right-0 top-full mt-1 w-36 bg-[oklch(18%_.028_151)] border border-[oklch(29%_.025_151)] rounded-[11px] p-1 hidden group-hover:block z-10">
-                      <button onClick={() => handleReportBlock(selectedUserId, 'report')} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-cream hover:bg-[oklch(21%_.03_151)] rounded-[8px]">
+                    <div className="absolute right-0 top-full mt-1 w-36 bg-[var(--surface)] border border-[var(--line)] rounded-[11px] p-1 hidden group-hover:block z-10">
+                      <button onClick={() => handleReportBlock(selectedUserId, 'report')} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-cream hover:bg-[var(--raised)] rounded-[8px]">
                         <Flag className="w-3 h-3" />
                         Report
                       </button>
-                      <button onClick={() => handleReportBlock(selectedUserId, 'block')} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[oklch(62%_.15_28)] hover:bg-[oklch(21%_.03_151)] rounded-[8px]">
+                      <button onClick={() => handleReportBlock(selectedUserId, 'block')} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[var(--red)] hover:bg-[var(--raised)] rounded-[8px]">
                         <AlertTriangle className="w-3 h-3" />
                         Block
                       </button>
@@ -394,11 +394,11 @@ export default function MessagesPage() {
 
               {/* Session Banner */}
               {activeSession && (
-                <div className="mb-4 p-3 rounded-[11px] bg-[oklch(55%_.13_151)]/10 border border-[oklch(55%_.13_151)]/30">
+                <div className="mb-4 p-3 rounded-[11px] bg-[var(--green)]/10 border border-[var(--green)]/30">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-[oklch(55%_.13_151)]" />
-                      <span className="text-xs font-medium text-[oklch(55%_.13_151)]">
+                      <Clock className="w-4 h-4 text-[var(--green)]" />
+                      <span className="text-xs font-medium text-[var(--green)]">
                         Active session: {activeSession.topic}
                       </span>
                     </div>
@@ -417,7 +417,7 @@ export default function MessagesPage() {
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="text-center py-12">
-                    <p className="text-xs text-[oklch(65%_.028_151)]">No messages yet. Start a conversation!</p>
+                    <p className="text-xs text-[var(--muted)]">No messages yet. Start a conversation!</p>
                   </div>
                 ) : (
                   messages.map(msg => {
@@ -426,14 +426,14 @@ export default function MessagesPage() {
                       <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[80%] px-4 py-2.5 rounded-[16px] text-sm ${
                           isMine
-                            ? 'bg-[oklch(55%_.13_151)] text-[oklch(14%_.025_151)] rounded-br-[4px]'
+                            ? 'bg-[var(--green)] text-[var(--night)] rounded-br-[4px]'
                             : 'bg-[oklch(21%_.03_151)] text-cream rounded-bl-[4px]'
                         }`}>
                           <p className="leading-relaxed">{msg.content}</p>
                           <div className={`flex items-center gap-1 mt-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
                             <span className="text-[9px] opacity-60">{formatTime(msg.created_at)}</span>
                             {isMine && (
-                              <CheckCheck className={`w-3 h-3 ${msg.is_read ? 'text-[oklch(55%_.13_151)]' : 'opacity-40'}`} />
+                              <CheckCheck className={`w-3 h-3 ${msg.is_read ? 'text-[var(--green)]' : 'opacity-40'}`} />
                             )}
                           </div>
                         </div>
@@ -445,13 +445,13 @@ export default function MessagesPage() {
               </div>
 
               {/* Input */}
-              <div className="pt-4 border-t border-[oklch(29%_.025_151)]">
+              <div className="pt-4 border-t border-[var(--line)]">
                 <div className="flex items-end gap-2">
                   <div className="flex items-center gap-1">
-                    <button className="p-2 rounded-[10px] text-[oklch(65%_.028_151)] hover:text-cream hover:bg-[oklch(21%_.03_151)] transition-colors">
+                    <button className="p-2 rounded-[10px] text-[var(--muted)] hover:text-cream hover:bg-[var(--raised)] transition-colors">
                       <Paperclip className="w-4 h-4" />
                     </button>
-                    <button className="p-2 rounded-[10px] text-[oklch(65%_.028_151)] hover:text-cream hover:bg-[oklch(21%_.03_151)] transition-colors">
+                    <button className="p-2 rounded-[10px] text-[var(--muted)] hover:text-cream hover:bg-[var(--raised)] transition-colors">
                       <Mic className="w-4 h-4" />
                     </button>
                   </div>
@@ -462,13 +462,13 @@ export default function MessagesPage() {
                       onKeyDown={handleKeyDown}
                       placeholder="Type a message..."
                       rows={1}
-                      className="w-full bg-[oklch(18%_.028_151)] border border-[oklch(29%_.025_151)] rounded-[11px] px-4 py-2.5 text-sm text-cream placeholder-[oklch(65%_.028_151)] focus:outline-none focus:border-[oklch(55%_.13_151)] resize-none"
+                      className="w-full bg-[var(--surface)] border border-[var(--line)] rounded-[11px] px-4 py-2.5 text-sm text-cream placeholder-[var(--muted)] focus:outline-none focus:border-[var(--green)] resize-none"
                     />
                   </div>
                   <button
                     onClick={handleSend}
                     disabled={!msgText.trim()}
-                    className="p-2.5 rounded-[11px] bg-[oklch(55%_.13_151)] text-[oklch(14%_.025_151)] hover:opacity-90 disabled:opacity-30 transition-opacity"
+                    className="p-2.5 rounded-[11px] bg-[var(--green)] text-[var(--night)] hover:opacity-90 disabled:opacity-30 transition-opacity"
                   >
                     <Send className="w-4 h-4" />
                   </button>
@@ -478,20 +478,20 @@ export default function MessagesPage() {
           ) : (
             <div className="card section flex items-center justify-center h-full md:min-h-[600px]">
               <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-[oklch(18%_.028_151)] flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-[oklch(65%_.028_151)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                <div className="w-16 h-16 rounded-full bg-[var(--surface)] flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                 </div>
-                <p className="text-[oklch(65%_.028_151)] text-sm">Select a conversation to start chatting</p>
-                <p className="text-xs text-[oklch(65%_.028_151)] mt-1">Your messages are end-to-end encrypted</p>
+                <p className="text-[var(--muted)] text-sm">Select a conversation to start chatting</p>
+                <p className="text-xs text-[var(--muted)] mt-1">Your messages are end-to-end encrypted</p>
               </div>
             </div>
           )}
 
           {/* Privacy notice */}
-          <div className="mt-4 p-3 rounded-[11px] bg-[oklch(18%_.028_151)] border border-[oklch(29%_.025_151)]">
+          <div className="mt-4 p-3 rounded-[11px] bg-[var(--surface)] border border-[var(--line)]">
             <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-[oklch(55%_.13_151)] flex-shrink-0" />
-              <p className="text-[10px] text-[oklch(65%_.028_151)]">
+              <Shield className="w-4 h-4 text-[var(--green)] flex-shrink-0" />
+              <p className="text-[10px] text-[var(--muted)]">
                 Messages are end-to-end encrypted. Never share personal information like M-Pesa PINs or passwords.
               </p>
             </div>

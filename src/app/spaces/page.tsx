@@ -2,10 +2,32 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { Users, Hash, Plus, X, Filter, Search } from 'lucide-react'
+import { Users, Hash, Plus, X, Filter, Search, Globe, Sparkles, Sprout, Cpu, Ship, BookOpen, Coins, ShoppingBag, Leaf, Building2, Microscope, Scale, HeartPulse } from 'lucide-react'
 
 interface Space {
-  id: string; name: string; slug: string; description: string; icon: string; category: string; member_count: number; post_count: number; created_by: string
+  id: string; name: string; slug: string; description: string; icon: string; category: string; member_count: number; post_count: number; created_by: string; cover_url?: string
+}
+
+const CATEGORIES = ['All', 'Agriculture', 'Technology', 'Business', 'Education', 'Finance', 'Health', 'Culture', 'Legal']
+
+const CATEGORY_META: Record<string, { gradient: string; icon: any }> = {
+  Agriculture: { gradient: 'linear-gradient(135deg, #2d6a4f, #52b788)', icon: Sprout },
+  Technology: { gradient: 'linear-gradient(135deg, #1a1a2e, #16213e)', icon: Cpu },
+  Business: { gradient: 'linear-gradient(135deg, #b8860b, #daa520)', icon: Ship },
+  Education: { gradient: 'linear-gradient(135deg, #6c5ce7, #a29bfe)', icon: BookOpen },
+  Finance: { gradient: 'linear-gradient(135deg, #00b894, #00cec9)', icon: Coins },
+  Health: { gradient: 'linear-gradient(135deg, #e17055, #fab1a0)', icon: HeartPulse },
+  Culture: { gradient: 'linear-gradient(135deg, #6c5ce7, #fd79a8)', icon: Building2 },
+  Legal: { gradient: 'linear-gradient(135deg, #2c3e50, #3498db)', icon: Scale },
+}
+
+const SPACE_COVERS: Record<string, { gradient: string }> = {
+  '1': { gradient: 'linear-gradient(135deg, #2d6a4f 0%, #40916c 50%, #52b788 100%)' },
+  '2': { gradient: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)' },
+  '3': { gradient: 'linear-gradient(135deg, #0c3483 0%, #a2b6df 50%, #6b8cce 100%)' },
+  '4': { gradient: 'linear-gradient(135deg, #780206 0%, #061161 50%, #1a2a6c 100%)' },
+  '5': { gradient: 'linear-gradient(135deg, #134e5e 0%, #71b280 50%, #2c6e49 100%)' },
+  '6': { gradient: 'linear-gradient(135deg, #c94b4b 0%, #4b134f 50%, #8e44ad 100%)' },
 }
 
 const FALLBACK_SPACES: Space[] = [
@@ -17,7 +39,18 @@ const FALLBACK_SPACES: Space[] = [
   { id: '6', name: 'Mama Mboga Network', slug: 'mama-mboga-network', description: 'Market vendors, fresh produce supply chains, and small-scale trading community.', icon: '🛒', category: 'Business', member_count: 760, post_count: 45, created_by: '' },
 ]
 
-const CATEGORIES = ['All', 'Agriculture', 'Technology', 'Business', 'Education', 'Finance', 'Health', 'Culture', 'Legal']
+const style = {
+  card: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: 20, boxShadow: 'var(--card-shadow)' },
+  input: { width: '100%', background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 11, padding: '10px 14px', fontSize: 13, color: 'var(--ink)', outline: 'none' },
+  btn: { padding: '10px 20px', borderRadius: 11, fontWeight: 700, fontSize: 12, border: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, transition: 'all .2s var(--ease)' },
+  primaryBtn: { background: 'var(--gold)', color: 'var(--night)' },
+  secondaryBtn: { background: 'var(--raised)', color: 'var(--ink)', border: '1px solid var(--line)' },
+  tag: { padding: '6px 14px', borderRadius: 99, fontSize: 10, fontWeight: 600, border: '1px solid var(--line)', background: 'var(--raised)', color: 'var(--muted)', cursor: 'pointer', transition: 'all .2s var(--ease)' },
+  tagActive: { background: 'var(--gold)', color: 'var(--night)', borderColor: 'var(--gold)' },
+  spaceCard: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, overflow: 'hidden', boxShadow: 'var(--card-shadow)' },
+  modalOverlay: { background: 'color-mix(in oklab, var(--night) 80%, transparent)' },
+  modalContent: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(480px, 100%)' },
+}
 
 export default function SpacesPage() {
   const supabase = useSupabase()
@@ -30,15 +63,12 @@ export default function SpacesPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [createName, setCreateName] = useState('')
   const [createDesc, setCreateDesc] = useState('')
-  const [createIcon, setCreateIcon] = useState('#')
+  const [createIcon, setCreateIcon] = useState('🌍')
   const [createCategory, setCreateCategory] = useState('Technology')
   const [creating, setCreating] = useState(false)
+  const [seeding, setSeeding] = useState(false)
 
-  useEffect(() => {
-    if (userLoading) return
-    fetchSpaces()
-    fetchMemberships()
-  }, [userLoading])
+  useEffect(() => { if (!userLoading) { fetchSpaces(); fetchMemberships() } }, [userLoading])
 
   const fetchSpaces = async () => {
     setLoading(true)
@@ -54,6 +84,26 @@ export default function SpacesPage() {
     if (!profile) return
     const { data } = await supabase.from('space_members').select('space_id').eq('user_id', profile.id)
     if (data) setMemberSpaces(new Set(data.map((m: { space_id: string }) => m.space_id)))
+  }
+
+  const handleSeedSpaces = async () => {
+    if (!profile) return toast('Sign in to seed spaces')
+    setSeeding(true)
+    try {
+      const { data: existing } = await supabase.from('spaces').select('id').limit(1)
+      if (existing && existing.length > 0) { toast('Spaces already exist in database'); return }
+      const { error } = await supabase.from('spaces').insert(
+        FALLBACK_SPACES.map(s => ({
+          name: s.name, slug: s.slug, description: s.description, icon: s.icon,
+          category: s.category, member_count: s.member_count, post_count: s.post_count,
+          created_by: profile.id, cover_url: s.cover_url || '',
+        }))
+      )
+      if (error) throw error
+      toast('Default spaces seeded!')
+      fetchSpaces()
+    } catch (err: any) { toast(err.message || 'Failed to seed spaces') }
+    finally { setSeeding(false) }
   }
 
   const handleJoin = async (space: Space) => {
@@ -96,7 +146,7 @@ export default function SpacesPage() {
         setSpaces(prev => [data as Space, ...prev])
         setMemberSpaces(prev => new Set(prev).add(data.id))
       }
-      setShowCreate(false); setCreateName(''); setCreateDesc(''); setCreateIcon('#')
+      setShowCreate(false); setCreateName(''); setCreateDesc(''); setCreateIcon('🌍')
       toast('Space created!')
     } catch { toast('Failed to create space') }
     finally { setCreating(false) }
@@ -108,31 +158,31 @@ export default function SpacesPage() {
     return true
   })
 
-  if (userLoading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin w-8 h-8 border-2 border-green border-t-transparent rounded-full" /></div>
+  if (userLoading) return <div className="flex items-center justify-center min-h-[80vh]"><div className="animate-spin w-8 h-8 border-2" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent', borderRadius: '50%' }} /></div>
 
   return (
-    <div className="pb-8">
-      <section className="page-head flex items-center justify-between">
+    <div className="pb-8 animate-fade-in-up">
+      <section className="page-head">
         <div>
-          <h1 className="page-title">Spaces</h1>
-          <p className="text-muted text-sm">Focused communities around topics you care about</p>
+          <h1 className="page-title flex items-center gap-3">
+            <Globe className="w-7 h-7" style={{ color: 'var(--green)' }} />
+            Spaces
+          </h1>
+          <p className="text-sm" style={{ color: 'var(--muted)' }}>Focused communities around topics you care about</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[11px] bg-[oklch(75%_.14_84)] text-[oklch(14%_.025_151)] text-sm font-bold hover:opacity-90 transition-opacity">
-          <Plus className="w-4 h-4" /> Create Space
-        </button>
       </section>
 
       {/* Search & Filter */}
-      <div className="card section mb-6">
+      <div style={style.card} className="mb-6">
         <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[oklch(65%_.028_151)]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted)' }} />
           <input type="text" placeholder="Search spaces..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-            className="w-full bg-[oklch(18%_.028_151)] border border-[oklch(29%_.025_151)] rounded-[11px] pl-10 pr-4 py-2.5 text-sm text-cream placeholder-[oklch(65%_.028_151)] focus:outline-none focus:border-[oklch(55%_.13_151)]" />
+            style={style.input} className="!pl-10" />
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
           {CATEGORIES.map(c => (
             <button key={c} onClick={() => setCategory(c)}
-              className={`flex-none px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${category === c ? 'bg-[oklch(55%_.13_151)] text-[oklch(14%_.025_151)]' : 'bg-[oklch(21%_.03_151)] text-[oklch(65%_.028_151)] border border-[oklch(29%_.025_151)] hover:text-cream'}`}>
+              style={{ ...style.tag, ...(category === c ? style.tagActive : {}) }}>
               {c}
             </button>
           ))}
@@ -142,78 +192,123 @@ export default function SpacesPage() {
       {/* Spaces Grid */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin w-8 h-8 border-2 border-green border-t-transparent rounded-full" />
+          <div className="animate-spin w-8 h-8 border-2" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent', borderRadius: '50%' }} />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="card section text-center py-12">
-          <Hash className="w-12 h-12 text-[oklch(30%_.025_151)] mx-auto mb-4 opacity-50" />
-          <p className="text-muted mb-2">No spaces found</p>
-          <p className="text-xs text-[oklch(65%_.028_151)] mb-6">Try a different category or search</p>
-          <button onClick={() => setShowCreate(true)} className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[11px] bg-[oklch(75%_.14_84)] text-[oklch(14%_.025_151)] text-sm font-bold hover:opacity-90 transition-opacity">
+        <div style={style.card} className="text-center py-12">
+          <Hash className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--muted)', opacity: 0.3 }} />
+          <p className="font-medium mb-1" style={{ color: 'var(--ink)' }}>No spaces found</p>
+          <p className="text-xs mb-6" style={{ color: 'var(--muted)' }}>Try a different category or search</p>
+          <button onClick={() => setShowCreate(true)} style={{ ...style.btn, ...style.primaryBtn }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = 'var(--card-shadow-hover)' }}
+            onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
             <Plus className="w-4 h-4" /> Create the first space
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filtered.map(space => {
-            const isMember = memberSpaces.has(space.id)
-            return (
-              <div key={space.id} className="rounded-[18px] p-5 border border-[oklch(29%_.025_151)] bg-[oklch(18%_.028_151)] hover:border-[oklch(55%_.13_151)]/40 transition-all group">
-                <div className="flex items-start gap-4">
-                  <span className="text-3xl flex-shrink-0">{space.icon || '#'}</span>
-                  <div className="flex-1 min-w-0">
-                    <Link href={`/spaces/${space.slug}`} className="font-bold text-base hover:text-[oklch(55%_.13_151)] transition-colors truncate block">{space.name}</Link>
-                    <p className="text-xs text-[oklch(65%_.028_151)] mt-1 line-clamp-2 leading-relaxed">{space.description}</p>
-                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-[oklch(29%_.025_151)]">
-                      <div className="flex items-center gap-3 text-xs text-[oklch(65%_.028_151)]">
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{filtered.length} space{filtered.length !== 1 ? 's' : ''}</p>
+            <div className="flex gap-2">
+              <button onClick={handleSeedSpaces} disabled={seeding}
+                style={{ ...style.secondaryBtn, padding: '6px 12px', fontSize: 10 }}>
+                {seeding ? 'Seeding...' : 'Seed defaults'}
+              </button>
+              <button onClick={() => setShowCreate(true)} style={{ ...style.btn, ...style.primaryBtn }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = 'var(--card-shadow-hover)' }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
+                <Plus className="w-4 h-4" /> New Space
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filtered.map(space => {
+              const isMember = memberSpaces.has(space.id)
+              const cover = SPACE_COVERS[space.id] || { gradient: 'linear-gradient(135deg, var(--gold), var(--green))' }
+              const catMeta = CATEGORY_META[space.category] || CATEGORY_META.Technology
+              const CatIcon = catMeta.icon
+              return (
+                <div key={space.id} style={style.spaceCard} className="card-hover feature-card">
+                  {/* Cover thumbnail */}
+                  <div style={{ height: 120, background: cover.gradient, position: 'relative', display: 'flex', alignItems: 'flex-end', padding: 16 }}>
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 60%)' }} />
+                    <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span className="text-2xl flex-shrink-0" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>{space.icon && space.icon !== '#' ? space.icon : '🌍'}</span>
+                      <div>
+                        <Link href={`/spaces/${space.slug}`}
+                          className="font-bold text-base block truncate transition-colors"
+                          style={{ color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}
+                          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                          onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+                          {space.name}
+                        </Link>
+                        <span className="flex items-center gap-1 text-[10px]" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                          <CatIcon className="w-3 h-3" /> {space.category}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ padding: 16 }}>
+                    <p className="text-xs line-clamp-2 leading-relaxed" style={{ color: 'var(--muted)', minHeight: 32 }}>{space.description}</p>
+                    <div className="flex items-center justify-between mt-4 pt-3" style={{ borderTop: '1px solid var(--line)' }}>
+                      <div className="flex items-center gap-3 text-xs" style={{ color: 'var(--muted)' }}>
                         <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" />{space.member_count}</span>
                         <span>{space.post_count} posts</span>
                       </div>
                       {isMember ? (
-                        <button onClick={() => handleLeave(space)} className="px-3 py-1.5 rounded-[8px] text-xs font-medium border border-[oklch(29%_.025_151)] text-[oklch(65%_.028_151)] hover:text-red hover:border-red/50 transition-colors">Leave</button>
+                        <button onClick={() => handleLeave(space)}
+                          style={{ ...style.secondaryBtn, padding: '6px 12px', fontSize: 10 }}>
+                          Leave
+                        </button>
                       ) : (
-                        <button onClick={() => handleJoin(space)} className="px-3 py-1.5 rounded-[8px] text-xs font-medium bg-[oklch(55%_.13_151)] text-[oklch(14%_.025_151)] hover:opacity-90 transition-opacity">Join</button>
+                        <button onClick={() => handleJoin(space)}
+                          style={{ ...style.btn, ...style.primaryBtn, padding: '6px 12px', fontSize: 10 }}>
+                          <Sparkles className="w-3 h-3" /> Join
+                        </button>
                       )}
                     </div>
                   </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        </>
       )}
 
       {/* Create Modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setShowCreate(false)} />
-          <div className="relative w-full max-w-md rounded-[18px] bg-[oklch(18%_.028_151)] border border-[oklch(29%_.025_151)] p-6 animate-rise">
-            <button onClick={() => setShowCreate(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[oklch(21%_.03_151)] flex items-center justify-center hover:bg-[oklch(29%_.025_151)] transition-colors">
-              <X className="w-4 h-4" />
-            </button>
-            <h2 className="font-bold text-lg mb-1">Create a Space</h2>
-            <p className="text-xs text-[oklch(65%_.028_151)] mb-5">Build a focused community around a topic</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={style.modalOverlay} onClick={e => { if (e.target === e.currentTarget) setShowCreate(false) }}>
+          <div className="animate-rise" style={style.modalContent}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-bold text-lg" style={{ color: 'var(--ink)' }}>Create a Space</h2>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>Build a focused community around a topic</p>
+              </div>
+              <button onClick={() => setShowCreate(false)}
+                className="w-8 h-8 rounded-full grid place-items-center transition-colors"
+                style={{ background: 'var(--raised)', color: 'var(--muted)', border: 0, cursor: 'pointer' }}>&times;</button>
+            </div>
 
-            <label className="text-xs text-[oklch(65%_.028_151)] font-medium block mb-1.5">Icon</label>
-            <input type="text" placeholder="Emoji or #" value={createIcon} onChange={e => setCreateIcon(e.target.value)} maxLength={2}
-              className="w-full bg-[oklch(14%_.025_151)] border border-[oklch(29%_.025_151)] rounded-[11px] px-3 py-2.5 text-sm text-cream placeholder-[oklch(65%_.028_151)] focus:outline-none focus:border-[oklch(55%_.13_151)] mb-4" />
+            <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Icon</label>
+            <input type="text" placeholder="Emoji icon" value={createIcon} onChange={e => setCreateIcon(e.target.value)} maxLength={2}
+              style={style.input} className="!mb-3" />
 
-            <label className="text-xs text-[oklch(65%_.028_151)] font-medium block mb-1.5">Name</label>
+            <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Name</label>
             <input type="text" placeholder="e.g. Kilimo Smart" value={createName} onChange={e => setCreateName(e.target.value)}
-              className="w-full bg-[oklch(14%_.025_151)] border border-[oklch(29%_.025_151)] rounded-[11px] px-3 py-2.5 text-sm text-cream placeholder-[oklch(65%_.028_151)] focus:outline-none focus:border-[oklch(55%_.13_151)] mb-4" />
+              style={style.input} className="!mb-3" />
 
-            <label className="text-xs text-[oklch(65%_.028_151)] font-medium block mb-1.5">Description</label>
+            <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Description</label>
             <textarea placeholder="What is this space about?" value={createDesc} onChange={e => setCreateDesc(e.target.value)} rows={3}
-              className="w-full bg-[oklch(14%_.025_151)] border border-[oklch(29%_.025_151)] rounded-[11px] px-3 py-2.5 text-sm text-cream placeholder-[oklch(65%_.028_151)] focus:outline-none focus:border-[oklch(55%_.13_151)] resize-none mb-4" />
+              style={{ ...style.input, resize: 'none' }} className="!mb-3" />
 
-            <label className="text-xs text-[oklch(65%_.028_151)] font-medium block mb-1.5">Category</label>
+            <label className="text-xs font-medium block mb-1.5" style={{ color: 'var(--muted)' }}>Category</label>
             <select value={createCategory} onChange={e => setCreateCategory(e.target.value)}
-              className="w-full bg-[oklch(14%_.025_151)] border border-[oklch(29%_.025_151)] rounded-[11px] px-3 py-2.5 text-sm text-cream focus:outline-none focus:border-[oklch(55%_.13_151)] mb-5">
+              style={style.input} className="!mb-5">
               {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
             </select>
 
             <button onClick={handleCreate} disabled={creating || !createName.trim() || !createDesc.trim()}
-              className="w-full py-2.5 rounded-[11px] bg-[oklch(75%_.14_84)] text-[oklch(14%_.025_151)] text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50">
+              style={{ ...style.btn, ...style.primaryBtn, width: '100%', justifyContent: 'center', opacity: (creating || !createName.trim() || !createDesc.trim()) ? 0.5 : 1 }}>
               {creating ? 'Creating...' : 'Create Space'}
             </button>
           </div>
