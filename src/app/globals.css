@@ -82,7 +82,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .user-mini strong { font-size: 12px; }
 .user-mini small { display: block; color: var(--muted); font-size: 10px; margin-top: 3px; }
 
-.main { min-width: 0; background: var(--bg); background-image: var(--bg-pattern); background-attachment: fixed; }
+.main { min-width: 0; width: 100%; max-width: 100%; overflow-x: hidden; background: var(--bg); background-image: var(--bg-pattern); background-attachment: fixed; }
 .topbar { height: 75px; padding: 0 30px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: color-mix(in oklab, var(--bg) 94%, transparent); backdrop-filter: blur(12px); z-index: 6; }
 .topbar-brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--ink); flex-shrink: 0; }
 .topbar-brand-text { font: 800 14px var(--jakarta); letter-spacing: -.04em; }
@@ -253,6 +253,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -366,8 +367,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 
 .feed-action-link:hover { background: var(--raised); color: var(--gold); }
 
-.post-footer { display: flex; justify-content: space-between; align-items: center; gap: 4px; }
-.action-group { display: flex; gap: 4px; align-items: center; }
+.post-footer { display: flex; justify-content: space-between; align-items: center; gap: 4px; flex-wrap: wrap; }
+.action-group { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 .action-button {
   min-width: 44px; min-height: 44px; padding: 6px 12px; border-radius: 999px; font-size: 11px; font-weight: 600;
   display: flex; align-items: center; gap: 4px; flex-shrink: 0;
@@ -385,6 +386,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .card-glow:hover { box-shadow: 0 0 0 1px color-mix(in oklab, var(--gold) 30%, transparent), 0 12px 40px color-mix(in oklab, var(--night) 10%, transparent); }
 
 .animate-rise { animation: rise .3s var(--ease); will-change: transform; }
+.animate-slide-up { animation: slideUp .35s var(--ease); will-change: transform; }
 
 /* Z-index layering system */
 :root { --z-header: 100; --z-sidebar: 200; --z-modal: 300; --z-toast: 400; }

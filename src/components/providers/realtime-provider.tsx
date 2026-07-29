@@ -15,7 +15,7 @@ const RealtimeContext = createContext<RealtimeContextType | null>(null)
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim()
   )
   const [channels, setChannels] = useState<RealtimeChannel[]>([])
 

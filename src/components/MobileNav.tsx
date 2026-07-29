@@ -66,7 +66,10 @@ export default function MobileNav() {
     <>
       <nav style={{
         position: 'fixed', display: 'flex', zIndex: 12,
-        left: 10, right: 10, bottom: 10, height: 65,
+        left: '50%', transform: 'translateX(-50%)',
+        bottom: 10, height: 65,
+        width: 'calc(100vw - 20px)',
+        maxWidth: 400,
         background: 'var(--surface)',
         border: '1px solid var(--line)',
         borderRadius: 20,

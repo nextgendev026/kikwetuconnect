@@ -9,7 +9,7 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith('/admin')) {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim(),
       {
         cookies: {
           getAll() { return req.cookies.getAll().map(c => ({ name: c.name, value: c.value })) },
