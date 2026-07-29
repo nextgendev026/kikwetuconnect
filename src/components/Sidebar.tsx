@@ -4,7 +4,7 @@ import Link from 'next/link'
 import {
   Home, Compass, Search, Grid3X3, GraduationCap, Briefcase,
   MessageSquare, Calendar, Store, Shield, Trophy,
-  Wallet, User, Settings, Zap, LogOut, Sparkles
+  Wallet, User, Settings, Zap, LogOut, Sparkles, Building2
 } from 'lucide-react'
 
 const sections = [
@@ -13,6 +13,7 @@ const sections = [
     { href: '/baraza', label: 'Baraza', icon: Compass },
     { href: '/explore', label: 'Explore', icon: Search },
     { href: '/spaces', label: 'Spaces', icon: Grid3X3 },
+    { href: '/pages', label: 'Pages', icon: Building2 },
   ]},
   { label: 'Guidance', items: [
     { href: '/students', label: 'Students Area', icon: GraduationCap },
