@@ -1,8 +1,8 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useSupabase, toast } from '@/app/providers'
+import { useSupabase, useUser, toast } from '@/app/providers'
 import ProfileHeader from '@/components/profile/ProfileHeader'
 import { MessageCircle, Award, Calendar, MapPin, Globe, ThumbsUp, MessageSquare, ChevronDown } from 'lucide-react'
 
@@ -24,6 +24,9 @@ export default function UserProfilePage() {
   const [hasMorePosts, setHasMorePosts] = useState(true)
   const [loadingPosts, setLoadingPosts] = useState(false)
   const [heshimaEarnings, setHeshimaEarnings] = useState<any[]>([])
+  const [isFollowing, setIsFollowing] = useState(false)
+  const { user } = useUser()
+  const router = useRouter()
 
   useEffect(() => {
     if (!username) return
@@ -38,6 +41,35 @@ export default function UserProfilePage() {
       })
       .finally(() => setLoading(false))
   }, [username, supabase])
+
+  useEffect(() => {
+    if (!profile || !user) return
+    supabase.from('follows').select('id').eq('follower_id', user.id).eq('following_id', profile.id).maybeSingle()
+      .then(({ data }: { data: any }) => setIsFollowing(!!data))
+  }, [profile, user, supabase])
+
+  const handleFollow = async () => {
+    if (!profile) return
+    const res = await fetch('/api/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'follow', target_user_id: profile.id }),
+    })
+    if (!res.ok) { toast('Follow failed'); return }
+    const { following } = await res.json()
+    setIsFollowing(following)
+  }
+
+  const handleMessage = async () => {
+    if (!profile) return
+    const res = await fetch('/api/conversations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'dm', member_ids: [profile.id] }),
+    })
+    if (!res.ok) { toast('Failed to open chat'); return }
+    router.push('/messages')
+  }
 
   useEffect(() => {
     if (!profile) return
@@ -105,7 +137,8 @@ export default function UserProfilePage() {
 
   return (
     <section className="page active" style={{ paddingTop: 33, paddingBottom: 94 }}>
-      <ProfileHeader profile={profile} isOwn={false} postCount={postCount} />
+      <ProfileHeader profile={profile} isOwn={false} postCount={postCount}
+        isFollowing={isFollowing} onFollow={handleFollow} onMessage={handleMessage} />
 
       {/* Sticky Tab Bar */}
       <div style={{
