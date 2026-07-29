@@ -293,7 +293,9 @@ export default function PostDetailPage() {
                 <span className="text-[48px] opacity-50">🎥</span>
               </div>
             ) : (
-              <img src={post.media_url} alt="" className="w-full h-auto max-h-[400px] object-cover" loading="lazy" />
+              <a href={post.media_url} target="_blank" rel="noopener noreferrer" className="block post-content-image">
+                <img src={post.media_url} alt="" className="w-full h-auto max-h-[400px] object-cover" loading="lazy" />
+              </a>
             )}
           </div>
         )}
