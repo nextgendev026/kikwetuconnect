@@ -29,7 +29,8 @@ export async function POST(request: NextRequest) {
     if (order.status !== 'pending') return NextResponse.json({ error: 'Order is not pending' }, { status: 400 })
 
     const mpesaPhone = phone.replace(/\s/g, '').replace(/^0/, '254')
-    const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14)
+    const ts = new Date().toISOString()
+    const timestamp = ts.split('.')[0].replace(/[-:]/g, '')
     const shortCode = process.env.MPESA_SHORTCODE || '174379'
     const passkey = process.env.MPESA_PASSKEY || 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'
     const password = Buffer.from(`${shortCode}${passkey}${timestamp}`).toString('base64')
