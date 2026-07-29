@@ -192,51 +192,52 @@ export default function SpacesPage() {
   if (userLoading) return <div className="flex items-center justify-center min-h-[80vh]"><div className="animate-spin w-8 h-8 border-2" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent', borderRadius: '50%' }} /></div>
 
   return (
-    <div className="pb-8 animate-fade-in-up">
-      <section className="page-head">
-        <div>
-          <h1 className="page-title flex items-center gap-3">
-            <Globe className="w-7 h-7" style={{ color: 'var(--green)' }} />
-            Spaces
-          </h1>
-          <p className="text-sm" style={{ color: 'var(--muted)' }}>Focused communities around topics you care about</p>
-        </div>
-      </section>
+    <>
+      <div className="pb-8 animate-fade-in-up">
+        <section className="page-head">
+          <div>
+            <h1 className="page-title flex items-center gap-3">
+              <Globe className="w-7 h-7" style={{ color: 'var(--green)' }} />
+              Spaces
+            </h1>
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>Focused communities around topics you care about</p>
+          </div>
+        </section>
 
-      <div style={style.card} className="mb-6">
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted)' }} />
-          <input type="text" placeholder="Search spaces..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-            style={style.input} className="!pl-10" />
+        <div style={style.card} className="mb-6">
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted)' }} />
+            <input type="text" placeholder="Search spaces..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+              style={style.input} className="!pl-10" />
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
+            {CATEGORIES.map(c => (
+              <button key={c} onClick={() => setCategory(c)}
+                style={{ ...style.tag, ...(category === c ? style.tagActive : {}) }}>
+                {c}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-          {CATEGORIES.map(c => (
-            <button key={c} onClick={() => setCategory(c)}
-              style={{ ...style.tag, ...(category === c ? style.tagActive : {}) }}>
-              {c}
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
+          </div>
+        ) : spaces.length === 0 ? (
+          <div style={style.card} className="text-center py-12">
+            <Hash className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--muted)', opacity: 0.3 }} />
+            <p className="font-medium mb-1" style={{ color: 'var(--ink)' }}>No spaces found</p>
+            <p className="text-xs mb-6" style={{ color: 'var(--muted)' }}>Try a different category or search</p>
+            <button onClick={() => setShowCreate(true)} style={activeBtn({ ...style.btn, ...style.primaryBtn })}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = 'var(--card-shadow-hover)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
+              <Plus className="w-4 h-4" /> Create the first space
             </button>
-          ))}
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
-        </div>
-      ) : spaces.length === 0 ? (
-        <div style={style.card} className="text-center py-12">
-          <Hash className="w-12 h-12 mx-auto mb-4" style={{ color: 'var(--muted)', opacity: 0.3 }} />
-          <p className="font-medium mb-1" style={{ color: 'var(--ink)' }}>No spaces found</p>
-          <p className="text-xs mb-6" style={{ color: 'var(--muted)' }}>Try a different category or search</p>
-          <button onClick={() => setShowCreate(true)} style={activeBtn({ ...style.btn, ...style.primaryBtn })}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = 'var(--card-shadow-hover)' }}
-            onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
-            <Plus className="w-4 h-4" /> Create the first space
-          </button>
-        </div>
-      ) : (
-        <>
-          <div className="flex items-center justify-between mb-4">
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-4">
             <p className="text-xs font-medium" style={{ color: 'var(--muted)' }}>{totalCount} space{totalCount !== 1 ? 's' : ''}</p>
             <button onClick={() => setShowCreate(true)} style={activeBtn({ ...style.btn, ...style.primaryBtn })}
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = 'var(--card-shadow-hover)' }}
@@ -305,6 +306,8 @@ export default function SpacesPage() {
         </>
       )}
 
+      </div>
+
       <BottomSheet open={showCreate} onClose={() => setShowCreate(false)} title="Create a Space">
         <p className="text-xs mb-4" style={{ color: 'var(--muted)' }}>Build a focused community around a topic</p>
 
@@ -331,6 +334,6 @@ export default function SpacesPage() {
           {creating ? 'Creating...' : 'Create Space'}
         </button>
       </BottomSheet>
-    </div>
+    </>
   )
 }
