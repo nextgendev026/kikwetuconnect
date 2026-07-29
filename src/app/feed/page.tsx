@@ -30,13 +30,13 @@ const TYPE_FILTERS = [
   { id: 'poll', label: 'Poll' },
 ] as const
 
-const CREATE_TYPES = [
-  { id: 'baraza', label: 'Post', icon: '💬' },
-  { id: 'inquiry', label: 'Question', icon: '❓' },
-  { id: 'poll', label: 'Poll', icon: '📊' },
-  { id: 'alert', label: 'Mtaa listing', icon: '📍' },
-  { id: 'alert', label: 'Safety update', icon: '🚨' },
-]
+const CATEGORY_FILTERS = [
+  { id: '', label: 'All' },
+  { id: 'Post', label: 'Post' },
+  { id: 'Ask', label: 'Ask' },
+  { id: 'Poll', label: 'Poll' },
+  { id: 'Nairobi', label: 'Nairobi' },
+] as const
 
 const EMOJI_REACTIONS = ['🔥', '❤️', '😂', '😮', '😢', '🙏', '💡', '🗳️']
 
@@ -67,6 +67,7 @@ interface Post {
   answers_count: number
   is_pinned: boolean
   created_at: string
+  category: string
   profiles: Profile | null
   user_vote?: 1 | -1 | null
   user_saved?: boolean
@@ -219,6 +220,15 @@ function PostCardComponent({
           }}>
             {post.post_type === 'baraza' ? 'Post' : post.post_type === 'inquiry' ? 'Question' : post.post_type === 'article' ? 'Article' : post.post_type === 'poll' ? 'Poll' : post.post_type}
           </span>
+          {post.category && post.category !== 'Post' && (
+            <span style={{
+              padding: '3px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700,
+              background: post.category === 'Nairobi' ? 'color-mix(in oklab, var(--earth) 20%, transparent)' : 'color-mix(in oklab, var(--blue) 20%, transparent)',
+              color: post.category === 'Nairobi' ? 'var(--earth)' : 'var(--blue)',
+            }}>
+              {post.category}
+            </span>
+          )}
           <span className="text-[var(--muted)] text-[11px] whitespace-nowrap">{timeAgo(post.created_at)}</span>
         </div>
       </div>
@@ -372,11 +382,13 @@ export default function FeedPage() {
   const [activeTab, setActiveTab] = useState<TabId>('for_you')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [countyFilter, setCountyFilter] = useState<string | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState('')
   const [showCountyPicker, setShowCountyPicker] = useState(false)
   const [composerText, setComposerText] = useState('')
 
-  const openCreateModal = () => {
-    document.dispatchEvent(new CustomEvent('open-create-modal'))
+  const composerTypeMap: Record<string, string> = { baraza: 'post', inquiry: 'question', poll: 'poll' }
+  const openCreateModal = (type?: string) => {
+    document.dispatchEvent(new CustomEvent('open-create-modal', { detail: { type: type ? composerTypeMap[type] || 'post' : undefined } }))
   }
 
   const [isOnline, setIsOnline] = useState(true)
@@ -453,6 +465,7 @@ export default function FeedPage() {
 
       if (typeFilter !== 'all') query = query.eq('post_type', typeFilter)
       if (activeTab === 'questions') query = query.eq('post_type', 'inquiry')
+      if (categoryFilter) query = query.eq('category', categoryFilter)
 
       if (activeTab === 'following' && profile) {
         const { data: following } = await supabase.from('follows').select('following_id').eq('follower_id', profile.id)
@@ -502,7 +515,7 @@ export default function FeedPage() {
     } finally {
       setLoading(false); setLoadingMore(false)
     }
-  }, [supabase, profile, activeTab, typeFilter, countyFilter])
+  }, [supabase, profile, activeTab, typeFilter, countyFilter, categoryFilter])
 
   useEffect(() => {
     fetchPosts()
@@ -592,7 +605,7 @@ export default function FeedPage() {
           <p className="text-[var(--muted)] text-[11px] mt-[2px]">The people's square</p>
         </div>
         <button
-          onClick={openCreateModal}
+          onClick={() => openCreateModal()}
           className="bg-gold text-night text-[12px] font-bold px-[18px] py-[10px] rounded-full flex items-center gap-[6px] transition-opacity hover:opacity-90"
         >
           <span className="text-[16px] leading-none">+</span>
@@ -619,7 +632,7 @@ export default function FeedPage() {
 
       {/* Composer */}
       <div
-        onClick={openCreateModal} role="button" tabIndex={0} aria-label="Create a new post"
+        onClick={() => openCreateModal()} role="button" tabIndex={0} aria-label="Create a new post"
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCreateModal() } }}
         className="bg-night2 border border-[var(--line)] rounded-[16px] p-[14px] mb-[12px] cursor-pointer hover:bg-deep transition-colors min-h-[44px]"
       >
@@ -641,13 +654,13 @@ export default function FeedPage() {
         <div className="flex gap-[6px] mt-[12px] pt-[12px] border-t border-[var(--line)] flex-wrap">
           <span className="text-[10px] text-[var(--muted)] self-center mr-1">Create:</span>
           {[
-            { label: 'Post', icon: '💬', type: 'baraza' },
-            { label: 'Ask', icon: '❓', type: 'inquiry' },
-            { label: 'Poll', icon: '📊', type: 'poll' },
+            { label: 'Post', icon: '💬', mode: 'baraza' },
+            { label: 'Ask', icon: '❓', mode: 'inquiry' },
+            { label: 'Poll', icon: '📊', mode: 'poll' },
           ].map(action => (
             <button
               key={action.label}
-              onClick={(e) => { e.stopPropagation(); openCreateModal() }}
+              onClick={(e) => { e.stopPropagation(); openCreateModal(action.mode) }}
               className="flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-[var(--raised)] hover:text-cream transition-all"
             >
               <span>{action.icon}</span>
@@ -685,7 +698,7 @@ export default function FeedPage() {
       </div>
 
       {/* Type filter chips */}
-      <div className="flex gap-[4px] overflow-x-auto pb-[12px] scrollbar-none -mx-[12px] px-[12px]">
+      <div className="flex gap-[4px] overflow-x-auto pb-[8px] scrollbar-none -mx-[12px] px-[12px]">
         {TYPE_FILTERS.map(f => (
           <button
             key={f.id}
@@ -727,6 +740,23 @@ export default function FeedPage() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Category filter chips */}
+      <div className="flex gap-[4px] overflow-x-auto pb-[12px] scrollbar-none -mx-[12px] px-[12px]">
+        {CATEGORY_FILTERS.map(f => (
+          <button
+            key={f.id}
+            onClick={() => setCategoryFilter(f.id)}
+            className={`flex-shrink-0 px-[12px] py-[5px] rounded-full text-[11px] font-semibold transition-all ${
+              categoryFilter === f.id
+                ? 'bg-gold text-night'
+                : 'text-[var(--muted)] border border-[var(--line)] hover:bg-deep hover:text-cream'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       {/* Content area */}

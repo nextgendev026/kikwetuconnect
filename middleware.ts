@@ -23,14 +23,15 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  const { data: { session } } = await supabase.auth.getSession()
+  // Use getUser() to verify token with Supabase Auth server (not getSession which reads stale cookies)
+  const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
 
-  const publicPaths = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/auth/callback']
+  const publicPaths = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/auth/callback', '/onboarding']
   const isPublicPath = publicPaths.some(p => req.nextUrl.pathname.startsWith(p))
   const isLanding = req.nextUrl.pathname === '/' || req.nextUrl.pathname === ''
 
-  if (!session && !isPublicPath && !isLanding) return NextResponse.redirect(new URL('/login', req.url))
-  if (session && (isPublicPath || isLanding)) return NextResponse.redirect(new URL('/feed', req.url))
+  if (!user && !isPublicPath && !isLanding) return NextResponse.redirect(new URL('/login', req.url))
+  if (user && (isPublicPath || isLanding)) return NextResponse.redirect(new URL('/feed', req.url))
 
   return res
 }

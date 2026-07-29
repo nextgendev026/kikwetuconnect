@@ -41,8 +41,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [profile, supabase])
 
   useEffect(() => {
-    if (!loading && !profile) router.push('/')
-  }, [loading, profile, router])
+    if (!loading && !profile) {
+      // Only redirect if not already on a public path (avoid loop with middleware)
+      const publicPaths = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/onboarding']
+      const isPublic = publicPaths.some(p => path === p || path.startsWith(p))
+      if (!isPublic) router.push('/')
+    }
+  }, [loading, profile, router, path])
 
   useEffect(() => {
     if (!profile || !supabase) return

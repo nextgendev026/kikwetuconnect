@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { postType, title, content, mediaUrl, mediaUrls, countyTag, bountyTokens = 0, topics = [] } = body
+    const { postType, title, content, mediaUrl, mediaUrls, countyTag, bountyTokens = 0, topics = [], category } = body
 
     if (!postType || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -25,6 +25,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Title is required for inquiries' }, { status: 400 })
     }
 
+    const allowedCategories = ['Post', 'Ask', 'Poll', 'Nairobi']
+    const validCategory = allowedCategories.includes(category) ? category : 'Post'
+
     const insertData: Record<string, any> = {
       user_id: user.id,
       post_type: postType,
@@ -34,6 +37,7 @@ export async function POST(request: NextRequest) {
       media_urls: mediaUrls || null,
       county_tag: countyTag || null,
       bounty_tokens: bountyTokens,
+      category: validCategory,
     }
 
     const { data: post, error: postError } = await supabase

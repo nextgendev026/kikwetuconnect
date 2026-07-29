@@ -49,6 +49,7 @@ export default function CreatePage() {
   const [selectedTopics, setSelectedTopics] = useState<string[]>([])
   const [selectedCounty, setSelectedCounty] = useState('')
   const [bountyTokens, setBountyTokens] = useState(0)
+  const [category, setCategory] = useState('Post')
   const [topics, setTopics] = useState<Topic[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -143,6 +144,7 @@ export default function CreatePage() {
           topics: selectedTopicIds,
           mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
           mediaUrl: mediaUrls.length > 0 ? mediaUrls[0] : null,
+          category,
         }),
       })
 
@@ -229,6 +231,26 @@ export default function CreatePage() {
         <p className="text-sm text-quiet mb-6">
           {postTypes.find(t => t.id === selectedType)?.description}
         </p>
+
+        {/* Category */}
+        <div className="mb-4">
+          <label className="text-xs font-semibold text-muted block mb-2">Category</label>
+          <div className="flex gap-2">
+            {['Post', 'Ask', 'Poll', 'Nairobi'].map(cat => (
+              <button
+                key={cat}
+                onClick={() => setCategory(cat)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  category === cat
+                    ? 'bg-gold text-night'
+                    : 'bg-surface text-muted border border-line hover:bg-surface-2'
+                }`}
+              >
+                {cat === 'Nairobi' ? '📍 Nairobi' : cat}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Title (for inquiries and articles) */}
         {(selectedType === 'inquiry' || selectedType === 'article') && (

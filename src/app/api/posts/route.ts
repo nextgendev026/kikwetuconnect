@@ -9,6 +9,7 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get('type')
   const county = searchParams.get('county')
   const topic = searchParams.get('topic')
+  const category = searchParams.get('category')
   const from = (page - 1) * limit
 
   let query = supabase
@@ -24,6 +25,7 @@ export async function GET(request: NextRequest) {
 
   if (type) query = query.eq('post_type', type)
   if (county) query = query.eq('county_tag', county)
+  if (category) query = query.eq('category', category)
   if (topic) {
     const { data: postIds } = await supabase
       .from('post_topics')

@@ -35,7 +35,14 @@ export default function CreateModal() {
   const { user } = useUser()
 
   useEffect(() => {
-    const handler = () => setOpen(true)
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail?.type) {
+        const t = detail.type
+        if (TYPES.some(tp => tp.id === t)) setType(t)
+      }
+      setOpen(true)
+    }
     document.addEventListener('open-create-modal', handler)
     return () => document.removeEventListener('open-create-modal', handler)
   }, [])
@@ -93,11 +100,13 @@ export default function CreateModal() {
         mediaUrls.push(publicUrl)
       }
       const postType = type === 'question' ? 'inquiry' : 'baraza'
+      const categoryMap: Record<string, string> = { post: 'Post', question: 'Ask', poll: 'Poll', listing: 'Nairobi', alert: 'Post' }
       const { error } = await supabase.from('posts').insert({
         user_id: user.id, post_type: postType, content: text,
         title: text.split('\n')[0].slice(0, 100),
         media_url: mediaUrls[0] || null,
         media_type: currentMedia[0]?.type || null,
+        category: categoryMap[type] || 'Post',
       })
       if (error) throw error
       setOpen(false); setText(''); setMediaFiles([])

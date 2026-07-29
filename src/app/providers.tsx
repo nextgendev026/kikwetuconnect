@@ -87,9 +87,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [])
 
   const fetchProfile = useCallback(async (id: string) => {
-    const { data } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle()
-    if (data) setProfile(data)
-    return data
+    try {
+      const { data } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle()
+      if (data) setProfile(data)
+      return data
+    } catch (e) {
+      console.error('fetchProfile error:', e)
+      return null
+    }
   }, [supabase])
 
   const refreshProfile = useCallback(async () => {
@@ -152,18 +157,25 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [supabase])
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user: u } }) => {
-      setUser(u)
-      if (u) fetchProfile(u.id)
-      setLoading(false)
-    })
+    let cancelled = false
+    const timeout = setTimeout(() => { if (!cancelled) setLoading(false) }, 8000)
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (cancelled) return
       setUser(session?.user ?? null)
-      if (session?.user) await fetchProfile(session.user.id)
-      else setProfile(null)
-      setLoading(false)
+      if (session?.user) {
+        const p = await fetchProfile(session.user.id)
+        if (!cancelled) {
+          if (!p) console.warn('No profile found for user', session.user.id)
+          setLoading(false)
+        }
+      } else {
+        setProfile(null)
+        setLoading(false)
+      }
+      clearTimeout(timeout)
     })
-    return () => subscription.unsubscribe()
+    return () => { cancelled = true; subscription.unsubscribe() }
   }, [supabase, fetchProfile])
 
   useEffect(() => {
