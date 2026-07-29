@@ -397,18 +397,28 @@ export type Database = {
 // Client-side Supabase client
 import { createBrowserClient as createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs'
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim()
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim()
+
+const REALTIME_CONFIG = {
+  realtime: {
+    params: { eventsPerSecond: 10 },
+  },
+}
+
 export const createBrowserClient = () =>
   createBrowserSupabaseClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    supabaseUrl,
+    supabaseAnonKey,
+    REALTIME_CONFIG
   )
 
 // Server-side Supabase client
 export const createServerClient = () => {
   const cookieStore = require('next/headers').cookies()
   return createServerSupabaseClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -416,12 +426,14 @@ export const createServerClient = () => {
         },
         setAll() {},
       },
+      ...REALTIME_CONFIG,
     }
   )
 }
 
 // Public client (for non-authenticated requests)
 export const supabase = createBrowserSupabaseClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  supabaseUrl,
+  supabaseAnonKey,
+  REALTIME_CONFIG
 )

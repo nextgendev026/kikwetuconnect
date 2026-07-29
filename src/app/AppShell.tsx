@@ -52,20 +52,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!profile || !supabase) return
     fetchUnreadCount()
-
-    const channel = supabase
-      .channel('notif-realtime')
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'notifications',
-        filter: `user_id=eq.${profile.id}`,
-      }, (payload: { new: any }) => {
-        setUnreadNotifCount(c => c + 1)
-        const n = payload.new
-        toast(n.content || 'New notification')
-      })
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
   }, [profile, supabase, fetchUnreadCount])
 
   useEffect(() => {

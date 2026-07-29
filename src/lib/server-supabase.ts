@@ -2,11 +2,14 @@ import { createServerClient } from '@supabase/auth-helpers-nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 import type { Database } from './database.types'
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim()
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim()
+
 export function createApiClient(request: NextRequest, response?: NextResponse) {
   const res = response ?? NextResponse.next()
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -28,8 +31,8 @@ export function createApiClient(request: NextRequest, response?: NextResponse) {
 export function createApiClientTyped(request: NextRequest, response?: NextResponse) {
   const res = response ?? NextResponse.next()
   return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
