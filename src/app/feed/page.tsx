@@ -182,10 +182,9 @@ function PostCardComponent({
       <div className="flex items-start gap-3 mb-[12px]">
         <Link href={`/profile/${author?.username || ''}`} className="flex-shrink-0 relative">
           {author?.avatar_url ? (
-            <img src={author.avatar_url} alt="" className="w-[40px] h-[40px] rounded-full object-cover" />
-          ) : (
-            <div className="w-[40px] h-[40px] rounded-full bg-gradient-to-br from-gold to-green flex items-center justify-center text-[12px] font-extrabold text-night">{initials}</div>
-          )}
+            <img src={author.avatar_url} alt="" className="w-[40px] h-[40px] rounded-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.querySelector('.avatar-fallback')?.classList.remove('hidden') }} />
+          ) : null}
+          <div className={`avatar-fallback w-[40px] h-[40px] rounded-full bg-gradient-to-br from-gold to-green flex items-center justify-center text-[12px] font-extrabold text-night ${author?.avatar_url ? 'hidden' : ''}`}>{initials}</div>
           {author?.is_verified_expert && (
             <span className="absolute -bottom-1 -right-1 w-[18px] h-[18px] bg-green rounded-full flex items-center justify-center border-2 border-night2">
               <svg viewBox="0 0 24 24" className="w-[10px] h-[10px] stroke-night fill-none" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
@@ -383,37 +382,40 @@ export default function FeedPage() {
     try {
       // For you tab uses personalized algorithm
       if (activeTab === 'for_you' && profile) {
-        const res = await fetch(`/api/feed/recommended?limit=50&offset=0`, { cache: 'no-store' })
-        if (!res.ok) throw new Error('Failed to load personalized feed')
-        const json = await res.json()
-        const rawPosts = (json.posts || []).map((p: any) => ({
-          ...p,
-          profiles: {
-            id: p.author_id,
-            full_name: p.author_name,
-            username: p.author_username,
-            avatar_url: p.author_avatar,
-            heshima_rating: p.author_heshima,
-          },
-          content: p.content,
-          title: p.title,
-        }))
-        const postIds = rawPosts.map((p: any) => p.id)
-        let voteMap: Record<string, 1 | -1 | null> = {}
-        let saveMap: Record<string, boolean> = {}
-        if (postIds.length > 0) {
-          const { data: votes } = await supabase
-            .from('votes').select('target_id, vote_type')
-            .eq('user_id', profile.id).eq('target_type', 'post').in('target_id', postIds)
-          if (votes) votes.forEach((v: any) => { voteMap[v.target_id] = v.vote_type })
-          const { data: saves } = await supabase
-            .from('saves').select('target_id')
-            .eq('user_id', profile.id).eq('target_type', 'post').in('target_id', postIds)
-          if (saves) saves.forEach((s: any) => { saveMap[s.target_id] = true })
-        }
-        setPosts(rawPosts.map((p: any) => ({ ...p, user_vote: voteMap[p.id] || null, user_saved: saveMap[p.id] || false })))
-        setLoading(false)
-        return
+        try {
+          const res = await fetch(`/api/feed/recommended?limit=50&offset=0`, { cache: 'no-store' })
+          if (res.ok) {
+            const json = await res.json()
+            const rawPosts = (json.posts || []).map((p: any) => ({
+              ...p,
+              profiles: {
+                id: p.author_id,
+                full_name: p.author_name,
+                username: p.author_username,
+                avatar_url: p.author_avatar,
+                heshima_rating: p.author_heshima,
+              },
+              content: p.content,
+              title: p.title,
+            }))
+            const postIds = rawPosts.map((p: any) => p.id)
+            let voteMap: Record<string, 1 | -1 | null> = {}
+            let saveMap: Record<string, boolean> = {}
+            if (postIds.length > 0) {
+              const { data: votes } = await supabase
+                .from('votes').select('target_id, vote_type')
+                .eq('user_id', profile.id).eq('target_type', 'post').in('target_id', postIds)
+              if (votes) votes.forEach((v: any) => { voteMap[v.target_id] = v.vote_type })
+              const { data: saves } = await supabase
+                .from('saves').select('target_id')
+                .eq('user_id', profile.id).eq('target_type', 'post').in('target_id', postIds)
+              if (saves) saves.forEach((s: any) => { saveMap[s.target_id] = true })
+            }
+            setPosts(rawPosts.map((p: any) => ({ ...p, user_vote: voteMap[p.id] || null, user_saved: saveMap[p.id] || false })))
+            setLoading(false)
+            return
+          }
+        } catch { /* fall through to regular query */ }
       }
 
       let query = supabase
@@ -698,13 +700,14 @@ export default function FeedPage() {
       >
         <div className="flex items-center gap-3">
           {profile ? (
-            profile.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="w-[36px] h-[36px] rounded-full object-cover flex-shrink-0" />
-            ) : (
-              <div className="w-[36px] h-[36px] rounded-full bg-gradient-to-br from-gold to-green flex items-center justify-center text-[11px] font-extrabold text-night flex-shrink-0">
+            <>
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt="" className="w-[36px] h-[36px] rounded-full object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.querySelector('.composer-avatar-fallback')?.classList.remove('hidden') }} />
+              ) : null}
+              <div className={`composer-avatar-fallback w-[36px] h-[36px] rounded-full bg-gradient-to-br from-gold to-green flex items-center justify-center text-[11px] font-extrabold text-night flex-shrink-0 ${profile.avatar_url ? 'hidden' : ''}`}>
                 {getInitials(profile.full_name || profile.username)}
               </div>
-            )
+            </>
           ) : (
             <div className="w-[36px] h-[36px] rounded-full bg-deep flex items-center justify-center text-[var(--muted)]">?</div>
           )}
