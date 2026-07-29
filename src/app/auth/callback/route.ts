@@ -6,9 +6,12 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code')
 
   if (code) {
-    const supabase = createApiClient(request)
-    await supabase.auth.exchangeCodeForSession(code)
+    const response = NextResponse.redirect(new URL('/feed', request.url))
+    const supabase = createApiClient(request, response)
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (error) console.error('Auth callback error:', error.message)
+    return response
   }
 
-  return NextResponse.redirect(new URL('/feed', request.url))
+  return NextResponse.redirect(new URL('/signup?mode=login', request.url))
 }

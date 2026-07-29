@@ -73,7 +73,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <header className="topbar">
             <div className="search">⌕ <input placeholder="Search Baraza, spaces, people..." /></div>
             <div className="top-actions">
-              <Link href="/explore" className="icon" title="Search">⌕</Link>
               <Link href="/notifications" className="icon" title="Notifications">♡</Link>
               <button className="icon" onClick={() => setChatOpen(!chatOpen)} title="Messages">◍</button>
               <Link href="/profile" className="icon" title="Profile">
