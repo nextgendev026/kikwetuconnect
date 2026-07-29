@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, MessageCircle, TrendingUp, Share2, Bookmark, Shield } from 'lucide-react'
+import { ArrowLeft, MessageCircle, TrendingUp, Share2, Bookmark, Shield, Star } from 'lucide-react'
 import { Button, Textarea } from '@/components/ui/form'
-import { useUser, useSupabase } from '@/providers/supabase-provider'
+import { useUser, useSupabase, toast } from '@/app/providers'
 
 interface Profile {
   id: string
@@ -21,6 +21,8 @@ interface Post {
   content: string
   post_type: string
   user_id: string
+  media_url: string | null
+  media_type: string | null
   upvotes_count: number
   answers_count: number
   bounty_tokens: number
@@ -52,14 +54,22 @@ export default function PostDetailPage() {
   const [submittingAnswer, setSubmittingAnswer] = useState(false)
   const [error, setError] = useState('')
   const [userVotes, setUserVotes] = useState<Record<string, number>>({})
+  const [userSaved, setUserSaved] = useState(false)
 
   useEffect(() => {
     fetchPost()
     fetchAnswers()
     if (profile) {
       fetchUserVotes()
+      checkSaved()
     }
   }, [postId, profile])
+
+  const checkSaved = async () => {
+    if (!profile) return
+    const { data } = await supabase.from('saves').select('id').eq('user_id', profile.id).eq('target_id', postId).eq('target_type', 'post').maybeSingle()
+    setUserSaved(!!data)
+  }
 
 
 
@@ -275,6 +285,17 @@ export default function PostDetailPage() {
         </div>
 
         {/* Title and Content */}
+        {post.media_url && (
+          <div className="mb-4 rounded-[12px] overflow-hidden" style={{ background: 'var(--raised)' }}>
+            {post.media_type?.startsWith('video/') ? (
+              <div className="h-[240px] flex items-center justify-center">
+                <span className="text-[48px] opacity-50">🎥</span>
+              </div>
+            ) : (
+              <img src={post.media_url} alt="" className="w-full h-auto max-h-[400px] object-cover" loading="lazy" />
+            )}
+          </div>
+        )}
         <h1 className="text-2xl font-bold mb-4">{post.title}</h1>
         <p className="text-base text-text mb-4 leading-relaxed">{post.content}</p>
 
@@ -321,13 +342,26 @@ export default function PostDetailPage() {
               <TrendingUp className="w-4 h-4" />
               Upvote
             </button>
-            <button className="px-3 py-2 rounded-full text-sm font-medium text-muted hover:bg-surface transition-colors flex items-center gap-1">
+            <button onClick={() => { navigator.clipboard.writeText(window.location.href); toast('Link copied') }}
+              className="px-3 py-2 rounded-full text-sm font-medium text-muted hover:bg-surface transition-colors flex items-center gap-1"
+              aria-label="Share post">
               <Share2 className="w-4 h-4" />
               Share
             </button>
-            <button className="px-3 py-2 rounded-full text-sm font-medium text-muted hover:bg-surface transition-colors flex items-center gap-1">
-              <Bookmark className="w-4 h-4" />
-              Save
+            <button onClick={async () => {
+              if (!profile) { toast('Sign in to save'); return }
+              const res = await fetch('/api/saves', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_type: 'post', target_id: postId }),
+              })
+              const data = await res.json()
+              if (res.ok) { setUserSaved(data.saved); toast(data.saved ? 'Saved' : 'Removed') }
+              else toast('Failed')
+            }}
+              className={`px-3 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${userSaved ? 'bg-gold-bg text-gold' : 'text-muted hover:bg-surface'}`}
+              aria-label={userSaved ? 'Unsave post' : 'Save post'}>
+              <Bookmark className={`w-4 h-4 ${userSaved ? 'fill-current' : ''}`} />
+              {userSaved ? 'Saved' : 'Save'}
             </button>
           </div>
         </div>

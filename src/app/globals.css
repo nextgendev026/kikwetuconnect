@@ -48,7 +48,7 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; background: var(--bg); }
-body { margin: 0; color: var(--ink); font: 16px 'DM Sans', system-ui, sans-serif; background: var(--bg); background-image: var(--bg-pattern); background-attachment: fixed; -webkit-font-smoothing: antialiased; transition: background-color .3s ease, color .3s ease; }
+body { margin: 0; color: var(--ink); font: 16px 'DM Sans', system-ui, -apple-system, 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif; background: var(--bg); background-image: var(--bg-pattern); background-attachment: fixed; -webkit-font-smoothing: antialiased; transition: background-color .3s ease, color .3s ease; }
 ::before, ::after, * { transition: background-color .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease; }
 button, input, textarea, select { font: inherit; color: inherit; }
 button { border: 0; cursor: pointer; }

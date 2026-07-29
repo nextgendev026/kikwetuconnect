@@ -122,14 +122,15 @@ export default function MarketPage() {
   const toggleSave = async (listingId: string) => {
     if (!profile) { toast('Sign in to save'); return }
     try {
-      if (savedIds.has(listingId)) {
-        await supabase.from('saved_listings').delete().eq('user_id', profile.id).eq('listing_id', listingId)
-        setSavedIds(prev => { const n = new Set(prev); n.delete(listingId); return n }); toast('Removed')
-      } else {
-        await supabase.from('saved_listings').insert({ user_id: profile.id, listing_id: listingId })
-        setSavedIds(prev => { const n = new Set(prev); n.add(listingId); return n }); toast('Saved')
-        await supabase.from('marketplace_listings').update({ views_count: (listings.find(l => l.id === listingId)?.views_count || 0) + 1 }).eq('id', listingId)
-      }
+      const res = await fetch('/api/saves', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_type: 'listing', target_id: listingId }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        if (data.saved) { setSavedIds(prev => { const n = new Set(prev); n.add(listingId); return n }); toast('Saved') }
+        else { setSavedIds(prev => { const n = new Set(prev); n.delete(listingId); return n }); toast('Removed') }
+      } else throw new Error(data.error)
     } catch { toast('Failed to save') }
   }
 
@@ -218,13 +219,14 @@ export default function MarketPage() {
   const handleSubmitReview = async () => {
     if (!profile || !reviewOrder) return
     try {
-      const { error } = await supabase.from('marketplace_reviews').insert({
-        order_id: reviewOrder.id, reviewer_id: profile.id, listing_id: reviewOrder.listing_id,
-        rating: reviewRating, comment: reviewComment.trim() || null,
+      const res = await fetch('/api/reviews', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: reviewOrder.id, listing_id: reviewOrder.listing_id, rating: reviewRating, comment: reviewComment.trim() || undefined }),
       })
-      if (error) throw error
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed')
       toast('Review submitted!'); setReviewOrder(null); setReviewRating(5); setReviewComment('')
-    } catch { toast('Failed to submit review') }
+    } catch (err: any) { toast(err.message || 'Failed to submit review') }
   }
 
   const openDetail = (item: Listing) => { setDetailItem(item); fetchReviews(item.id) }

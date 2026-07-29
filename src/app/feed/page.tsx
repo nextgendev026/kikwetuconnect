@@ -367,7 +367,9 @@ export default function FeedPage() {
 
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(true)
   const [activeTab, setActiveTab] = useState<TabId>('for_you')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [countyFilter, setCountyFilter] = useState<string | null>(null)
@@ -392,14 +394,16 @@ export default function FeedPage() {
     }
   }, [])
 
-  const fetchPosts = useCallback(async () => {
-    setLoading(true)
-    setError(null)
+  const fetchPosts = useCallback(async (cursor?: string | null) => {
+    const isReset = !cursor
+    if (isReset) { setLoading(true); setError(null) } else { setLoadingMore(true) }
     try {
+      const limit = 25
+
       // For you tab uses personalized algorithm
-      if (activeTab === 'for_you' && profile) {
+      if (activeTab === 'for_you' && profile && isReset) {
         try {
-          const res = await fetch(`/api/feed/recommended?limit=50&offset=0`, { cache: 'no-store' })
+          const res = await fetch(`/api/feed/recommended?limit=${limit}&offset=0`, { cache: 'no-store' })
           if (res.ok) {
             const json = await res.json()
             const rawPosts = (json.posts || []).map((p: any) => ({
@@ -428,10 +432,11 @@ export default function FeedPage() {
               if (saves) saves.forEach((s: any) => { saveMap[s.target_id] = true })
             }
             setPosts(rawPosts.map((p: any) => ({ ...p, user_vote: voteMap[p.id] || null, user_saved: saveMap[p.id] || false })))
+            setHasMore(rawPosts.length >= limit)
             setLoading(false)
             return
           }
-        } catch { /* fall through to regular query */ }
+        } catch { /* fall through */ }
       }
 
       let query = supabase
@@ -443,103 +448,60 @@ export default function FeedPage() {
           )
         `)
         .order('created_at', { ascending: false })
-        .limit(50)
+        .limit(limit + 1)
 
-      if (typeFilter !== 'all') {
-        query = query.eq('post_type', typeFilter)
-      }
+      if (cursor) query = query.lt('created_at', cursor)
 
-      if (activeTab === 'questions') {
-        query = query.eq('post_type', 'inquiry')
-      }
+      if (typeFilter !== 'all') query = query.eq('post_type', typeFilter)
+      if (activeTab === 'questions') query = query.eq('post_type', 'inquiry')
 
       if (activeTab === 'following' && profile) {
-        const { data: following } = await supabase
-          .from('follows')
-          .select('following_id')
-          .eq('follower_id', profile.id)
+        const { data: following } = await supabase.from('follows').select('following_id').eq('follower_id', profile.id)
         const ids = following?.map((f: { following_id: string }) => f.following_id) || []
-        if (ids.length > 0) {
-          query = query.in('user_id', ids)
-        } else {
-          setPosts([])
-          setLoading(false)
-          return
-        }
+        if (ids.length > 0) { query = query.in('user_id', ids) }
+        else { setPosts([]); setLoading(false); return }
       }
 
-      if (activeTab === 'near_you' && countyFilter) {
-        query = query.eq('county_tag', countyFilter)
-      } else if (activeTab === 'near_you' && profile?.county_hub) {
-        query = query.eq('county_tag', profile.county_hub)
-      }
-
-      if (countyFilter && activeTab !== 'near_you') {
-        query = query.eq('county_tag', countyFilter)
-      }
+      if (activeTab === 'near_you' && countyFilter) query = query.eq('county_tag', countyFilter)
+      else if (activeTab === 'near_you' && profile?.county_hub) query = query.eq('county_tag', profile.county_hub)
+      if (countyFilter && activeTab !== 'near_you') query = query.eq('county_tag', countyFilter)
 
       if (activeTab === 'saved' && profile) {
-        const { data: savedPosts } = await supabase
-          .from('saves')
-          .select('target_id')
-          .eq('user_id', profile.id)
-          .eq('target_type', 'post')
+        const { data: savedPosts } = await supabase.from('saves').select('target_id').eq('user_id', profile.id).eq('target_type', 'post')
         const ids = savedPosts?.map((s: { target_id: string }) => s.target_id) || []
-        if (ids.length > 0) {
-          query = query.in('id', ids)
-        } else {
-          setPosts([])
-          setLoading(false)
-          return
-        }
+        if (ids.length > 0) { query = query.in('id', ids) }
+        else { setPosts([]); setLoading(false); return }
       }
 
       const { data, error: fetchError } = await query
-
       if (fetchError) throw new Error(fetchError.message)
 
       const rawPosts = (data || []) as any[]
+      const pagePosts = rawPosts.slice(0, limit)
+      setHasMore(rawPosts.length > limit)
 
-      // Get user votes for these posts
       let voteMap: Record<string, 1 | -1 | null> = {}
       let saveMap: Record<string, boolean> = {}
-
       if (profile) {
-        const postIds = rawPosts.map(p => p.id)
+        const postIds = pagePosts.map(p => p.id)
         if (postIds.length > 0) {
-          const { data: votes } = await supabase
-            .from('votes')
-            .select('target_id, vote_type')
-            .eq('user_id', profile.id)
-            .eq('target_type', 'post')
-            .in('target_id', postIds)
-          if (votes) {
-            votes.forEach((v: { target_id: string; vote_type: number }) => { voteMap[v.target_id] = v.vote_type as 1 | -1 })
-          }
-
-          const { data: saves } = await supabase
-            .from('saves')
-            .select('target_id')
-            .eq('user_id', profile.id)
-            .eq('target_type', 'post')
-            .in('target_id', postIds)
-          if (saves) {
-            saves.forEach((s: { target_id: string }) => { saveMap[s.target_id] = true })
-          }
+          const { data: votes } = await supabase.from('votes').select('target_id, vote_type').eq('user_id', profile.id).eq('target_type', 'post').in('target_id', postIds)
+          if (votes) votes.forEach((v: any) => { voteMap[v.target_id] = v.vote_type as 1 | -1 })
+          const { data: saves } = await supabase.from('saves').select('target_id').eq('user_id', profile.id).eq('target_type', 'post').in('target_id', postIds)
+          if (saves) saves.forEach((s: any) => { saveMap[s.target_id] = true })
         }
       }
 
-      const enriched: Post[] = rawPosts.map(p => ({
-        ...p,
-        user_vote: voteMap[p.id] || null,
-        user_saved: saveMap[p.id] || false,
+      const enriched: Post[] = pagePosts.map(p => ({
+        ...p, user_vote: voteMap[p.id] || null, user_saved: saveMap[p.id] || false,
       }))
 
-      setPosts(enriched)
+      if (isReset) setPosts(enriched)
+      else setPosts(prev => [...prev, ...enriched])
     } catch (err: any) {
       setError(err.message || 'Failed to load posts')
     } finally {
-      setLoading(false)
+      setLoading(false); setLoadingMore(false)
     }
   }, [supabase, profile, activeTab, typeFilter, countyFilter])
 
@@ -571,45 +533,36 @@ export default function FeedPage() {
       return { ...p, user_vote: voteType, upvotes_count: Math.max(0, p.upvotes_count + diff) }
     }))
     try {
-      const { data: existing } = await supabase
-        .from('votes')
-        .select('id')
-        .eq('user_id', profile.id)
-        .eq('target_id', postId)
-        .eq('target_type', 'post')
-        .single()
-      if (existing) {
-        if (voteType === null) {
-          await supabase.from('votes').delete().eq('id', existing.id)
-          await supabase.from('posts').update({ upvotes_count: Math.max(0, (posts.find(p => p.id === postId)?.upvotes_count || 1) - 1) }).eq('id', postId)
-        } else {
-          await supabase.from('votes').update({ vote_type: voteType }).eq('id', existing.id)
-        }
-      } else if (voteType !== null) {
-        await supabase.from('votes').insert({ user_id: profile.id, target_id: postId, target_type: 'post', vote_type: voteType })
-        await supabase.from('posts').update({ upvotes_count: (posts.find(p => p.id === postId)?.upvotes_count || 0) + 1 }).eq('id', postId)
+      if (voteType === null) {
+        await fetch(`/api/votes?target_type=post&target_id=${postId}`, { method: 'DELETE' })
+      } else {
+        const res = await fetch('/api/votes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target_type: 'post', target_id: postId, vote_type: voteType }),
+        })
+        if (!res.ok) throw new Error('Vote failed')
       }
     } catch {
       setPosts(previousPosts)
     }
-  }, [supabase, profile, posts])
+  }, [profile, posts])
 
   const handleSave = useCallback(async (postId: string) => {
     if (!profile) { toast('Sign in to save posts'); return }
     const previousPosts = [...posts]
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, user_saved: !p.user_saved } : p))
-    const post = posts.find(p => p.id === postId)
-    const wasSaved = post?.user_saved
     try {
-      if (wasSaved) {
-        await supabase.from('saves').delete().eq('user_id', profile.id).eq('target_id', postId).eq('target_type', 'post')
-      } else {
-        await supabase.from('saves').insert({ user_id: profile.id, target_id: postId, target_type: 'post' })
-      }
+      const res = await fetch('/api/saves', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_type: 'post', target_id: postId }),
+      })
+      if (!res.ok) throw new Error('Save failed')
     } catch {
       setPosts(previousPosts)
     }
-  }, [supabase, profile, posts])
+  }, [profile, posts])
 
   const handleReact = useCallback((_postId: string, _emoji: string) => {
     // Reactions stored locally; could sync to DB later
@@ -805,8 +758,18 @@ export default function FeedPage() {
 
 
 
-      {/* Load more indicator */}
-      {!loading && posts.length > 0 && (
+      {/* Load more */}
+      {!loading && posts.length > 0 && hasMore && (
+        <div className="text-center py-[16px]">
+          <button onClick={() => fetchPosts(posts[posts.length - 1]?.created_at)}
+            className="px-[24px] py-[10px] rounded-full text-[12px] font-bold transition-all"
+            style={{ background: 'var(--raised)', color: 'var(--ink)', border: '1px solid var(--line)' }}
+            disabled={loadingMore}>
+            {loadingMore ? 'Loading...' : 'Load more'}
+          </button>
+        </div>
+      )}
+      {!loading && !hasMore && posts.length > 0 && (
         <div className="text-center py-[20px]">
           <p className="text-[var(--muted)] text-[11px]">You've reached the end... for now</p>
         </div>
