@@ -345,6 +345,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .btn-gold:hover, .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px color-mix(in oklab, var(--gold) 35%, transparent); filter: brightness(1.08); }
 .btn-ghost:hover { background: var(--raised); color: var(--ink); }
 
+.feed-action-link:hover { background: var(--raised); color: var(--gold); }
 .baraza-hub-card:hover { transform: translateY(-4px); box-shadow: var(--card-shadow-hover); border-color: color-mix(in oklab, var(--green) 50%, transparent); }
 .baraza-row-card:hover { background: var(--raised); }
 .baraza-row-card:hover .baraza-row-icon { transform: scale(1.1); }

@@ -278,10 +278,8 @@ function PostCardComponent({
 
         <Link
           href={`/posts/${post.id}`}
-          className="flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold transition-all"
+          className="feed-action-link flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold transition-all"
           style={{ color: 'var(--muted)' }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'var(--raised)'; e.currentTarget.style.color = 'var(--gold)' }}
-          onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = 'var(--muted)' }}
         >
           <span>{post.post_type === 'inquiry' ? '✏️' : '💬'}</span>
           <span>{post.answers_count || 0}</span>
@@ -677,11 +675,12 @@ export default function FeedPage() {
           )}
           <div id="composer-input" className="flex-1 text-[13px] text-[var(--muted)]">What's on your mind, {profile?.full_name?.split(' ')[0] || 'Mwananchi'}?</div>
         </div>
-        <div className="flex gap-[6px] mt-[12px] pt-[12px] border-t border-[var(--line)]">
+        <div className="flex gap-[6px] mt-[12px] pt-[12px] border-t border-[var(--line)] flex-wrap">
+          <span className="text-[10px] text-[var(--muted)] self-center mr-1">Create:</span>
           {[
+            { label: 'Post', icon: '💬', type: 'baraza' },
             { label: 'Ask', icon: '❓', type: 'inquiry' },
             { label: 'Poll', icon: '📊', type: 'poll' },
-            { label: 'Sell', icon: '🛒', type: 'baraza' },
           ].map(action => (
             <button
               key={action.label}
@@ -692,6 +691,22 @@ export default function FeedPage() {
               <span>{action.label}</span>
             </button>
           ))}
+          <span className="w-px h-5 bg-[var(--line)] self-center mx-1"></span>
+          <button
+            onClick={(e) => { e.stopPropagation(); openCreateModal() }}
+            className="flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-[var(--raised)] hover:text-cream transition-all"
+            title="Add image"
+          >🖼️ <span className="hidden sm:inline">Image</span></button>
+          <button
+            onClick={(e) => { e.stopPropagation(); openCreateModal() }}
+            className="flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-[var(--raised)] hover:text-cream transition-all"
+            title="Add video"
+          >🎥 <span className="hidden sm:inline">Video</span></button>
+          <button
+            onClick={(e) => { e.stopPropagation(); openCreateModal() }}
+            className="flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-[var(--raised)] hover:text-cream transition-all"
+            title="Add audio"
+          >🎙️ <span className="hidden sm:inline">Audio</span></button>
           {profile?.county_hub && (
             <button
               onClick={(e) => { e.stopPropagation(); setCountyFilter(countyFilter === profile.county_hub ? null : profile.county_hub) }}
