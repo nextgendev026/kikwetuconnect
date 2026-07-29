@@ -66,15 +66,14 @@ export async function POST(request: NextRequest) {
     const translatedTitle = title && lines.length > 1 ? lines[0] : null
     const translatedText = translatedTitle ? lines.slice(1).join('\n').trim() || translated : translated
 
-    // Cache result
-    await supabase.from('post_translations').insert({
-      post_id,
-      source_type,
-      language,
-      translated_title: translatedTitle,
-      translated_text: translatedText,
-      provider: 'openai',
-      created_by: user.id,
+    // Cache result via RPC (respects RLS)
+    await supabase.rpc('insert_translation', {
+      p_post_id: post_id,
+      p_source_type: source_type,
+      p_language: language,
+      p_translated_text: translatedText,
+      p_translated_title: translatedTitle,
+      p_provider: 'openai',
     })
 
     return NextResponse.json({ translated_title: translatedTitle, translated_text: translatedText, cached: false })

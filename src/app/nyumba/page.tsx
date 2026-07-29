@@ -174,8 +174,7 @@ export default function NyumbaPage() {
   const reportMisinformation = async (alertId: string) => {
     if (!profile) { toast('Sign in to report'); return }
     try {
-      await supabase.from('moderation_queue').insert({ target_type: 'nyumba_kumi_alert', target_id: alertId, reporter_id: profile.id, reason: 'Misinformation in Nyumba Kumi alert', status: 'pending' } as any)
-      await supabase.from('admin_activity').insert({ admin_id: profile.id, action: 'report_alert', target_type: 'nyumba_kumi_alert', target_id: alertId, details: { reason: 'Misinformation' } } as any)
+      await supabase.rpc('report_alert_audited', { p_alert_id: alertId, p_reason: 'Misinformation in Nyumba Kumi alert' })
       toast('Report submitted for review')
     } catch { toast('Failed to submit report') }
   }
@@ -241,22 +240,18 @@ export default function NyumbaPage() {
     setCreatingGroup(true)
     try {
       const slug = groupForm.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'group'
-      const { data, error } = await supabase.from('nyumba_kumi_groups').insert({
-        name: groupForm.name.trim(),
-        slug,
-        description: groupForm.description.trim(),
-        county: groupForm.county || null,
-        created_by: profile.id,
-      } as any).select().single()
+      const { data, error } = await supabase.rpc('create_nyumba_group_audited', {
+        p_name: groupForm.name.trim(),
+        p_slug: slug,
+        p_description: groupForm.description.trim(),
+        p_county: groupForm.county || null,
+      })
       if (error) throw error
-      // Auto-join creator as admin
-      await supabase.from('nyumba_kumi_group_members').insert({ group_id: data.id, user_id: profile.id, role: 'admin' } as any)
-      setGroups(prev => [data as Group, ...prev])
+      setGroups(prev => [{ ...data, name: groupForm.name.trim(), description: groupForm.description.trim(), created_by: profile.id, member_count: 1 } as any, ...prev])
       setMyGroupIds(prev => { const n = new Set(prev); n.add(data.id); return n })
       setGroupForm({ name: '', description: '', county: '' })
       setShowCreateGroup(false)
       toast('Neighbourhood group created!')
-      await supabase.from('admin_activity').insert({ admin_id: profile.id, action: 'create_nyumba_group', target_type: 'nyumba_kumi_group', target_id: data.id } as any)
     } catch { toast('Failed to create group') }
     finally { setCreatingGroup(false) }
   }
@@ -275,9 +270,8 @@ export default function NyumbaPage() {
   const handleModerate = async (itemId: string, newStatus: string) => {
     if (!profile) return
     try {
-      await supabase.from('moderation_queue').update({ status: newStatus, reviewed_by: profile.id, reviewed_at: new Date().toISOString() } as any).eq('id', itemId)
+      await supabase.rpc('moderate_alert_audited', { p_item_id: itemId, p_status: newStatus })
       setModQueue(prev => prev.map(m => m.id === itemId ? { ...m, status: newStatus } : m))
-      await supabase.from('admin_activity').insert({ admin_id: profile.id, action: 'moderate_alert', target_type: 'moderation_queue', target_id: itemId, details: { status: newStatus } } as any)
       toast(`Alert ${newStatus}`)
     } catch { toast('Failed to update') }
   }
@@ -308,9 +302,8 @@ export default function NyumbaPage() {
   const handleHideAlert = async (alertId: string) => {
     if (!profile) return
     try {
-      await supabase.from('nyumba_kumi_alerts').delete().eq('id', alertId)
+      await supabase.rpc('hide_alert_audited', { p_alert_id: alertId })
       setAlerts(prev => prev.filter(a => a.id !== alertId))
-      await supabase.from('admin_activity').insert({ admin_id: profile.id, action: 'hide_alert', target_type: 'nyumba_kumi_alert', target_id: alertId } as any)
       toast('Alert removed from feed')
     } catch { toast('Failed to remove alert') }
   }

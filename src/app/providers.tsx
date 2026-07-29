@@ -217,12 +217,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
   // Admin activity logging helper
   const logAdminActivity = useCallback(async (action: string, targetType?: string, targetId?: string, details?: Record<string, any>) => {
     if (!user) return
-    await supabase.from('admin_activity').insert({
-      admin_id: user.id,
-      action,
-      target_type: targetType,
-      target_id: targetId,
-      details: details || {},
+    await supabase.rpc('admin_log_activity', {
+      p_action: action,
+      p_target_type: targetType,
+      p_target_id: targetId,
+      p_details: details || {},
     })
   }, [supabase, user])
 
