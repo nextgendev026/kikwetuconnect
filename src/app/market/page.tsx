@@ -243,9 +243,9 @@ export default function MarketPage() {
         <div>
           <h1 className="page-title flex items-center gap-3" style={{ margin: 0 }}>
             <Store className="w-7 h-7" style={{ color: 'var(--gold)' }} />
-            Mtaa Exchange
+            Mtaa Market
           </h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>Buy & sell in your community</p>
+          <p className="text-sm mt-1" style={{ color: 'var(--muted)' }}>The local marketplace — buy, sell, trade in your community</p>
         </div>
         <div className="flex gap-2">
           {profile && <button onClick={() => setShowCreate(true)} style={{ ...s.btn, ...s.primaryBtn }}><Plus className="w-4 h-4" /> List Item</button>}

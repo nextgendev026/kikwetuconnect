@@ -48,6 +48,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Notify post owner (if not answering own post)
+    const { data: answeredPost } = await supabase
+      .from('posts').select('user_id, title').eq('id', postId).single()
+    if (answeredPost && answeredPost.user_id !== user.id) {
+      await supabase.from('notifications').insert({
+        user_id: answeredPost.user_id,
+        actor_id: user.id,
+        type: 'new_answer',
+        target_id: postId,
+        target_type: 'post',
+        content: `New answer on "${(answeredPost.title || content).slice(0, 80)}"`,
+        meta: { link: `/posts/${postId}` },
+      })
+    }
+
     return NextResponse.json({
       answer,
       message: 'Answer submitted successfully',

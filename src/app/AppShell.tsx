@@ -4,7 +4,7 @@ import { useUser, useSupabase, useTheme, toast } from './providers'
 import Sidebar from '@/components/Sidebar'
 import MobileNav from '@/components/MobileNav'
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import CreateModal from '@/components/CreateModal'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -21,10 +21,38 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [postCount, setPostCount] = useState(0)
   const [userCount, setUserCount] = useState(0)
   const [moderationCount, setModerationCount] = useState(0)
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0)
+
+  const fetchUnreadCount = useCallback(async () => {
+    if (!profile || !supabase) return
+    const { count } = await supabase
+      .from('notifications').select('id', { count: 'exact', head: true })
+      .eq('user_id', profile.id).eq('is_read', false)
+    if (count !== null) setUnreadNotifCount(count)
+  }, [profile, supabase])
 
   useEffect(() => {
     if (!loading && !profile) router.push('/')
   }, [loading, profile, router])
+
+  useEffect(() => {
+    if (!profile || !supabase) return
+    fetchUnreadCount()
+
+    const channel = supabase
+      .channel('notif-realtime')
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'notifications',
+        filter: `user_id=eq.${profile.id}`,
+      }, (payload: { new: any }) => {
+        setUnreadNotifCount(c => c + 1)
+        const n = payload.new
+        toast(n.content || 'New notification')
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [profile, supabase, fetchUnreadCount])
 
   useEffect(() => {
     if (!supabase) return
@@ -80,7 +108,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <input aria-label="Search Baraza, spaces, people..." placeholder="Search Baraza, spaces, people..." />
             </div>
             <div className="top-actions">
-              <Link href="/notifications" className="icon" aria-label="Notifications" title="Notifications">♡</Link>
+              <Link href="/notifications" className="icon" aria-label={unreadNotifCount > 0 ? `${unreadNotifCount} unread notifications` : 'Notifications'} title="Notifications" style={{ position: 'relative' }}>
+                ♡
+                {unreadNotifCount > 0 && (
+                  <span style={{
+                    position: 'absolute', top: -2, right: -2,
+                    background: 'var(--red)', color: '#fff',
+                    fontSize: 8, fontWeight: 700, minWidth: 16, height: 16,
+                    borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '0 3px', lineHeight: 1,
+                  }}>{unreadNotifCount > 99 ? '99+' : unreadNotifCount}</span>
+                )}
+              </Link>
               <button className="icon" onClick={() => setChatOpen(!chatOpen)} aria-label={chatOpen ? 'Close chat' : 'Open chat'} title="Messages">◍</button>
               <Link href="/profile" className="icon" aria-label="Profile" title="Profile">
                 <span className="avatar" style={{ width: 30, height: 30, fontSize: 10, overflow: 'hidden' }}>

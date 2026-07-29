@@ -22,7 +22,7 @@ const sections = [
     { href: '/sessions', label: 'My sessions', icon: Calendar },
   ]},
   { label: 'Community', items: [
-    { href: '/market', label: 'Mtaa Exchange', icon: Store },
+    { href: '/market', label: 'Mtaa Market', icon: Store },
     { href: '/nyumba', label: 'Nyumba Kumi', icon: Shield },
     { href: '/quizzes', label: 'Quizzes', icon: Trophy },
   ]},

@@ -49,7 +49,8 @@ export async function POST(request: NextRequest) {
       type: 'upvote',
       target_id,
       target_type,
-      content: `${target_type === 'post' ? 'post' : 'answer'} upvoted`,
+      content: `Your ${target_type === 'post' ? 'post' : 'answer'} was upvoted`,
+      meta: { link: `/${target_type === 'post' ? 'posts' : 'answers'}/${target_id}` },
     })
   }
   return NextResponse.json({ vote_type })

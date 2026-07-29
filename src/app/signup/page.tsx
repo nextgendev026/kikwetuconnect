@@ -10,7 +10,7 @@ const SERVICES = [
   { id: 'share-knowledge', icon: '\u270D\uFE0F', label: 'Share knowledge', desc: 'Posts, articles, polls' },
   { id: 'find-guidance', icon: '\uD83E\uDDED', label: 'Find guidance', desc: 'Private expert sessions' },
   { id: 'offer-services', icon: '\u2726', label: 'Offer services', desc: 'Apply as a professional' },
-  { id: 'buy-sell', icon: '\uD83E\uDDEA', label: 'Buy or sell locally', desc: 'Mtaa Exchange' },
+  { id: 'buy-sell', icon: '\uD83E\uDDEA', label: 'Buy or sell locally', desc: 'Mtaa Market' },
   { id: 'safety', icon: '\uD83D\uDEE1\uFE0F', label: 'Neighbourhood safety', desc: 'Nyumba Kumi updates' },
 ]
 const TOPICS = [

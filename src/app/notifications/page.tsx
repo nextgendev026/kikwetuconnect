@@ -10,7 +10,7 @@ import {
 type TabType = 'all' | 'replies' | 'sessions' | 'wallet'
 
 const replyTypes = ['reply', 'answer', 'mention']
-const sessionTypes = ['session_request', 'session_accept', 'session_complete']
+const sessionTypes = ['session_request', 'session_assigned', 'session_accept', 'session_ended', 'session_complete']
 const walletTypes = ['tip', 'payout']
 
 interface Actor {
@@ -107,15 +107,16 @@ export default function NotificationsPage() {
   }
 
   const getTargetHref = (n: Notification): string | null => {
+    if ((n as any).meta?.link) return (n as any).meta.link
     if (n.target_id) {
-      if (n.target_type === 'post' || n.type === 'answer' || n.type === 'reply' || n.type === 'upvote') {
+      if (n.target_type === 'post' || n.type === 'answer' || n.type === 'new_answer' || n.type === 'reply' || n.type === 'upvote') {
         return `/posts/${n.target_id}`
       }
       if (n.target_type === 'profile' || n.type === 'follow') {
         return `/profile/${n.profiles?.username || n.actor_id}`
       }
       if (n.type.startsWith('session')) {
-        return '/profile?tab=sessions'
+        return '/sessions'
       }
     }
     if (n.profiles?.username) return `/profile/${n.profiles.username}`
@@ -132,12 +133,15 @@ export default function NotificationsPage() {
     switch (type) {
       case 'upvote': return <ThumbsUp className="w-4 h-4 text-green" />
       case 'downvote': return <ThumbsUp className="w-4 h-4 text-red rotate-180" />
-      case 'answer': return <MessageSquare className="w-4 h-4 text-blue" />
+      case 'answer':
+      case 'new_answer': return <MessageSquare className="w-4 h-4 text-blue" />
       case 'reply': return <Reply className="w-4 h-4 text-blue" />
       case 'mention': return <AtSign className="w-4 h-4 text-gold" />
       case 'follow': return <Users className="w-4 h-4 text-green" />
       case 'session_request': return <CalendarCheck className="w-4 h-4 text-gold" />
+      case 'session_assigned':
       case 'session_accept': return <CheckCircle className="w-4 h-4 text-green" />
+      case 'session_ended':
       case 'session_complete': return <Star className="w-4 h-4 text-gold" />
       case 'tip': return <Coins className="w-4 h-4 text-gold" />
       case 'payout': return <Wallet className="w-4 h-4 text-green" />

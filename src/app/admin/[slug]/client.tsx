@@ -8,7 +8,7 @@ const PAGE_META: Record<string, { title: string; desc: string }> = {
   verification: { title: 'Approve expertise with evidence.', desc: 'Review qualifications, identity context, public answer quality, and conduct agreements.' },
   users: { title: 'See the people behind the signal.', desc: 'Search, inspect, restrict, restore, and support members with audit trails.' },
   spaces: { title: 'Manage communities', desc: 'Review Spaces, moderators, visibility, rules, and activity.' },
-  marketplace: { title: 'Mtaa Exchange review', desc: 'Review listings, sellers, reports, and contact safety.' },
+  marketplace: { title: 'Mtaa Market review', desc: 'Review listings, sellers, reports, and contact safety.' },
   safety: { title: 'Safety review', desc: 'Review alerts, confirmations, misinformation, and privacy issues.' },
   payments: { title: 'Payments you can explain.', desc: 'Monitor tips, bounties, M-Pesa callbacks, fees, payouts, and exceptions.' },
   settings: { title: 'Platform settings', desc: 'Control defaults without burying the consequences.' },

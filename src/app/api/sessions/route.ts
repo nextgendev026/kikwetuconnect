@@ -27,6 +27,14 @@ export async function POST(request: NextRequest) {
       }).select().single()
     if (sErr) return NextResponse.json({ error: sErr.message }, { status: 400 })
 
+    // Notify student
+    await supabase.from('notifications').insert({
+      user_id: helpReq.student_id, actor_id: user.id,
+      type: 'session_assigned', target_id: session.id, target_type: 'session',
+      content: 'An expert has started a session for your help request',
+      meta: { link: '/sessions' },
+    })
+
     return NextResponse.json({ session, message: 'Session started' })
   } catch (e: any) {
     console.error('Create session error:', e)
@@ -62,6 +70,19 @@ export async function PATCH(request: NextRequest) {
     const { data: updated, error: updateErr } = await supabase
       .from('student_sessions').update(updateData).eq('id', session_id).select().single()
     if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 400 })
+
+    // Notify both participants
+    const sessionParticipants = [session.expert_id, session.student_id].filter(id => id !== user.id)
+    if (sessionParticipants.length > 0) {
+      await supabase.from('notifications').insert(
+        sessionParticipants.map(uid => ({
+          user_id: uid, actor_id: user.id,
+          type: 'session_ended', target_id: session_id, target_type: 'session',
+          content: `Session completed (${duration_minutes} min)`,
+          meta: { link: '/sessions' },
+        }))
+      )
+    }
 
     return NextResponse.json({ session: updated, message: `Session completed — ${duration_minutes} min` })
   } catch (e: any) {
