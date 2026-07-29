@@ -89,26 +89,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => { supabase.removeChannel(channel) }
   }, [supabase, profile?.id])
 
-  if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
-    <div style={{ width: 30, height: 30, border: '3px solid var(--line)', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin .7s linear infinite' }} />
-  </div>
-  if (!profile) return null
-
-  const initials = (profile.full_name || profile.username || 'U').slice(0, 2).toUpperCase()
-  const noLayout = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email'].includes(path) || path.startsWith('/auth')
-  if (noLayout) return <>{children}</>
-
-  // Fetch or create support conversation + fetch messages
   const openSupportChat = useCallback(async () => {
     if (!profile || !supabase) return
     setChatOpen(true)
     if (chatConvId) {
-      // Re-fetch messages
       const res = await fetch(`/api/messages?conversation_id=${chatConvId}`)
       if (res.ok) setChatMessages(await res.json())
       return
     }
-    // Find existing support conversation
     const { data: convs } = await supabase
       .from('conversation_participants')
       .select('conversation_id')
@@ -128,7 +116,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         return
       }
     }
-    // Create support conversation
     const res = await fetch('/api/conversations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -141,7 +128,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [profile, supabase, chatConvId])
 
-  // Realtime subscription for open chat
   useEffect(() => {
     if (!chatConvId || !supabase) return
     if (chatChannelRef.current) supabase.removeChannel(chatChannelRef.current)
@@ -158,10 +144,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [chatConvId, supabase])
 
-  // Scroll chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMessages])
+
+  if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+    <div style={{ width: 30, height: 30, border: '3px solid var(--line)', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin .7s linear infinite' }} />
+  </div>
+  if (!profile) return null
+
+  const initials = (profile.full_name || profile.username || 'U').slice(0, 2).toUpperCase()
+  const noLayout = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email'].includes(path) || path.startsWith('/auth')
+  if (noLayout) return <>{children}</>
 
   const handleChatSend = async () => {
     if (!chatInput.trim() || !chatConvId || chatSending) return
