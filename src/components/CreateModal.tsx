@@ -127,7 +127,7 @@ export default function CreateModal() {
           </button>
         </div>
 
-        <div className="flex gap-2 flex-wrap mb-4">
+        <div className="grid grid-cols-2 sm:flex sm:gap-2 gap-1.5 mb-4">
           {TYPES.map(t => {
             const Icon = t.icon; const active = type === t.id
             return (

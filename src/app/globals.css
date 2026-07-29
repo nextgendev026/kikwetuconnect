@@ -347,6 +347,17 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .btn-ghost:hover { background: var(--raised); color: var(--ink); }
 
 .feed-action-link:hover { background: var(--raised); color: var(--gold); }
+
+.post-footer { display: flex; justify-content: space-between; align-items: center; gap: 4px; }
+.action-group { display: flex; gap: 4px; align-items: center; }
+.action-button {
+  min-width: 44px; min-height: 44px; padding: 6px 12px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+  color: var(--muted); transition: all .2s var(--ease); text-decoration: none;
+}
+.action-button:hover { background: var(--raised); color: var(--ink); }
+.action-button.active-vote { background: color-mix(in oklab, var(--green) 20%, transparent); color: var(--green); }
+.action-button.active-save { background: color-mix(in oklab, var(--gold) 20%, transparent); color: var(--gold); }
 .baraza-hub-card:hover { transform: translateY(-4px); box-shadow: var(--card-shadow-hover); border-color: color-mix(in oklab, var(--green) 50%, transparent); }
 .baraza-row-card:hover { background: var(--raised); }
 .baraza-row-card:hover .baraza-row-icon { transform: scale(1.1); }

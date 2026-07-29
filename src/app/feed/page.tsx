@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
+import { ArrowUp, MessageCircle, Smile, Share2, Globe, Star, Flag } from 'lucide-react'
 
 const COUNTIES = [
   'Nairobi', 'Mombasa', 'Kisumu', 'Eldoret', 'Kitale', 'Nakuru', 'Thika', 'Kericho',
@@ -267,72 +268,82 @@ function PostCardComponent({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center gap-[4px] pt-[12px] border-t border-[var(--line)]">
-        <button
-          onClick={() => onVote(post.id, post.user_vote === 1 ? null : 1)}
-          className={`flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold transition-all ${post.user_vote === 1 ? 'bg-green/20 text-green' : 'text-[var(--muted)] hover:bg-deep hover:text-cream'}`}
-        >
-          <span className={post.user_vote === 1 ? 'text-green' : ''}>▲</span>
-          <span>{post.upvotes_count || 0}</span>
-        </button>
-
-        <Link
-          href={`/posts/${post.id}`}
-          className="feed-action-link flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold transition-all"
-          style={{ color: 'var(--muted)' }}
-        >
-          <span>{post.post_type === 'inquiry' ? '✏️' : '💬'}</span>
-          <span>{post.answers_count || 0}</span>
-          <span style={{ fontSize: 10, marginLeft: 2 }}>{post.post_type === 'inquiry' ? 'Answer' : 'Comment'}</span>
-        </Link>
-
-        <div className="relative">
+      <div className="post-footer pt-[12px] border-t border-[var(--line)]">
+        <div className="action-group">
           <button
-            onClick={() => setShowReactions(!showReactions)}
-            className="flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all"
+            onClick={() => onVote(post.id, post.user_vote === 1 ? null : 1)}
+            className={`action-button ${post.user_vote === 1 ? 'active-vote' : ''}`}
+            aria-label={post.user_vote === 1 ? 'Remove upvote' : 'Upvote'}
           >
-            <span>😊</span>
-            {Object.keys(reactions).length > 0 && <span className="text-[10px]">{Object.values(reactions).reduce((a, b) => a + b, 0)}</span>}
+            <ArrowUp className={`w-4 h-4 ${post.user_vote === 1 ? 'text-green' : ''}`} />
+            <span>{post.upvotes_count || 0}</span>
           </button>
-          {showReactions && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setShowReactions(false)} />
-              <div className="absolute bottom-full left-0 mb-1 flex gap-[3px] p-[6px] bg-deep border border-[var(--line)] rounded-full shadow-xl z-20 animate-rise">
-                {EMOJI_REACTIONS.map(emoji => (
-                  <button key={emoji} onClick={() => handleReact(emoji)} className="w-[30px] h-[30px] flex items-center justify-center hover:scale-125 transition-transform text-[16px]">{emoji}</button>
-                ))}
-              </div>
-            </>
-          )}
+
+          <Link
+            href={`/posts/${post.id}`}
+            className="action-button feed-action-link"
+            aria-label={post.post_type === 'inquiry' ? 'Answers' : 'Comments'}
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>{post.answers_count || 0}</span>
+            <span style={{ fontSize: 10, marginLeft: 2 }}>{post.post_type === 'inquiry' ? 'Answer' : 'Comment'}</span>
+          </Link>
+
+          <div className="relative">
+            <button
+              onClick={() => setShowReactions(!showReactions)}
+              className="action-button"
+              aria-label="React to post"
+            >
+              <Smile className="w-4 h-4" />
+              {Object.keys(reactions).length > 0 && <span className="text-[10px]">{Object.values(reactions).reduce((a, b) => a + b, 0)}</span>}
+            </button>
+            {showReactions && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowReactions(false)} />
+                <div className="absolute bottom-full left-0 mb-1 flex gap-[3px] p-[6px] bg-deep border border-[var(--line)] rounded-full shadow-xl z-20 animate-rise">
+                  {EMOJI_REACTIONS.map(emoji => (
+                    <button key={emoji} onClick={() => handleReact(emoji)} className="w-[30px] h-[30px] flex items-center justify-center hover:scale-125 transition-transform text-[16px]" aria-label={`React with ${emoji}`}>{emoji}</button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
-        <button
-          onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`); toast('Link copied to clipboard') }}
-          className="flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all"
-        >
-          <span>↗</span>
-        </button>
-
-        <button
-          onClick={() => toast('Tafsiri — Kiswahili translation coming soon')}
-          className="flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all"
+        <div className="action-group">
+          <button
+            onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`); toast('Link copied to clipboard') }}
+            className="action-button"
+            aria-label="Share post"
           >
-            <span>🌐</span>
+            <Share2 className="w-4 h-4" />
           </button>
 
-        <button
-          onClick={() => onSave(post.id)}
-          className={`flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold transition-all ${post.user_saved ? 'bg-gold/20 text-gold' : 'text-[var(--muted)] hover:bg-deep hover:text-cream'}`}
-        >
-          <span>{post.user_saved ? '★' : '☆'}</span>
-        </button>
+          <button
+            onClick={() => toast('Tafsiri — Kiswahili translation coming soon')}
+            className="action-button"
+            aria-label="Translate"
+          >
+            <Globe className="w-4 h-4" />
+          </button>
 
-        <button
-          onClick={() => toast('Report submitted. Moderators will review.')}
-          className="flex items-center gap-1 px-[12px] py-[6px] min-h-[44px] md:min-h-auto rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-deep hover:text-cream transition-all ml-auto"
-        >
-          <span>⚑</span>
-        </button>
+          <button
+            onClick={() => onSave(post.id)}
+            className={`action-button ${post.user_saved ? 'active-save' : ''}`}
+            aria-label={post.user_saved ? 'Unsave post' : 'Save post'}
+          >
+            <Star className={`w-4 h-4 ${post.user_saved ? 'fill-current text-gold' : ''}`} />
+          </button>
+
+          <button
+            onClick={() => toast('Report submitted. Moderators will review.')}
+            className="action-button"
+            aria-label="Report post"
+          >
+            <Flag className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Emoji reaction chips */}
