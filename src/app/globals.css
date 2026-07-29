@@ -109,7 +109,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .page-head { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 24px; }
 .eyebrow { font-size: 10px; letter-spacing: .15em; text-transform: uppercase; font-weight: 800; color: var(--green); }
 .page h1, .page-title { font: 800 clamp(1.8rem, 4vw, 3rem) / 1 var(--jakarta); letter-spacing: -.07em; margin: 8px 0 0; }
-.page-head p { font-size: 13px; color: var(--muted); line-height: 1.55; max-width: 58ch; margin: 10px 0 0; }
+.page-head p { font-size: 15px; color: var(--muted); line-height: 1.55; max-width: 58ch; margin: 10px 0 0; }
 
 .input { width: 100%; min-height: 43px; background: var(--raised); border: 1px solid var(--line); border-radius: 11px; padding: 0 14px; font-size: 13px; color: var(--ink); outline: none; }
 .input:focus { border-color: var(--gold); }
@@ -279,7 +279,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .page-head .btn { width: 100%; margin-top: 17px; }
   .topic-grid { grid-template-columns: 1fr 1fr; }
   .page-title { font-size: clamp(1.6rem, 5vw, 2rem) !important; }
-  .page-head p { font-size: 12px !important; }
+  .page-head p { font-size: 13px !important; }
   .subtitle-mobile { font-size: 11px; }
   .chat { left: 10px; right: 10px; bottom: 84px; width: auto; }
   .modal-wrap { align-items: end; padding: 0; }
@@ -349,7 +349,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .card-hover:hover { transform: translateY(-8px) scale(1.01); box-shadow: 0 25px 50px -12px oklch(40% 0.1 150 / 0.25); }
 
 .feature-card { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-.feature-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px -10px oklch(40% 0.1 150 / 0.15); }
+.feature-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px -10px oklch(40% 0.1 150 / 0.15); border-color: var(--gold) !important; }
+.search-focus:focus { border-color: var(--gold) !important; background: var(--surface) !important; box-shadow: 0 0 0 3px color-mix(in oklab, var(--gold) 20%, transparent); }
 
 .stat-card { transition: all 0.3s ease; }
 .stat-card:hover { transform: translateY(-4px); }

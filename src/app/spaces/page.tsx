@@ -38,7 +38,7 @@ const style = {
   primaryBtn: { background: 'var(--gold)', color: 'var(--night)' },
   secondaryBtn: { background: 'var(--raised)', color: 'var(--ink)', border: '1px solid var(--line)' },
   tag: { padding: '6px 14px', borderRadius: 99, fontSize: 11, fontWeight: 600, border: '1px solid var(--line)', background: 'var(--raised)', color: 'var(--muted)', cursor: 'pointer', transition: 'all .2s var(--ease)' },
-  tagActive: { background: 'var(--gold)', color: 'var(--night)', borderColor: 'var(--gold)' },
+  tagActive: { background: 'var(--gold)', color: 'var(--night)', borderColor: 'var(--gold)', boxShadow: '0 4px 12px color-mix(in oklab, var(--gold) 40%, transparent)' },
   spaceCard: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, overflow: 'hidden', boxShadow: 'var(--card-shadow)' },
   modalOverlay: { background: 'color-mix(in oklab, var(--night) 80%, transparent)' },
   modalContent: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(480px, 100%)', position: 'relative' as const },
@@ -208,7 +208,7 @@ export default function SpacesPage() {
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--muted)' }} />
             <input type="text" placeholder="Search spaces..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-              style={style.input} className="!pl-10" />
+              style={style.input} className="!pl-10 search-focus" />
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
             {CATEGORIES.map(c => (
