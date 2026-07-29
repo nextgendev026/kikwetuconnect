@@ -6,7 +6,6 @@ import MobileNav from '@/components/MobileNav'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import CreateModal from '@/components/CreateModal'
-import useHeshimaRealtime from '@/hooks/useHeshimaRealtime'
 import { Send, MessageSquare } from 'lucide-react'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -14,7 +13,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, toggleTheme } = useTheme()
   const supabase = useSupabase()
   const router = useRouter()
-  useHeshimaRealtime()
   const path = usePathname()
   const [chatOpen, setChatOpen] = useState(false)
   const [chatInput, setChatInput] = useState('')

@@ -70,6 +70,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const notifChannelRef = useRef<any>(null)
+  const heshimaChannelRef = useRef<any>(null)
 
   useEffect(() => {
     const saved = localStorage.getItem('kikwetu-theme') || 'light'
@@ -149,6 +150,27 @@ export function Providers({ children }: { children: React.ReactNode }) {
     notifChannelRef.current = channel
   }, [supabase, user])
 
+  const subscribeToHeshima = useCallback(() => {
+    if (!user || heshimaChannelRef.current) return
+    const channel = supabase.channel('heshima')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'heshima_earnings', filter: `user_id=eq.${user.id}` }, (payload: any) => {
+        const e = payload.new
+        toast(`+${e.amount} Heshima${e.description ? ' — ' + e.description : ''}`)
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_badges', filter: `user_id=eq.${user.id}` }, () => {
+        toast('Badge unlocked 🎉')
+      })
+      .subscribe()
+    heshimaChannelRef.current = channel
+  }, [supabase, user])
+
+  const unsubscribeFromHeshima = useCallback(() => {
+    if (heshimaChannelRef.current) {
+      supabase.removeChannel(heshimaChannelRef.current)
+      heshimaChannelRef.current = null
+    }
+  }, [supabase])
+
   const unsubscribeFromNotifications = useCallback(() => {
     if (notifChannelRef.current) {
       supabase.removeChannel(notifChannelRef.current)
@@ -179,10 +201,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [supabase, fetchProfile])
 
   useEffect(() => {
-    if (user) { fetchNotifications(); subscribeToNotifications() }
-    else { setNotifications([]); setUnreadCount(0); unsubscribeFromNotifications() }
-    return () => unsubscribeFromNotifications()
-  }, [user, fetchNotifications, subscribeToNotifications, unsubscribeFromNotifications])
+    if (user) {
+      fetchNotifications()
+      subscribeToNotifications()
+      subscribeToHeshima()
+    } else {
+      setNotifications([])
+      setUnreadCount(0)
+      unsubscribeFromNotifications()
+      unsubscribeFromHeshima()
+    }
+    return () => { unsubscribeFromNotifications(); unsubscribeFromHeshima() }
+  }, [user, fetchNotifications, subscribeToNotifications, unsubscribeFromNotifications, subscribeToHeshima, unsubscribeFromHeshima])
 
   // Admin activity logging helper
   const logAdminActivity = useCallback(async (action: string, targetType?: string, targetId?: string, details?: Record<string, any>) => {
