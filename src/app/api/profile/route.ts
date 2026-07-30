@@ -32,22 +32,11 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Confirm upload: verify file, update profile
+    // Confirm upload: update profile with new photo URL
     if (action === 'confirm-upload') {
       const { type, path } = body
       if (!type || !['avatar', 'cover'].includes(type)) {
         return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
-      }
-
-      // Verify file exists
-      const { data: files, error: listErr } = await supabase.storage
-        .from('public-media')
-        .list(path.split('/').slice(0, -1).join('/'), {
-          search: path.split('/').pop(),
-          limit: 1,
-        })
-      if (listErr || !files?.length) {
-        throw new Error('File not found after upload')
       }
 
       const { data: { publicUrl } } = supabase.storage.from('public-media').getPublicUrl(path)

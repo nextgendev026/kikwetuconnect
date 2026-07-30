@@ -1,7 +1,7 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback, DragEvent } from 'react'
 import Link from 'next/link'
-import { Edit3, Settings, MapPin, Globe, MessageCircle, Heart, Users, BookOpen, Award, Sparkles, Camera, X, Check, Shield, Calendar } from 'lucide-react'
+import { Edit3, Settings, MapPin, Globe, MessageCircle, Heart, Users, BookOpen, Award, Sparkles, Camera, X, Check, Shield, Calendar, Upload } from 'lucide-react'
 import { toast } from '@/app/providers'
 
 interface Profile {
@@ -51,8 +51,31 @@ export default function ProfileHeader({
   const [showCropModal, setShowCropModal] = useState(false)
   const [cropType, setCropType] = useState<'avatar' | 'cover'>('avatar')
   const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [coverDragOver, setCoverDragOver] = useState(false)
+  const [avatarDragOver, setAvatarDragOver] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
+
+  const handleDragOver = useCallback((e: DragEvent, setter: (v: boolean) => void) => {
+    e.preventDefault(); e.stopPropagation(); setter(true)
+  }, [])
+  const handleDragLeave = useCallback((e: DragEvent, setter: (v: boolean) => void) => {
+    e.preventDefault(); e.stopPropagation(); setter(false)
+  }, [])
+  const handleDrop = useCallback((e: DragEvent, type: 'avatar' | 'cover') => {
+    e.preventDefault(); e.stopPropagation()
+    setCoverDragOver(false); setAvatarDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { toast('Please select an image'); return }
+    if (file.size > 5 * 1024 * 1024) { toast('Image must be under 5MB'); return }
+    setPendingFile(file)
+    setCropType(type)
+    const preview = URL.createObjectURL(file)
+    if (type === 'avatar') setAvatarPreview(preview)
+    else setCoverPreview(preview)
+    setShowCropModal(true)
+  }, [])
 
   const initials = (profile.full_name || profile.username || '?').slice(0, 2).toUpperCase()
   const gradientId = `cover-gradient-${profile.id.replace(/-/g, '')}`
@@ -138,11 +161,18 @@ export default function ProfileHeader({
         marginBottom: 20,
       }}>
         {/* Cover */}
-        <div style={{
-          height: 200,
-          position: 'relative',
-          background: profile.cover_url ? `url(${profile.cover_url}) center/cover no-repeat` : defaultCover,
-        }}>
+        <div
+          onDragOver={e => isOwn && handleDragOver(e, setCoverDragOver)}
+          onDragLeave={e => isOwn && handleDragLeave(e, setCoverDragOver)}
+          onDrop={e => isOwn && handleDrop(e, 'cover')}
+          style={{
+            height: 200,
+            position: 'relative',
+            background: profile.cover_url ? `url(${profile.cover_url}) center/cover no-repeat` : defaultCover,
+            transition: 'outline .2s',
+            outline: coverDragOver ? '3px dashed var(--gold)' : '3px solid transparent',
+            outlineOffset: -3,
+          }}>
           {isOwn && (
             <label style={{
               position: 'absolute', top: 12, right: 12, zIndex: 2,
@@ -160,10 +190,21 @@ export default function ProfileHeader({
               <input ref={coverInputRef} type="file" accept="image/*" onChange={e => handleFileSelect(e, 'cover')} className="hidden" disabled={coverUploading} />
             </label>
           )}
+          {isOwn && coverDragOver && (
+            <div style={{
+              position: 'absolute', inset: 0, zIndex: 3,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)',
+              borderRadius: 16, color: '#fff', fontSize: 14, fontWeight: 700, gap: 8,
+            }}>
+              <Upload className="w-5 h-5" /> Drop cover photo here
+            </div>
+          )}
           {/* Gradient overlay */}
           <div style={{
             position: 'absolute', inset: 0,
             background: 'linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 50%)',
+            pointerEvents: 'none',
           }} />
         </div>
 
@@ -171,7 +212,12 @@ export default function ProfileHeader({
         <div style={{ padding: '0 20px 20px', marginTop: -48, position: 'relative', zIndex: 1 }}>
           <div className="flex items-end gap-4 mb-4">
             {/* Avatar */}
-            <div className="relative group flex-shrink-0">
+            <div
+              onDragOver={e => isOwn && handleDragOver(e, setAvatarDragOver)}
+              onDragLeave={e => isOwn && handleDragLeave(e, setAvatarDragOver)}
+              onDrop={e => isOwn && handleDrop(e, 'avatar')}
+              className="relative group flex-shrink-0"
+              style={{ outline: avatarDragOver ? '3px dashed var(--gold)' : '3px solid transparent', outlineOffset: 2, borderRadius: 23, transition: 'outline .2s' }}>
               <div style={{
                 width: 96, height: 96, borderRadius: 20,
                 background: 'var(--surface)',
@@ -192,14 +238,16 @@ export default function ProfileHeader({
               {isOwn && (
                 <label style={{
                   position: 'absolute', inset: 0, borderRadius: 20,
-                  background: 'rgba(0,0,0,0.5)', cursor: 'pointer',
+                  background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(1px)', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  opacity: 0, transition: 'opacity .2s',
+                  opacity: avatarDragOver ? 1 : 0, transition: 'opacity .2s',
                 }}
-                  className="group-hover:opacity-100"
+                  className={`${avatarDragOver ? '' : 'group-hover:opacity-100'}`}
                   aria-label="Change profile photo">
                   {avatarUploading ? (
                     <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                  ) : avatarDragOver ? (
+                    <Upload className="w-6 h-6 text-white" />
                   ) : <Camera className="w-6 h-6 text-white" />}
                   <input ref={avatarInputRef} type="file" accept="image/*" onChange={e => handleFileSelect(e, 'avatar')} className="hidden" disabled={avatarUploading} />
                 </label>

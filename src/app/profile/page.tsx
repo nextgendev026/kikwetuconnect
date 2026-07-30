@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
 import { useRouter } from 'next/navigation'
@@ -40,6 +40,10 @@ export default function ProfilePage() {
   const [savedItems, setSavedItems] = useState<SavedItem[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [postCount, setPostCount] = useState(0)
+  const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(null)
+  const [localCoverUrl, setLocalCoverUrl] = useState<string | null>(null)
+  const [followingCount, setFollowingCount] = useState(0)
+  const [followerCount, setFollowerCount] = useState(0)
 
   useHeshimaRealtime()
 
@@ -51,6 +55,44 @@ export default function ProfilePage() {
   const [postsCursor, setPostsCursor] = useState<string | null>(null)
   const [hasMorePosts, setHasMorePosts] = useState(true)
   const [loadingPosts, setLoadingPosts] = useState(false)
+
+  // Optimistic local display profile
+  const displayProfile = useMemo(() => profile ? {
+    ...profile,
+    avatar_url: localAvatarUrl || profile.avatar_url,
+    cover_url: localCoverUrl || profile.cover_url,
+    follower_count: followerCount || profile.follower_count || 0,
+    following_count: followingCount || profile.following_count || 0,
+  } : null, [profile, localAvatarUrl, localCoverUrl, followerCount, followingCount])
+
+  // Realtime subscription for profile changes
+  useEffect(() => {
+    if (!profile?.id) return
+    const channel = supabase
+      .channel(`profile-realtime-${profile.id}`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${profile.id}` },
+        (payload: any) => {
+          const p = payload.new as any
+          if (p.follower_count !== undefined) setFollowerCount(p.follower_count)
+          if (p.following_count !== undefined) setFollowingCount(p.following_count)
+          if (p.avatar_url && p.avatar_url !== profile.avatar_url) setLocalAvatarUrl(p.avatar_url)
+          if (p.cover_url && p.cover_url !== profile.cover_url) setLocalCoverUrl(p.cover_url)
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [supabase, profile?.id])
+
+  const handleAvatarChange = useCallback((url: string) => {
+    setLocalAvatarUrl(url)
+    refreshProfile()
+  }, [refreshProfile])
+
+  const handleCoverChange = useCallback((url: string) => {
+    setLocalCoverUrl(url)
+    refreshProfile()
+  }, [refreshProfile])
 
   const fetchAllData = useCallback(async () => {
     if (!profile) return
@@ -243,11 +285,11 @@ export default function ProfilePage() {
   return (
     <div className="animate-fade-in-up">
       <ProfileHeader
-        profile={profile}
+        profile={displayProfile || profile}
         isOwn={true}
         postCount={postCount}
-        onAvatarChange={refreshProfile}
-        onCoverChange={refreshProfile}
+        onAvatarChange={handleAvatarChange}
+        onCoverChange={handleCoverChange}
       />
 
       {/* Heshima Points */}
