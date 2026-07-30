@@ -78,7 +78,8 @@ export default function PwaSetup() {
   }
 
   // Track install status
-  const isInstalled = installed || (window.matchMedia?.('(display-mode: standalone)').matches)
+  const [isInstalled, setIsInstalled] = useState(installed)
+  useEffect(() => { if (!installed && typeof window !== 'undefined') { setIsInstalled(window.matchMedia?.('(display-mode: standalone)').matches) } }, [installed])
 
   return (
     <>
