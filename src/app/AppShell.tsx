@@ -18,6 +18,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [chatOpen, setChatOpen] = useState(false)
   const [chatInput, setChatInput] = useState('')
   const [onlineCount, setOnlineCount] = useState(0)
+  const [onlineUsers, setOnlineUsers] = useState<any[]>([])
   const [recentProfiles, setRecentProfiles] = useState<any[]>([])
   const [trendingTopics, setTrendingTopics] = useState<any[]>([])
   const [postCount, setPostCount] = useState(0)
@@ -65,9 +66,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [supabase])
 
   useEffect(() => {
+    if (!supabase) return
     const channel = supabase.channel('online-presence')
     channel.on('presence', { event: 'sync' }, () => {
-      setOnlineCount(Object.keys(channel.presenceState()).length)
+      const state = channel.presenceState()
+      const userIds = Object.keys(state)
+      setOnlineCount(userIds.length)
+      if (userIds.length > 0) {
+        supabase.from('profiles').select('id, username, full_name, avatar_url, heshima_rating, county_hub, is_verified_expert').in('id', userIds).then(({ data }: { data: any[] | null }) => {
+          if (data) setOnlineUsers(data)
+        })
+      } else {
+        setOnlineUsers([])
+      }
     }).subscribe(async (status: string) => {
       if (status === 'SUBSCRIBED') {
         await channel.track({ user_id: profile?.id, online_at: new Date().toISOString() })
@@ -167,7 +178,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <ToolbarProvider>
         <div className="app">
           {/* Sidebar */}
-          <Sidebar initials={initials} profile={profile} theme={theme} toggleTheme={toggleTheme} />
+          <Sidebar initials={initials} profile={profile} theme={theme} toggleTheme={toggleTheme} onlineCount={onlineCount} onlineUsers={onlineUsers} />
 
           {/* Main */}
           <main className="main">

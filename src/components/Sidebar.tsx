@@ -1,10 +1,12 @@
 'use client'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { useState } from 'react'
+import { toast } from '@/app/providers'
 import {
   Home, Compass, Search, Grid3X3, GraduationCap, Briefcase,
   MessageSquare, Calendar, Store, Shield, Trophy,
-  Wallet, User, Settings, Zap, LogOut, Sparkles, Building2
+  Wallet, User, Settings, Zap, LogOut, Sparkles, MessageCircle, Heart
 } from 'lucide-react'
 
 const sections = [
@@ -13,7 +15,6 @@ const sections = [
     { href: '/baraza', label: 'Baraza', icon: Compass },
     { href: '/explore', label: 'Explore', icon: Search },
     { href: '/spaces', label: 'Spaces', icon: Grid3X3 },
-    { href: '/pages', label: 'Pages', icon: Building2 },
   ]},
   { label: 'Guidance', items: [
     { href: '/students', label: 'Students Area', icon: GraduationCap },
@@ -50,9 +51,29 @@ const navLinkStyle = (isActive: boolean): React.CSSProperties => ({
   transition: 'transform .2s var(--ease), background .2s var(--ease)',
 })
 
-export default function Sidebar({ initials, profile, theme, toggleTheme }: { initials: string; profile: any; theme: string; toggleTheme: () => void }) {
+export default function Sidebar({ initials, profile, theme, toggleTheme, onlineCount = 0, onlineUsers = [] }: {
+  initials: string; profile: any; theme: string; toggleTheme: () => void
+  onlineCount?: number; onlineUsers?: any[]
+}) {
   const path = usePathname()
   const isAdmin = profile?.role === 'admin'
+  const [following, setFollowing] = useState<Set<string>>(new Set())
+
+  const handleFollow = async (userId: string, e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation()
+    if (following.has(userId)) {
+      setFollowing(prev => { const n = new Set(prev); n.delete(userId); return n })
+      toast('Unfollowed')
+    } else {
+      setFollowing(prev => { const n = new Set(prev); n.add(userId); return n })
+      toast('Following')
+    }
+  }
+
+  const handleMessage = (userId: string, e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation()
+    window.location.href = `/messages?user=${userId}`
+  }
 
   return (
     <aside className="sidebar animate-slide-in-left">
@@ -94,6 +115,62 @@ export default function Sidebar({ initials, profile, theme, toggleTheme }: { ini
           </div>
         ))}
       </nav>
+
+      {/* Live users section */}
+      <div style={{ marginTop: 12, padding: '0 4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, padding: '0 8px' }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 6px var(--green)' }} />
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em' }}>Live — {onlineCount} online</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 280, overflowY: 'auto' }}>
+          {onlineUsers.length === 0 ? (
+            <small style={{ fontSize: 10, color: 'var(--faint)', padding: '4px 8px' }}>No one online right now</small>
+          ) : onlineUsers.slice(0, 10).map((u: any) => (
+            <div key={u.id} style={{
+              display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px',
+              borderRadius: 10, transition: 'background .2s',
+            }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--raised)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+              <div style={{ position: 'relative', width: 30, height: 30, flex: 'none' }}>
+                <div className="avatar" style={{ width: 30, height: 30, fontSize: 9, overflow: 'hidden' }}>
+                  {u.avatar_url ? (
+                    <img src={u.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy"
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.textContent = (u.full_name || u.username || '?').slice(0, 2).toUpperCase() }} />
+                  ) : (u.full_name || u.username || '?').slice(0, 2).toUpperCase()}
+                </div>
+                <span style={{ position: 'absolute', bottom: 0, right: 0, width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', border: '2px solid var(--surface)' }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Link href={`/profile/${u.id}`} style={{ fontWeight: 700, fontSize: 11, color: 'var(--ink)', textDecoration: 'none', display: 'block', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {u.full_name || u.username}
+                </Link>
+                <small style={{ fontSize: 9, color: 'var(--muted)' }}>{u.county_hub || 'Kenya'}{u.is_verified_expert ? ' ✓' : ''}</small>
+              </div>
+              <div style={{ display: 'flex', gap: 3, flex: 'none' }}>
+                <button onClick={(e) => handleFollow(u.id, e)}
+                  style={{
+                    width: 26, height: 26, borderRadius: 7, border: 0, cursor: 'pointer', display: 'grid', placeItems: 'center',
+                    background: following.has(u.id) ? 'var(--gold)' : 'var(--raised)',
+                    color: following.has(u.id) ? 'var(--night)' : 'var(--muted)',
+                    fontSize: 11, transition: 'all .15s',
+                  }}
+                  title={following.has(u.id) ? 'Unfollow' : 'Follow'}>
+                  <Heart className="w-3 h-3" />
+                </button>
+                <button onClick={(e) => handleMessage(u.id, e)}
+                  style={{
+                    width: 26, height: 26, borderRadius: 7, border: 0, cursor: 'pointer', display: 'grid', placeItems: 'center',
+                    background: 'var(--raised)', color: 'var(--muted)', fontSize: 11, transition: 'all .15s',
+                  }}
+                  title="Message">
+                  <MessageCircle className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* User mini */}
       <div className="user-mini" style={{ marginTop: 'auto' }}>

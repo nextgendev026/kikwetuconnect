@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { useUser, useSupabase } from '@/app/providers'
 import { useToolbar } from '@/lib/toolbar'
-import { Home, Search, User, Plus, Grid3X3, Trophy, Store, Shield, X, Menu as MenuIcon, GraduationCap, Briefcase, Building2, MessageSquare, ArrowLeft } from 'lucide-react'
+import { Home, Search, User, Plus, Grid3X3, Trophy, Store, Shield, X, Menu as MenuIcon, GraduationCap, Briefcase, MessageSquare, ArrowLeft } from 'lucide-react'
 
 const mainItems = [
   { href: '/feed', label: 'Home', icon: Home },
@@ -15,8 +15,7 @@ const mainItems = [
 ]
 
 const menuItems = [
-  { href: '/spaces', label: 'Spaces', icon: Grid3X3, desc: 'Topic communities' },
-  { href: '/pages', label: 'Pages', icon: Building2, desc: 'Organizations & brands' },
+  { href: '/spaces', label: 'Spaces', icon: Grid3X3, desc: 'Topic communities & orgs' },
   { href: '/quizzes', label: 'Quizzes', icon: Trophy, desc: 'Test your knowledge' },
   { href: '/market', label: 'Market', icon: Store, desc: 'Buy & sell locally' },
   { href: '/nyumba', label: 'Nyumba Kumi', icon: Shield, desc: 'Neighbourhood safety' },

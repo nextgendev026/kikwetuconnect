@@ -19,6 +19,7 @@ const NAV = {
   ],
   Money: [
     { id: 'payments', label: 'Payments & payouts', icon: '\u25C8' },
+    { id: 'ads', label: 'Ads', icon: '\u25B2' },
   ],
   System: [
     { id: 'settings', label: 'Platform settings', icon: '\u2699' },

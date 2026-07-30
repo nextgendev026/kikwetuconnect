@@ -193,6 +193,53 @@ export type Database = {
           topic_id?: string
         }
       }
+      ads: {
+        Row: {
+          id: string
+          title: string
+          image_url: string | null
+          link_url: string
+          placement: 'sidebar' | 'feed' | 'banner' | 'spaces'
+          is_active: boolean
+          impressions: number
+          clicks: number
+          starts_at: string
+          ends_at: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          image_url?: string | null
+          link_url: string
+          placement: 'sidebar' | 'feed' | 'banner' | 'spaces'
+          is_active?: boolean
+          impressions?: number
+          clicks?: number
+          starts_at?: string
+          ends_at?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          image_url?: string | null
+          link_url?: string
+          placement?: 'sidebar' | 'feed' | 'banner' | 'spaces'
+          is_active?: boolean
+          impressions?: number
+          clicks?: number
+          starts_at?: string
+          ends_at?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       notifications: {
         Row: {
           id: string
