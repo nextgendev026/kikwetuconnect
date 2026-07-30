@@ -64,8 +64,9 @@ export function useConversations() {
   const fetchUnreadCounts = useCallback(async () => {
     if (!user) return {}
     const { data } = await supabase.rpc('unread_message_count')
-    return (data as Array<{ conversation_id: string; count: number }> || []).reduce((acc: Record<string, number>, r: any) => {
-      acc[r.conversation_id || r.conversation_id] = r.count
+    if (!Array.isArray(data)) return {}
+    return (data as Array<{ conversation_id: string; count: number }>).reduce((acc: Record<string, number>, r: any) => {
+      if (r?.conversation_id) acc[r.conversation_id] = r.count || 0
       return acc
     }, {})
   }, [supabase, user])
@@ -264,7 +265,7 @@ export function useMessages(conversationId: string | null) {
     })
     if (error) toast(error.message)
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
-    await supabase.from('user_typing').delete().eq('conversation_id', conversationId).eq('user_id', user.id)
+    try { await supabase.from('user_typing').delete().eq('conversation_id', conversationId).eq('user_id', user.id) } catch { /* ignore */ }
   }, [supabase, conversationId, user])
 
   const sendMediaMessage = useCallback(async (file: File, messageType: string) => {
@@ -288,9 +289,13 @@ export function useMessages(conversationId: string | null) {
   const startTyping = useCallback(async () => {
     if (!conversationId || !user) return
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
-    await supabase.from('user_typing').upsert({ conversation_id: conversationId, user_id: user.id }, { onConflict: 'conversation_id,user_id' })
+    try {
+      await supabase.from('user_typing').upsert({ conversation_id: conversationId, user_id: user.id }, { onConflict: 'conversation_id,user_id' })
+    } catch { /* typing indicator errors are non-critical */ }
     typingTimeoutRef.current = setTimeout(async () => {
-      await supabase.from('user_typing').delete().eq('conversation_id', conversationId).eq('user_id', user.id)
+      try {
+        await supabase.from('user_typing').delete().eq('conversation_id', conversationId).eq('user_id', user.id)
+      } catch { /* ignore */ }
     }, 3000)
   }, [supabase, conversationId, user])
 

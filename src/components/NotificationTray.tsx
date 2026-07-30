@@ -49,7 +49,7 @@ export default function NotificationTray({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     if (!user) return
-    supabase.from('notifications').select('*, actor:profiles!notifications_actor_id_fkey(username, full_name, avatar_url)')
+    supabase.from('notifications').select('*, profiles:actor_id(username, full_name, avatar_url)')
       .eq('user_id', user.id).order('created_at', { ascending: false }).limit(20)
       .then(({ data }) => { if (data) setNotifications(data as Notification[]); setLoading(false) })
     const channel = supabase.channel('notif-tray')

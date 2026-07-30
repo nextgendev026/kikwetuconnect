@@ -25,10 +25,14 @@ export default function FeedAd() {
 
   const track = async (type: 'impression' | 'click') => {
     if (!ad) return
-    await supabase.from('ad_impressions').insert({ ad_id: ad.id, user_id: user?.id || null, type })
-    if (type === 'impression') {
-      await supabase.from('ads').update({ impressions: (ad as any).impressions + 1 }).eq('id', ad.id)
-    }
+    try {
+      const { error: insertErr } = await supabase.from('ad_impressions').insert({ ad_id: ad.id, user_id: user?.id || null, type })
+      if (insertErr) return
+      if (type === 'impression') {
+        const current = ((ad as any).impressions || 0) + 1
+        await supabase.from('ads').update({ impressions: current }).eq('id', ad.id)
+      }
+    } catch { /* tracking errors are non-critical */ }
   }
 
   useEffect(() => {
