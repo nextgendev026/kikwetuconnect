@@ -540,10 +540,10 @@ export default function ProfilePage() {
         <div className="space-y-1">
           {[
             { icon: <Edit3 className="w-5 h-5" />, label: 'Edit Profile', href: '/profile/edit' },
-            { icon: <Shield className="w-5 h-5" />, label: 'Expert Verification', href: '#' },
-            { icon: <BarChart3 className="w-5 h-5" />, label: 'Analytics', href: '#' },
-            { icon: <Award className="w-5 h-5" />, label: 'Badges', href: '#' },
-            { icon: <Users className="w-5 h-5" />, label: 'Followers', href: '#' },
+            { icon: <Shield className="w-5 h-5" />, label: 'Expert Verification', href: '/profile/expert-verification' },
+            { icon: <BarChart3 className="w-5 h-5" />, label: 'Analytics', href: '/profile/analytics' },
+            { icon: <Award className="w-5 h-5" />, label: 'Badges', href: '/profile/badges' },
+            { icon: <Users className="w-5 h-5" />, label: 'Followers', href: '/profile/followers' },
             { icon: <Settings className="w-5 h-5" />, label: 'Settings', href: '/settings' },
           ].map(item => (
             <Link key={item.label} href={item.href}
