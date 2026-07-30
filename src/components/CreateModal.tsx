@@ -26,6 +26,9 @@ export default function CreateModal() {
   const [text, setText] = useState('')
   const [mediaFiles, setMediaFiles] = useState<{ file: File; preview: string; type: string }[]>([])
   const [uploading, setUploading] = useState(false)
+  const [countyTag, setCountyTag] = useState<string | null>(null)
+  const [barazaId, setBarazaId] = useState<string | null>(null)
+  const [spaceId, setSpaceId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const videoInputRef = useRef<HTMLInputElement>(null)
   const audioInputRef = useRef<HTMLInputElement>(null)
@@ -41,6 +44,9 @@ export default function CreateModal() {
         const t = detail.type
         if (TYPES.some(tp => tp.id === t)) setType(t)
       }
+      setCountyTag(detail?.countyTag || null)
+      setBarazaId(detail?.barazaId || null)
+      setSpaceId(detail?.spaceId || null)
       setOpen(true)
     }
     document.addEventListener('open-create-modal', handler)
@@ -107,9 +113,12 @@ export default function CreateModal() {
         media_url: mediaUrls[0] || null,
         media_type: currentMedia[0]?.type || null,
         category: categoryMap[type] || 'Post',
+        county_tag: countyTag,
+        baraza_id: barazaId,
+        space_id: spaceId,
       })
       if (error) throw error
-      setOpen(false); setText(''); setMediaFiles([])
+      setOpen(false); setText(''); setMediaFiles([]); setCountyTag(null); setBarazaId(null); setSpaceId(null)
       currentMedia.forEach(m => URL.revokeObjectURL(m.preview))
       toast('Published!')
     } catch (e: any) { toast(e?.message || 'Failed to publish') }

@@ -92,6 +92,7 @@ export default function CountyHubPage() {
   const countyName = COUNTY_DISPLAY_NAMES[countySlug] || countySlug
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
+  const [barazaId, setBarazaId] = useState<string | null>(null)
   const [stats, setStats] = useState<CountyStats>({
     county: countyName,
     postCount: 0,
@@ -106,6 +107,14 @@ export default function CountyHubPage() {
   const fetchCountyData = async () => {
     setLoading(true)
     try {
+      // Fetch baraza record for this county slug
+      const { data: baraza } = await supabase
+        .from('barazas')
+        .select('id')
+        .eq('slug', countySlug)
+        .maybeSingle()
+      if (baraza) setBarazaId(baraza.id)
+
       // Fetch posts for this county
       const { data: postsData, error: postsError } = await supabase
         .from('posts')
@@ -182,11 +191,19 @@ export default function CountyHubPage() {
             </div>
           </div>
 
-          {profile?.county_hub === countyName && (
-            <div className="px-4 py-2 rounded-full bg-green-bg text-green text-sm font-medium flex items-center gap-2">
-              ✓ Your County
-            </div>
-          )}
+          <div className="flex flex-col items-end gap-2">
+            {profile?.county_hub === countyName && (
+              <div className="px-4 py-2 rounded-full bg-green-bg text-green text-sm font-medium flex items-center gap-2">
+                ✓ Your County
+              </div>
+            )}
+            <button onClick={() => document.dispatchEvent(new CustomEvent('open-create-modal', {
+              detail: { countyTag: countyName, barazaId },
+            }))}
+              className="btn btn-primary text-sm">
+              Create Post
+            </button>
+          </div>
         </div>
       </div>
 
@@ -210,9 +227,12 @@ export default function CountyHubPage() {
             <MapPin className="w-12 h-12 text-quiet mx-auto mb-4 opacity-50" />
             <p className="text-muted mb-2">No posts from {countyName} yet</p>
             <p className="text-xs text-quiet mb-6">Be the first to share something!</p>
-            <Link href="/create" className="btn btn-primary">
+            <button onClick={() => document.dispatchEvent(new CustomEvent('open-create-modal', {
+              detail: { countyTag: countyName, barazaId },
+            }))}
+              className="btn btn-primary">
               Create a post
-            </Link>
+            </button>
           </div>
         ) : (
           <div className="space-y-4">
