@@ -658,6 +658,8 @@ export default function AdminPageClient({ slug }: { slug: string }) {
   const supabase = useSupabase()
   const meta = PAGE_META[slug] || { title: slug, desc: 'Manage this section.' }
 
+  if (!supabase) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>Connecting...</div>
+
   const pages: Record<string, (s: any) => React.ReactNode> = {
     analytics: (s) => <AnalyticsPage supabase={s} />,
     health: (s) => <HealthPage supabase={s} />,
