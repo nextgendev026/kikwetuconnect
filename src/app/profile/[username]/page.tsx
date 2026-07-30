@@ -31,17 +31,17 @@ export default function UserProfilePage() {
   const { setConfig } = useToolbar()
 
   useEffect(() => {
+    let cancelled = false
     if (!username) return
-    supabase.from('profiles')
-      .select('*')
-      .eq('username', username)
-      .maybeSingle()
-      .then(({ data, error }: { data: any; error: any }) => {
-        if (error) { toast(error.message); return }
-        if (!data) { setNotFound(true); return }
-        setProfile(data)
-      })
-      .finally(() => setLoading(false))
+    ;(async () => {
+      const { data, error } = await supabase.from('profiles').select('*').eq('username', username).maybeSingle()
+      if (cancelled) return
+      if (error) { toast(error.message); setLoading(false); return }
+      if (!data) { setNotFound(true); setLoading(false); return }
+      setProfile(data)
+      setLoading(false)
+    })()
+    return () => { cancelled = true }
   }, [username, supabase])
 
   useEffect(() => {

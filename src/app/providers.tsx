@@ -1,6 +1,6 @@
 'use client'
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
-import { createBrowserClient } from '@supabase/auth-helpers-nextjs'
+import { createBrowserClient } from '@/lib/supabase'
 import { usePathname } from 'next/navigation'
 
 type SupabaseClient = ReturnType<typeof createBrowserClient>
@@ -65,10 +65,7 @@ export function ShellRouter({ children }: { children: React.ReactNode }) {
 import AppShell from './AppShell'
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [supabase] = useState(() => createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim()
-  ))
+  const [supabase] = useState(() => createBrowserClient())
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)

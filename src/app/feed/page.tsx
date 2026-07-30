@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
 import { ArrowUp, MessageCircle, Smile, Share2, Globe, Star, Flag, MoreHorizontal, Edit3, Trash2, EyeOff, Eye } from 'lucide-react'
+import FeedAd from '@/components/FeedAd'
 
 const COUNTIES = [
   'Nairobi', 'Mombasa', 'Kisumu', 'Eldoret', 'Kitale', 'Nakuru', 'Thika', 'Kericho',
@@ -596,7 +597,9 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
         else { setPosts([]); setLoading(false); return }
       }
 
-      if (profile) query = query.or(`is_hidden.neq.true,user_id.eq.${profile.id}`)
+      query = query.is('space_id', null)
+
+      if (profile?.id) query = query.or(`is_hidden.neq.true,user_id.eq.${profile.id}`)
       else query = query.neq('is_hidden', true)
 
       const { data, error: fetchError } = await query
@@ -637,17 +640,20 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
 
   useEffect(() => {
     if (!profile) return
+    let debounceTimer: ReturnType<typeof setTimeout>
     const channel = supabase
       .channel('feed-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => {
-        fetchPosts()
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
+        clearTimeout(debounceTimer)
+        debounceTimer = setTimeout(() => fetchPosts(), 2000)
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'votes' }, () => {
-        fetchPosts()
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts', filter: `user_id=neq.${profile.id}` }, () => {
+        clearTimeout(debounceTimer)
+        debounceTimer = setTimeout(() => fetchPosts(), 2000)
       })
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    return () => { clearTimeout(debounceTimer); supabase.removeChannel(channel) }
   }, [supabase, profile, fetchPosts])
 
   const handleVote = useCallback(async (postId: string, voteType: 1 | -1 | null) => {
@@ -871,15 +877,18 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
         <EmptyState tab={activeTab} hasCountyFilter={!!countyFilter} />
       )}
 
-      {!loading && posts.map(post => (
-        <PostCardComponent
-          key={post.id}
-          post={post}
-          currentUserId={user?.id || null}
-          onVote={handleVote}
-          onSave={handleSave}
-          onReact={handleReact}
-        />
+      {!loading && posts.map((post, idx) => (
+        <div key={post.id}>
+          {idx > 0 && idx % 4 === 0 && <FeedAd />}
+          <PostCardComponent
+            key={post.id}
+            post={post}
+            currentUserId={user?.id || null}
+            onVote={handleVote}
+            onSave={handleSave}
+            onReact={handleReact}
+          />
+        </div>
       ))}
 
 

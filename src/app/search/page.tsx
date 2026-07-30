@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Search, Users, Tag, Globe } from 'lucide-react'
@@ -15,6 +15,10 @@ interface SearchResult {
 }
 
 export default function SearchPage() {
+  return <Suspense><SearchContent /></Suspense>
+}
+
+function SearchContent() {
   const searchParams = useSearchParams()
   const query = searchParams.get('q') || ''
   const [results, setResults] = useState<SearchResult | null>(null)

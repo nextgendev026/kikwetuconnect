@@ -2,12 +2,14 @@
 import { useEffect, useState } from 'react'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
-import { Bell, MapPin, Download, X, Check } from 'lucide-react'
+import { Bell, MapPin, Download, X, Check, RefreshCw } from 'lucide-react'
 
 export default function PwaSetup() {
   const [installable, setInstallable] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [installed, setInstalled] = useState(false)
+  const [updateAvailable, setUpdateAvailable] = useState(false)
+  const [swRegistration, setSwRegistration] = useState<ServiceWorkerRegistration | null>(null)
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false)
   const [dismissedPerms, setDismissedPerms] = useState(false)
   const { permitted: locationPermitted, loading: locationLoading, requestPosition } = useGeolocation()
@@ -16,9 +18,20 @@ export default function PwaSetup() {
   // Service worker registration
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {})
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        setSwRegistration(reg)
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                setUpdateAvailable(true)
+              }
+            })
+          }
+        })
+      }).catch(() => {})
 
-      // Listen for messages from service worker
       navigator.serviceWorker.addEventListener('message', event => {
         if (event.data?.type === 'NAVIGATE' && event.data.url) {
           window.location.href = event.data.url
@@ -26,6 +39,13 @@ export default function PwaSetup() {
       })
     }
   }, [])
+
+  const handleUpdate = () => {
+    if (swRegistration?.waiting) {
+      swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' })
+      window.location.reload()
+    }
+  }
 
   // Install prompt
   useEffect(() => {
@@ -53,7 +73,7 @@ export default function PwaSetup() {
     }
   }
 
-  // Show permission prompt after delay (not on first visit)
+  // Show permission prompt after delay
   useEffect(() => {
     const dismissed = localStorage.getItem('kikwetu-perms-dismissed')
     if (dismissed) { setDismissedPerms(true); return }
@@ -83,9 +103,29 @@ export default function PwaSetup() {
 
   return (
     <>
+      {/* Update available banner */}
+      {updateAvailable && (
+        <div className="fixed top-4 left-4 right-4 z-50 animate-rise" style={{ maxWidth: 400, margin: '0 auto' }}>
+          <div className="rounded-[16px] p-3 shadow-xl" style={{ background: 'var(--night)', color: 'var(--surface)', border: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <RefreshCw className="w-4 h-4" style={{ color: 'var(--gold)', flexShrink: 0 }} />
+            <span className="text-[11px] flex-1">Update available</span>
+            <button onClick={handleUpdate}
+              className="py-1.5 px-3 rounded-[10px] text-[10px] font-bold border-0 cursor-pointer"
+              style={{ background: 'var(--gold)', color: 'var(--night)', whiteSpace: 'nowrap' }}>
+              Refresh
+            </button>
+            <button onClick={() => setUpdateAvailable(false)}
+              className="p-1 rounded-full border-0 cursor-pointer"
+              style={{ background: 'none', color: 'var(--muted)' }}>
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Install banner */}
       {installable && !isInstalled && (
-        <div className="fixed bottom-20 left-4 right-4 z-50 animate-rise" style={{ maxWidth: 360, margin: '0 auto' }}>
+        <div className="fixed bottom-[88px] left-4 right-4 z-50 animate-rise" style={{ maxWidth: 360, margin: '0 auto' }}>
           <div className="rounded-[16px] p-4 shadow-xl" style={{ background: 'var(--night)', color: 'var(--surface)', border: '1px solid var(--line)' }}>
             <div className="flex items-center gap-3 mb-2">
               <Download className="w-5 h-5" style={{ color: 'var(--gold)' }} />
@@ -112,7 +152,7 @@ export default function PwaSetup() {
 
       {/* Permission prompt */}
       {showPermissionPrompt && !dismissedPerms && (
-        <div className="fixed bottom-4 left-4 right-4 z-50 animate-rise" style={{ maxWidth: 360, margin: '0 auto' }}>
+        <div className="fixed bottom-[88px] left-4 right-4 z-50 animate-rise" style={{ maxWidth: 360, margin: '0 auto' }}>
           <div className="rounded-[16px] p-4 shadow-xl" style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}>
             <div className="flex items-center justify-between mb-3">
               <p className="text-[12px] font-bold" style={{ color: 'var(--ink)' }}>Enable features</p>

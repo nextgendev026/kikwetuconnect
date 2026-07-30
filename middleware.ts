@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -11,7 +11,7 @@ export async function middleware(req: NextRequest) {
     {
       cookies: {
         getAll() {
-          return req.cookies.getAll().map(c => ({ name: c.name, value: c.value }))
+          return req.cookies.getAll()
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
@@ -23,7 +23,6 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  // Use getUser() to verify token with Supabase Auth server (not getSession which reads stale cookies)
   const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }))
 
   const publicPaths = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/auth/callback', '/onboarding']

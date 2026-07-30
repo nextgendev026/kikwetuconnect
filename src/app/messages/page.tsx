@@ -1,386 +1,318 @@
 'use client'
-import { useEffect, useState, useCallback, useRef } from 'react'
-import { useSupabase, useUser, toast } from '@/app/providers'
-import { useToolbar } from '@/lib/toolbar'
-import { MessageSquare, Search, ArrowLeft, Send, Check, CheckCheck, Clock, Edit3 } from 'lucide-react'
-import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useUser, useSupabase, toast } from '@/app/providers'
+import { useConversations, useMessages, Message } from '@/hooks/useConversations'
 
-interface Conversation {
-  id: string
-  type: string
-  title: string | null
-  last_message: string | null
-  last_message_at: string | null
-  updated_at: string
-  created_at: string
-  created_by: string | null
-  participants: Array<{ id: string; username: string; full_name: string; avatar_url: string | null }>
-}
-
-interface Message {
-  id: string
-  conversation_id: string
-  sender_id: string
-  content: string
-  message_type: string
-  metadata: any
-  reply_to: string | null
-  status: string
-  created_at: string
-  read_at: string | null
-  sender: { id: string; username: string; full_name: string; avatar_url: string | null } | null
-}
-
-export default function MessagesPage() {
+function MessagesInner() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, profile } = useUser()
   const supabase = useSupabase()
-  const searchParams = useSearchParams()
-  const { setConfig } = useToolbar()
+  const { conversations, loading: convsLoading, fetchConversations } = useConversations()
 
-  useEffect(() => {
-    setConfig({
-      actions: [
-        { icon: Edit3 as any, label: 'New Chat', onClick: () => document.getElementById('msg-new-btn')?.click(), variant: 'gold' },
-      ],
-    })
-    return () => setConfig(null)
-  }, [setConfig])
-  const [conversations, setConversations] = useState<Conversation[]>([])
-  const [loading, setLoading] = useState(true)
-  const [activeConv, setActiveConv] = useState<string | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [msgLoading, setMsgLoading] = useState(false)
+  const [convId, setConvId] = useState<string | null>(null)
   const [input, setInput] = useState('')
-  const [sending, setSending] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [unreadMap, setUnreadMap] = useState<Record<string, number>>({})
+  const [search, setSearch] = useState('')
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null)
+  const [replyTo, setReplyTo] = useState<{ id: string; content: string } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const channelRef = useRef<any>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  useEffect(() => { scrollToBottom() }, [messages])
-
-  // Auto-select conversation from URL param after conversations load
-  useEffect(() => {
-    const convId = searchParams.get('conversation_id')
-    if (convId && conversations.length > 0) {
-      const exists = conversations.some(c => c.id === convId)
-      if (exists) { setActiveConv(convId); return }
-      // Newly created — refetch to include it
-      fetchConversations().then(() => setActiveConv(convId))
-    }
-  }, [searchParams, conversations])
-
-  const fetchConversations = useCallback(async () => {
-    if (!user) return
-    const res = await fetch('/api/conversations')
-    if (res.ok) {
-      const data = await res.json()
-      setConversations(data)
-    }
-    setLoading(false)
-  }, [user])
-
-  const fetchMessages = useCallback(async (convId: string) => {
-    setMsgLoading(true)
-    const res = await fetch(`/api/messages?conversation_id=${convId}`)
-    if (res.ok) {
-      const data = await res.json()
-      setMessages(data)
-      // Mark read
-      await fetch('/api/messages', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversation_id: convId }),
-      })
-    }
-    setMsgLoading(false)
-  }, [])
+  const { messages, loading: msgsLoading, sendMessage, sendMediaMessage, startTyping, typingUsers, addReaction, removeReaction } = useMessages(convId)
 
   useEffect(() => {
-    fetchConversations()
-  }, [fetchConversations])
+    const cid = searchParams.get('conversation_id')
+    if (cid) { setConvId(cid); setSidebarOpen(false) }
+  }, [searchParams])
 
-  useEffect(() => {
-    if (!user || !supabase) return
-    const channel = supabase.channel('messages-global')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
-        fetchConversations()
-      })
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [supabase, user, fetchConversations])
+  useEffect(() => { if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
-  // Realtime per conversation
-  useEffect(() => {
-    if (!activeConv || !supabase) return
-    if (channelRef.current) { supabase.removeChannel(channelRef.current) }
-    const channel = supabase.channel(`msg-${activeConv}`)
-      .on('postgres_changes', {
-        event: 'INSERT', schema: 'public', table: 'messages',
-        filter: `conversation_id=eq.${activeConv}`,
-      }, (payload: any) => {
-        const msg = payload.new as Message
-        setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
-        fetchConversations()
-      })
-      .subscribe()
-    channelRef.current = channel
-    return () => { if (channelRef.current) supabase.removeChannel(channelRef.current) }
-  }, [activeConv, supabase, fetchConversations])
-
-  // Realtime conversation updates (last_message, etc.)
-  useEffect(() => {
-    if (!supabase || !user) return
-    const channel = supabase.channel('conversations-updates')
-      .on('postgres_changes', {
-        event: 'UPDATE', schema: 'public', table: 'conversations',
-      }, () => {
-        fetchConversations()
-      })
-      .subscribe()
-    return () => { supabase.removeChannel(channel) }
-  }, [supabase, user, fetchConversations])
-
-  const selectConversation = async (convId: string) => {
-    setActiveConv(convId)
-    await fetchMessages(convId)
-  }
-
-  const sendMessage = async () => {
-    if (!input.trim() || !activeConv || sending) return
-    setSending(true)
-    const content = input.trim()
-    setInput('')
-    try {
-      const res = await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ conversation_id: activeConv, content }),
-      })
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error) }
-      await fetchConversations()
-    } catch (e: any) {
-      toast(e.message || 'Failed to send')
-    }
-    setSending(false)
-  }
-
-  const getOtherParticipants = (conv: Conversation) => {
-    if (!profile) return []
-    return conv.participants.filter(p => p.id !== profile.id)
-  }
-
-  const conversationTitle = (conv: Conversation) => {
-    const others = getOtherParticipants(conv)
-    if (conv.title && conv.type === 'group') return conv.title
-    if (conv.type === 'support') return 'KikwetuConnect Support'
-    return others.map(p => p.full_name || p.username).join(', ') || 'Unknown'
-  }
-
-  const getInitials = (name: string) => (name || '?').slice(0, 2).toUpperCase()
-
-  const formatTime = (date: string) => {
-    const d = new Date(date)
-    const now = new Date()
-    const diff = now.getTime() - d.getTime()
-    if (diff < 60000) return 'now'
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m`
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`
-    if (diff < 604800000) return `${Math.floor(diff / 86400000)}d`
-    return d.toLocaleDateString('en-KE', { month: 'short', day: 'numeric' })
-  }
+  const activeConv = conversations.find(c => c.id === convId)
+  const convTitle = activeConv ? (activeConv.type === 'support' ? 'KikwetuConnect Support' : activeConv.participants.map(p => p.full_name || p.username).join(', ') || 'Conversation') : ''
+  const convAvatar = activeConv?.participants?.[0]
 
   const filteredConvs = conversations.filter(c => {
-    if (!searchQuery) return true
-    const q = searchQuery.toLowerCase()
-    return conversationTitle(c).toLowerCase().includes(q) || (c.last_message || '').toLowerCase().includes(q)
+    const title = c.participants.map(p => p.full_name || p.username).join(' ').toLowerCase()
+    return title.includes(search.toLowerCase()) || (c.last_message || '').toLowerCase().includes(search.toLowerCase())
   })
 
-  const activeConvData = conversations.find(c => c.id === activeConv)
-
-  if (!user || !profile) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <MessageSquare className="w-12 h-12 mb-4" style={{ color: 'var(--muted)', opacity: 0.3 }} />
-        <p className="text-muted mb-4">Sign in to see messages</p>
-        <Link href="/login" className="btn btn-primary">Sign in</Link>
-      </div>
-    )
+  const handleSend = async () => {
+    if (!input.trim()) return
+    const content = input.trim()
+    setInput('')
+    if (replyTo) {
+      await sendMessage(content, 'text', { reply_to: replyTo.id, reply_content: replyTo.content })
+      setReplyTo(null)
+    } else {
+      await sendMessage(content)
+    }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
+    else if (e.key === 'Enter' && e.shiftKey) { /* allow newline */ }
+    else startTyping()
+  }
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 20 * 1024 * 1024) { toast('Max 20MB'); return }
+    await sendMediaMessage(file, type === 'image/*' ? 'image' : 'file')
+    e.target.value = ''
+  }
+
+  const handleReaction = async (messageId: string, emoji: string) => {
+    const msg = messages.find(m => m.id === messageId)
+    const has = msg?.reactions?.some(r => r.user_id === user?.id && r.emoji === emoji)
+    if (has) await removeReaction(messageId, emoji)
+    else await addReaction(messageId, emoji)
+    setShowEmojiPicker(null)
+  }
+
+  const formatTime = (d: string) => {
+    const date = new Date(d); const now = new Date(); const diff = now.getTime() - date.getTime()
+    if (diff < 60000) return 'now'
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m`
+    if (diff < 86400000) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    if (diff < 172800000) return 'Yesterday'
+    return date.toLocaleDateString([], { day: 'numeric', month: 'short' })
+  }
+
+  const formatDateSeparator = (d: string) => {
+    const date = new Date(d); const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    if (diff < 86400000) return 'Today'
+    if (diff < 172800000) return 'Yesterday'
+    return date.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined })
+  }
+
+  const shouldShowDate = (idx: number) => {
+    if (idx === 0) return true
+    const curr = new Date(messages[idx].created_at)
+    const prev = new Date(messages[idx - 1].created_at)
+    return curr.toDateString() !== prev.toDateString()
+  }
+
+  const isOwn = (senderId: string) => senderId === user?.id
+
+  const statusIcon = (msg: Message) => {
+    if (msg.status === 'sending') return '\u23F3'
+    if (msg.status === 'sent') return '\u2713'
+    if (msg.status === 'delivered') return '\u2713\u2713'
+    if (msg.status === 'read') return '\u2713\u2713'
+    return ''
+  }
+
+  if (!user) return <div className="flex items-center justify-center min-h-screen" style={{ background: 'var(--bg)' }}><p style={{ color: 'var(--muted)' }}>Sign in to see messages</p></div>
+
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 140px)', gap: 1, background: 'var(--line)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--line)' }}>
-      {/* Conversation List */}
-      <div style={{ width: 320, minWidth: 260, background: 'var(--bg)', display: 'flex', flexDirection: 'column', flexShrink: 0, borderRight: '1px solid var(--line)' }}>
-        <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--line)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <h2 style={{ fontSize: 17, fontWeight: 700, margin: 0 }}>Messages</h2>
-            <Link href="/messages" style={{ color: 'var(--green)', fontSize: 12 }}>New</Link>
+    <div className="flex h-screen" style={{ background: 'var(--bg)' }}>
+      {/* Conversation list */}
+      <div className={`${sidebarOpen ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-[360px] flex-shrink-0 border-r`} style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
+        <div className="p-4 pb-2">
+          <div className="flex items-center justify-between mb-3">
+            <h1 className="font-extrabold text-lg m-0" style={{ color: 'var(--ink)' }}>Chats</h1>
+            <button onClick={() => setConvId(null)} className="text-xs border-0 cursor-pointer p-2 rounded-lg" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>+ New</button>
           </div>
-          <div style={{ position: 'relative' }}>
-            <Search className="w-4 h-4" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)' }} />
-            <input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search messages..."
-              style={{ width: '100%', padding: '8px 8px 8px 32px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--raised)', fontSize: 13, outline: 'none' }}
-            />
-          </div>
+          <input placeholder="Search conversations..." value={search} onChange={e => setSearch(e.target.value)}
+            className="w-full h-[38px] rounded-[10px] px-3 text-[12px] outline-none" style={{ border: '1px solid var(--line)', background: 'var(--raised)', color: 'var(--ink)' }} />
         </div>
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          {loading ? (
-            <div className="flex justify-center py-8"><div className="animate-spin w-5 h-5 border-2" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent', borderRadius: '50%' }} /></div>
-          ) : filteredConvs.length === 0 ? (
-            <div className="text-center py-8 px-4">
-              <p style={{ color: 'var(--muted)', fontSize: 13 }}>{searchQuery ? 'No matches' : 'No conversations yet'}</p>
-              {!searchQuery && <p style={{ color: 'var(--muted)', fontSize: 11, marginTop: 4 }}>Visit a profile and click Message</p>}
+        <div className="flex-1 overflow-y-auto px-2 pb-2">
+          {convsLoading ? Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 p-3 rounded-xl mb-1">
+              <div className="w-[48px] h-[48px] rounded-full" style={{ background: 'var(--raised)' }} />
+              <div className="flex-1"><div className="h-3 w-24 rounded mb-2" style={{ background: 'var(--raised)' }} /><div className="h-2 w-32 rounded" style={{ background: 'var(--raised)' }} /></div>
             </div>
-          ) : filteredConvs.map(conv => {
-            const others = getOtherParticipants(conv)
-            const avatarUser = others[0]
-            const isActive = conv.id === activeConv
+          )) : filteredConvs.length === 0 ? (
+            <div className="text-center py-10" style={{ color: 'var(--muted)' }}>
+              <div className="text-3xl mb-2">\uD83D\uDCAC</div>
+              <p className="text-xs">No conversations yet</p>
+              <p className="text-[10px] mt-1">Message someone from their profile</p>
+            </div>
+          ) : filteredConvs.map(c => {
+            const avatar = c.participants?.[0]
             return (
-              <div
-                key={conv.id}
-                onClick={() => selectConversation(conv.id)}
-                style={{
-                  padding: '12px 16px', cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'center',
-                  background: isActive ? 'var(--raised)' : 'transparent',
-                  borderBottom: '1px solid var(--line)',
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--raised)' }}
-                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
-              >
-                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--gold-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--gold)', flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
-                  {avatarUser?.avatar_url ? (
-                    <img src={avatarUser.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-m1'); if (fb) fb.classList.remove('hidden') }} />
-                  ) : null}
-                  <span className={`af-m1 ${avatarUser?.avatar_url ? 'hidden' : ''}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{getInitials(avatarUser?.full_name || avatarUser?.username || 'S')}</span>
+              <button key={c.id} onClick={() => { setConvId(c.id); setSidebarOpen(false) }}
+                className="w-full flex items-center gap-3 p-3 rounded-xl text-left border-0 cursor-pointer mb-0.5 transition-colors"
+                style={{ background: convId === c.id ? 'var(--raised)' : 'none' }}>
+                <div className="w-[48px] h-[48px] rounded-full flex-shrink-0 grid place-items-center text-sm font-bold overflow-hidden" style={{ background: avatar?.avatar_url ? 'none' : 'var(--gold)', color: avatar?.avatar_url ? 'none' : 'var(--night)' }}>
+                  {avatar?.avatar_url ? <img src={avatar.avatar_url} alt="" className="w-full h-full object-cover" /> : (avatar?.full_name?.[0] || '?')}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--ink)' }}>{conversationTitle(conv)}</span>
-                    <span style={{ fontSize: 10, color: 'var(--muted)', flexShrink: 0 }}>{conv.last_message_at ? formatTime(conv.last_message_at) : ''}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center gap-2">
+                    <strong className="text-sm truncate" style={{ color: 'var(--ink)' }}>{c.type === 'support' ? 'KikwetuConnect Support' : avatar?.full_name || avatar?.username || 'User'}</strong>
+                    <span className="text-[10px] whitespace-nowrap" style={{ color: 'var(--muted)' }}>{c.last_message_at ? formatTime(c.last_message_at) : ''}</span>
                   </div>
-                  <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{conv.last_message || 'No messages yet'}</p>
+                  <div className="flex justify-between items-center mt-0.5">
+                    <span className="text-xs truncate flex-1" style={{ color: c.unread_count > 0 ? 'var(--ink)' : 'var(--muted)', fontWeight: c.unread_count > 0 ? 600 : 400 }}>{c.last_message || 'Start chatting'}</span>
+                    {c.unread_count > 0 && <span className="ml-2 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-bold px-1" style={{ background: 'var(--gold)', color: 'var(--night)' }}>{c.unread_count > 99 ? '99+' : c.unread_count}</span>}
+                  </div>
                 </div>
-              </div>
+              </button>
             )
           })}
         </div>
       </div>
 
-      {/* Message Pane */}
-      <div style={{ flex: 1, background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
-        {!activeConv ? (
-          <div className="flex flex-col items-center justify-center h-full">
-            <MessageSquare className="w-16 h-16 mb-4" style={{ color: 'var(--muted)', opacity: 0.15 }} />
-            <p style={{ color: 'var(--muted)', fontSize: 14, fontWeight: 500 }}>Select a conversation</p>
-            <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 4 }}>Choose from the left or visit a profile to start a chat</p>
+      {/* Chat pane */}
+      <div className={`${!sidebarOpen ? 'flex' : 'hidden'} md:flex flex-1 flex-col`}>
+        {!convId ? (
+          <div className="flex-1 flex items-center justify-center flex-col gap-3" style={{ background: 'var(--surface)' }}>
+            <div className="text-5xl mb-2">\uD83D\uDCAC</div>
+            <h2 className="font-extrabold text-lg m-0" style={{ color: 'var(--ink)' }}>KikwetuChat</h2>
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>Select a conversation or start a new one</p>
+            <button onClick={() => router.push('/feed')} className="px-4 h-[38px] rounded-[10px] text-xs font-bold border-0 cursor-pointer" style={{ background: 'var(--gold)', color: 'var(--night)' }}>Browse the feed</button>
           </div>
         ) : (
           <>
-            {/* Header */}
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button onClick={() => setActiveConv(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'none', padding: 4 }} className="back-btn">
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--gold-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gold)', flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
-                {activeConvData ? (() => {
-                  const others = getOtherParticipants(activeConvData)
-                  const u = others[0]
-                  return u?.avatar_url ? <img src={u.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-m2'); if (fb) fb.classList.remove('hidden') }} /> : null
-                })() : null}
-                <span className={`af-m2 ${(() => { try { const others = getOtherParticipants(activeConvData!); const u = others[0]; return u?.avatar_url } catch { return false } })() ? 'hidden' : ''}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
-                  {(() => { try { const others = getOtherParticipants(activeConvData!); const u = others[0]; return getInitials(u?.full_name || u?.username || '?') } catch { return '?' } })()}
-                </span>
+            {/* Chat header */}
+            <div className="flex items-center gap-3 px-4 h-[64px] border-b flex-shrink-0" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
+              <button onClick={() => setSidebarOpen(true)} className="md:hidden bg-none border-0 text-lg cursor-pointer" style={{ color: 'var(--muted)' }}>\u2190</button>
+              <div className="w-[40px] h-[40px] rounded-full flex-shrink-0 grid place-items-center text-sm font-bold overflow-hidden" style={{ background: convAvatar?.avatar_url ? 'none' : 'var(--gold)', color: convAvatar?.avatar_url ? 'none' : 'var(--night)' }}>
+                {convAvatar?.avatar_url ? <img src={convAvatar.avatar_url} alt="" className="w-full h-full object-cover" /> : (convAvatar?.full_name?.[0] || '?')}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--ink)' }}>{activeConvData ? conversationTitle(activeConvData) : 'Loading...'}</span>
-                <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)' }}>{activeConvData?.type === 'support' ? 'KikwetuConnect Support' : activeConvData?.type === 'session' ? 'Session chat' : 'Direct message'}</p>
+              <div className="flex-1 min-w-0">
+                <strong className="text-sm block truncate" style={{ color: 'var(--ink)' }}>{convTitle}</strong>
+                {typingUsers.length > 0 && <span className="text-[10px]" style={{ color: 'var(--green)' }}>{typingUsers.map(t => t.full_name || t.username).join(', ')} typing...</span>}
               </div>
             </div>
 
             {/* Messages */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-              {msgLoading ? (
-                <div className="flex justify-center py-8"><div className="animate-spin w-5 h-5 border-2" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent', borderRadius: '50%' }} /></div>
+            <div className="flex-1 overflow-y-auto px-4 py-3" style={{ background: 'var(--bg)' }}>
+              {msgsLoading ? (
+                <div className="flex justify-center py-10"><div className="w-[24px] h-[24px] rounded-full animate-spin" style={{ border: '2px solid var(--gold)', borderTopColor: 'transparent' }} /></div>
               ) : messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full">
-                  <p style={{ color: 'var(--muted)', fontSize: 13 }}>No messages yet</p>
-                  <p style={{ color: 'var(--muted)', fontSize: 11 }}>Say hello!</p>
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-xs" style={{ color: 'var(--muted)' }}>No messages yet. Say hello!</p>
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {messages.map(msg => {
-                    const isMe = msg.sender_id === profile.id
-                    const showAvatar = !isMe
-                    return (
-                      <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: 6 }}>
-                        {showAvatar && (
-                          <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--raised)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
-                            {msg.sender?.avatar_url ? <img src={msg.sender.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-m3'); if (fb) fb.classList.remove('hidden') }} /> : null}
-                            <span className={`af-m3 ${msg.sender?.avatar_url ? 'hidden' : ''}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{getInitials(msg.sender?.full_name || msg.sender?.username || '?')}</span>
-                          </div>
-                        )}
-                        <div style={{ maxWidth: '70%', minWidth: 60 }}>
-                          <div style={{
-                            padding: '8px 14px', borderRadius: 16, fontSize: 13, lineHeight: 1.45, wordBreak: 'break-word',
-                            background: isMe ? 'var(--gold)' : 'var(--raised)',
-                            color: isMe ? 'var(--night)' : 'var(--ink)',
-                            borderBottomRightRadius: isMe ? 4 : 16,
-                            borderBottomLeftRadius: isMe ? 16 : 4,
-                          }}>
-                            {msg.content}
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 2, justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
-                            <span style={{ fontSize: 9, color: 'var(--muted)' }}>{formatTime(msg.created_at)}</span>
-                            {isMe && (
-                              msg.status === 'read' ? <CheckCheck className="w-3 h-3" style={{ color: 'var(--green)' }} />
-                              : msg.status === 'sent' ? <Check className="w-3 h-3" style={{ color: 'var(--muted)' }} />
-                              : <Clock className="w-3 h-3" style={{ color: 'var(--muted)' }} />
+                <div className="max-w-[680px] mx-auto">
+                  {messages.map((msg, idx) => (
+                    <div key={msg.id}>
+                      {shouldShowDate(idx) && (
+                        <div className="flex justify-center my-4">
+                          <span className="text-[10px] px-3 py-1 rounded-full" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>{formatDateSeparator(msg.created_at)}</span>
+                        </div>
+                      )}
+                      <div className={`flex mb-1.5 group ${isOwn(msg.sender_id) ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`relative max-w-[75%] ${isOwn(msg.sender_id) ? 'order-1' : 'order-1'}`}>
+                          {/* Reply preview */}
+                          {msg.reply_to && (
+                            <div className="px-3 pt-2 pb-1 rounded-t-lg text-[10px] border-l-2 mb-0.5" style={{ background: isOwn(msg.sender_id) ? 'rgba(255,255,255,0.15)' : 'var(--raised)', borderLeftColor: 'var(--gold)', color: 'var(--muted)' }}>
+                              {msg.metadata?.reply_content || 'Replied to a message'}
+                            </div>
+                          )}
+                          {/* Message bubble */}
+                          <div className={`px-3 py-2 rounded-2xl text-sm leading-relaxed ${isOwn(msg.sender_id) ? 'rounded-br-md' : 'rounded-bl-md'}`}
+                            style={{
+                              background: isOwn(msg.sender_id) ? 'var(--gold)' : 'var(--surface)',
+                              color: isOwn(msg.sender_id) ? 'var(--night)' : 'var(--ink)',
+                              borderBottomRightRadius: isOwn(msg.sender_id) ? '4px' : '16px',
+                              borderBottomLeftRadius: isOwn(msg.sender_id) ? '16px' : '4px',
+                            }}>
+                            {msg.message_type === 'image' && msg.metadata?.url && (
+                              <img src={msg.metadata.url} alt="" className="max-w-full rounded-lg mb-1.5 max-h-[300px] object-cover cursor-pointer" onClick={() => window.open(msg.metadata.url)} />
                             )}
+                            {msg.message_type === 'file' && msg.metadata?.url && (
+                              <div className="flex items-center gap-2 p-2 rounded-lg mb-1" style={{ background: isOwn(msg.sender_id) ? 'rgba(0,0,0,0.1)' : 'var(--raised)' }}>
+                                <span>\uD83D\uDCCE</span>
+                                <div className="min-w-0">
+                                  <span className="text-xs truncate block">{msg.metadata?.name || 'File'}</span>
+                                  <span className="text-[10px]">{msg.metadata?.size ? `${(msg.metadata.size / 1024).toFixed(0)} KB` : ''}</span>
+                                </div>
+                              </div>
+                            )}
+                            {msg.content && <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>}
                           </div>
+                          {/* Reactions */}
+                          {msg.reactions && msg.reactions.length > 0 && (
+                            <div className={`flex gap-0.5 -mt-1.5 ${isOwn(msg.sender_id) ? 'justify-end' : 'justify-start'}`}>
+                              {Object.entries(
+                                msg.reactions.reduce((acc: Record<string, string[]>, r: any) => {
+                                  if (!acc[r.emoji]) acc[r.emoji] = []
+                                  acc[r.emoji].push(r.user_id)
+                                  return acc
+                                }, {})
+                              ).map(([emoji]) => (
+                                <button key={emoji} onClick={() => handleReaction(msg.id, emoji)}
+                                  className={`text-xs px-1.5 py-0.5 rounded-full border cursor-pointer ${msg.reactions?.some(r => r.user_id === user?.id && r.emoji === emoji) ? 'border' : ''}`}
+                                  style={{ background: msg.reactions?.some(r => r.user_id === user?.id && r.emoji === emoji) ? 'var(--gold)' : 'var(--surface)', borderColor: 'var(--line)' }}>
+                                  {emoji}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {/* Metadata row */}
+                          <div className={`flex items-center gap-1 mt-0.5 ${isOwn(msg.sender_id) ? 'justify-end' : 'justify-start'}`}>
+                            <span className="text-[9px]" style={{ color: 'var(--faint)' }}>{formatTime(msg.created_at)}</span>
+                            {isOwn(msg.sender_id) && <span className="text-[9px]" style={{ color: msg.status === 'read' ? 'var(--blue)' : 'var(--faint)' }}>{statusIcon(msg)}</span>}
+                          </div>
+                          {/* Actions on hover */}
+                          <div className={`absolute top-0 ${isOwn(msg.sender_id) ? 'left-0 -translate-x-full pr-1' : 'right-0 translate-x-full pl-1'} opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5`}>
+                            <button onClick={() => { setReplyTo({ id: msg.id, content: msg.content?.slice(0, 80) || '' }); (document.querySelector('.composer-input') as HTMLInputElement)?.focus() }}
+                              className="w-[28px] h-[28px] rounded-full grid place-items-center text-xs border-0 cursor-pointer" style={{ background: 'var(--surface)', color: 'var(--muted)' }}>\u21A9</button>
+                            <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)}
+                              className="w-[28px] h-[28px] rounded-full grid place-items-center text-xs border-0 cursor-pointer" style={{ background: 'var(--surface)', color: 'var(--muted)' }}>\uD83D\uDE00</button>
+                          </div>
+                          {/* Inline emoji picker */}
+                          {showEmojiPicker === msg.id && (
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex gap-1 p-1.5 rounded-xl z-10" style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}>
+                              {['\uD83D\uDC4D', '\uD83D\uDC4E', '\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDE0A', '\uD83D\uDE22', '\uD83D\uDE21', '\uD83D\uDE4F'].map(e => (
+                                <button key={e} onClick={() => handleReaction(msg.id, e)} className="text-lg border-0 bg-none cursor-pointer hover:scale-125 transition-transform">{e}</button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    )
-                  })}
+                    </div>
+                  ))}
+                  {typingUsers.length > 0 && (
+                    <div className="flex items-center gap-2 py-2 text-xs" style={{ color: 'var(--muted)' }}>
+                      <div className="flex gap-0.5"><span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--muted)', animationDelay: '0ms' }} /><span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--muted)', animationDelay: '150ms' }} /><span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--muted)', animationDelay: '300ms' }} /></div>
+                      {typingUsers.map(t => t.full_name || t.username).join(', ')} typing...
+                    </div>
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
               )}
             </div>
 
+            {/* Reply preview bar */}
+            {replyTo && (
+              <div className="flex items-center gap-2 px-4 py-2 border-t" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
+                <div className="flex-1">
+                  <div className="text-[10px] font-bold" style={{ color: 'var(--gold)' }}>Replying</div>
+                  <div className="text-xs truncate" style={{ color: 'var(--muted)' }}>{replyTo.content}</div>
+                </div>
+                <button onClick={() => setReplyTo(null)} className="bg-none border-0 cursor-pointer text-sm" style={{ color: 'var(--muted)' }}>\u2715</button>
+              </div>
+            )}
+
             {/* Composer */}
-            <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line)', display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-              <input
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-                placeholder="Write a message..."
-                style={{
-                  flex: 1, padding: '10px 14px', borderRadius: 12, border: '1px solid var(--line)',
-                  background: 'var(--raised)', fontSize: 13, outline: 'none', resize: 'none',
-                  lineHeight: 1.4, maxHeight: 100,
-                }}
-                disabled={sending}
-              />
-              <button
-                onClick={sendMessage}
-                disabled={!input.trim() || sending}
-                style={{
-                  width: 38, height: 38, borderRadius: '50%', border: 'none', cursor: 'pointer', flexShrink: 0,
-                  background: input.trim() ? 'var(--gold)' : 'var(--line)',
-                  color: input.trim() ? 'var(--night)' : 'var(--muted)',
-                  display: 'grid', placeItems: 'center', transition: 'all 0.15s',
-                }}
-              >
-                <Send className="w-4 h-4" />
+            <div className="flex items-center gap-2 px-4 py-3 border-t" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
+              <button onClick={() => imageInputRef.current?.click()} className="w-[36px] h-[36px] rounded-full grid place-items-center text-sm flex-shrink-0 border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </button>
+              <button onClick={() => fileInputRef.current?.click()} className="w-[36px] h-[36px] rounded-full grid place-items-center text-sm flex-shrink-0 border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+              </button>
+              <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFileSelect(e, 'image/*')} />
+              <input ref={fileInputRef} type="file" className="hidden" onChange={e => handleFileSelect(e, 'file')} />
+              <div className="flex-1 relative">
+                <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
+                  placeholder="Type a message..." rows={1}
+                  className="composer-input w-full rounded-2xl px-4 py-2.5 text-sm outline-none resize-none"
+                  style={{ background: 'var(--raised)', border: '1px solid var(--line)', color: 'var(--ink)', maxHeight: 120 }}
+                  onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px' }} />
+              </div>
+              <button onClick={handleSend} disabled={!input.trim()}
+                className="w-[42px] h-[42px] rounded-full grid place-items-center border-0 cursor-pointer transition-opacity flex-shrink-0"
+                style={{ background: input.trim() ? 'var(--gold)' : 'var(--raised)', color: input.trim() ? 'var(--night)' : 'var(--muted)', opacity: input.trim() ? 1 : 0.5 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
               </button>
             </div>
           </>
@@ -388,4 +320,8 @@ export default function MessagesPage() {
       </div>
     </div>
   )
+}
+
+export default function MessagesPage() {
+  return <Suspense><MessagesInner /></Suspense>
 }

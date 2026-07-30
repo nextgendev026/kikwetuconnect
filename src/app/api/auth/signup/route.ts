@@ -1,11 +1,10 @@
-import { createServerClient } from '@/lib/supabase'
+import { createApiClient } from '@/lib/server-supabase'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password, fullName } = await request.json()
 
-    // Validate input
     if (!email || !password || !fullName) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -27,16 +26,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createServerClient()
+    const res = NextResponse.json({})
+    const supabase = createApiClient(request, res)
 
-    // Sign up user
-    const { data, error } = await supabase.auth.admin.createUser({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      user_metadata: {
-        full_name: fullName,
+      options: {
+        data: { full_name: fullName },
       },
-      email_confirm: false, // Require email verification
     })
 
     if (error) {

@@ -24,7 +24,7 @@ interface Post {
 
 interface SavedItem {
   id: string; target_id: string; target_type: string; created_at: string
-  posts?: { id: string; title: string | null; content: string; post_type: string } | null
+  posts?: { id: string; title: string | null; content: string; post_type: string }[] | null
 }
 
 const PAGE_SIZE = 10
@@ -88,7 +88,7 @@ export default function ProfilePage() {
         })))
       }
       setRecentPosts((postsRes.data as Post[]) || [])
-      setSavedItems((savesRes.data as SavedItem[]) || [])
+      setSavedItems((savesRes.data as unknown as SavedItem[]) || [])
       if (featuredRes.data) setFeaturedPost(featuredRes.data as Post)
       if (earningsRes.data) setRecentEarnings(earningsRes.data)
     } catch (err) {
@@ -396,7 +396,7 @@ export default function ProfilePage() {
                           <Bookmark className="w-4 h-4 text-gold mt-0.5 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">
-                              {item.posts?.title || (item.posts?.content?.slice(0, 60) || 'Saved post')}
+                              {item.posts?.[0]?.title || item.posts?.[0]?.content?.slice(0, 60) || 'Saved post'}
                             </p>
                             <p className="text-xs text-muted mt-1">Saved {formatTime(item.created_at)}</p>
                           </div>

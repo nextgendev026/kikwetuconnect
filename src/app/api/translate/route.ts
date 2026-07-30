@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     const prompt = `Translate the following text to Kiswahili (Swahili). Keep all formatting, line breaks, and punctuation. Output only the translated text.\n\n${fullText}`
 
-    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', { signal: AbortSignal.timeout(15000),
       method: 'POST',
       headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({

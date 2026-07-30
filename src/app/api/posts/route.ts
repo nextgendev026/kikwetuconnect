@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
       post_topics (topics:topic_id (name, slug, color)),
       votes:user_id (vote_type)
     `)
+    .is('space_id', null)
     .order('created_at', { ascending: false })
     .range(from, from + limit - 1)
 

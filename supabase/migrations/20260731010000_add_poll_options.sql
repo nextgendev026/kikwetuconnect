@@ -13,7 +13,15 @@ ALTER TABLE public.poll_options ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Poll options are viewable by everyone" ON public.poll_options
   FOR SELECT USING (true);
 
-CREATE POLICY "Authenticated users can insert poll options" ON public.poll_options
+CREATE POLICY "Users can insert poll options for their own posts" ON public.poll_options
   FOR INSERT WITH CHECK (auth.uid() IN (SELECT user_id FROM posts WHERE id = post_id));
 
-ALTER PUBLICATION supabase_realtime ADD TABLE poll_options;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'poll_options'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.poll_options;
+  END IF;
+END $$;

@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSupabase, useUser, toast } from '@/app/providers'
 import { X, PenSquare, HelpCircle, BarChart3, ShoppingBag, Shield, Image, Video, Mic, Trash2, Upload, Plus, Minus, Coins, MapPin, Tag } from 'lucide-react'
 import imageCompress from 'browser-image-compression'
+import MediaEditor from '@/components/MediaEditor'
 
 const TYPES = [
   { id: 'post', label: 'Post', icon: PenSquare, color: 'var(--green)' },
@@ -66,6 +67,7 @@ export default function CreateModal() {
   const [alertSeverity, setAlertSeverity] = useState('medium')
   const [alertUrgent, setAlertUrgent] = useState(false)
   const [alertLocation, setAlertLocation] = useState('')
+  const [editingMedia, setEditingMedia] = useState<{ file: File; type: 'image' | 'video' } | null>(null)
 
   // Bounty
   const [bountyTokens, setBountyTokens] = useState(0)
@@ -111,8 +113,12 @@ export default function CreateModal() {
         const processed = mediaType === 'image' && file.type.startsWith('image/')
           ? await imageCompress(file, { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true })
           : file
-        const preview = URL.createObjectURL(processed)
-        setMediaFiles(prev => [...prev, { file: processed, preview, type: mediaType }])
+        if (mediaType === 'image' || mediaType === 'video') {
+          setEditingMedia({ file: processed, type: mediaType as 'image' | 'video' })
+        } else {
+          const preview = URL.createObjectURL(processed)
+          setMediaFiles(prev => [...prev, { file: processed, preview, type: mediaType }])
+        }
       } catch { toast(`Failed to process ${file.name}`) }
     }
     e.target.value = ''
@@ -218,7 +224,7 @@ export default function CreateModal() {
 
       if (type === 'poll' && post) {
         const opts = pollOptions.filter(o => o.trim()).map(o => ({ post_id: post.id, option_text: o.trim(), votes: 0 }))
-        await supabase.from('poll_options').insert(opts).catch(() => {})
+        await supabase.from('poll_options').insert(opts)
       }
 
       toast('Published!')
@@ -277,6 +283,17 @@ export default function CreateModal() {
             )
           })}
         </div>
+
+        {/* Media editor overlay */}
+        {editingMedia && (
+          <MediaEditor file={editingMedia.file} type={editingMedia.type}
+            onComplete={(editedFile) => {
+              const preview = URL.createObjectURL(editedFile)
+              setMediaFiles(prev => [...prev, { file: editedFile, preview, type: editingMedia.type }])
+              setEditingMedia(null)
+            }}
+            onCancel={() => setEditingMedia(null)} />
+        )}
 
         {/* Title field (for question, listing, alert) */}
         {['question', 'listing', 'alert'].includes(type) && (

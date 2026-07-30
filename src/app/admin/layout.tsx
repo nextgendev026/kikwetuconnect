@@ -38,7 +38,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [pendingModCount, setPendingModCount] = useState(0)
 
   useEffect(() => {
-    if (!loading && (!user || profile?.role !== 'admin')) router.push('/feed')
+    if (!loading && (!user || profile?.role !== 'admin')) setTimeout(() => router.push('/feed'), 0)
   }, [user, profile, loading, router])
 
   useEffect(() => {
@@ -50,110 +50,129 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const current = pathname.split('/').pop() || 'dashboard'
   const initials = (profile?.full_name || profile?.username || 'AD').slice(0, 2).toUpperCase()
 
-  const openDrawer = () => setDrawerOpen(true)
-
-  if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}><div style={{ width: 32, height: 32, border: '3px solid var(--gold)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin .6s linear infinite' }} /></div>
+  if (loading) return <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}><div className="w-[32px] h-[32px] rounded-full animate-spin" style={{ border: '3px solid var(--gold)', borderTopColor: 'transparent' }} /></div>
   if (!user || profile?.role !== 'admin') return null
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '245px minmax(0,1fr)', minHeight: '100vh', maxWidth: 1700, margin: 'auto', background: 'var(--bg)' }}>
-      {/* Sidebar */}
-      <aside style={{ background: 'var(--night)', color: '#fff', padding: '22px 15px', position: 'sticky', top: 0, height: '100vh', flexDirection: 'column', gap: 20, zIndex: 10 }}
-        className={`${mobileOpen ? 'fixed inset-0 z-50 flex' : 'hidden'} md:flex md:static md:z-auto`}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 8px' }}>
-          <div style={{ width: 35, height: 35, borderRadius: 11, background: 'var(--gold)', color: 'var(--night)', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 18, transform: 'rotate(-8deg)' }}>K</div>
-          <div><b style={{ fontWeight: 800, fontSize: 15, letterSpacing: '-.05em' }}>KikwetuConnect</b><small style={{ display: 'block', color: 'var(--muted)', fontSize: 9, letterSpacing: '.13em', textTransform: 'uppercase', marginTop: 2 }}>Admin console</small></div>
-          <button onClick={() => setMobileOpen(false)} className="md:hidden" style={{ marginLeft: 'auto', background: 'none', color: '#fff', fontSize: 22 }}>×</button>
-        </div>
-        <div style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 14, background: 'var(--raised)' }}>
-          <small style={{ color: 'var(--muted)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.12em' }}>Workspace</small>
-          <strong style={{ display: 'block', fontSize: 12, marginTop: 6 }}>Ink master&apos;s Workspace</strong>
-          <div style={{ fontSize: 9, color: 'var(--muted)', marginTop: 5 }}>Production · Kenya</div>
-        </div>
-        <nav style={{ display: 'grid', gap: 4, flex: 1, overflow: 'auto' }}>
-          {Object.entries(NAV).map(([section, items]) => (
-            <div key={section}>
-              <div style={{ color: 'var(--faint)', fontSize: 10, letterSpacing: '.13em', textTransform: 'uppercase', margin: '7px 10px 3px' }}>{section}</div>
-              {items.map(item => (
-                <button key={item.id} onClick={() => { router.push(`/admin/${item.id}`); setMobileOpen(false) }}
-                  style={{
-                    height: 42, borderRadius: 11, background: current === item.id ? 'var(--gold)' : 'none',
-                    color: current === item.id ? 'var(--night)' : 'oklch(73% .025 151)',
-                    textAlign: 'left', padding: '0 12px', fontSize: 12, width: '100%',
-                    fontWeight: current === item.id ? 700 : 400, cursor: 'pointer', border: 0,
-                    transition: 'background .2s, transform .2s',
-                    display: 'flex', alignItems: 'center', gap: 6,
-                  }}>
-                  {item.icon} &nbsp; {item.label}
-                  {item.id === 'moderation' && pendingModCount > 0 && (
-                    <span style={{ marginLeft: 'auto', background: 'var(--red)', color: '#fff', fontSize: 9, fontWeight: 700, minWidth: 18, height: 18, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{pendingModCount}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          ))}
-        </nav>
-        <div style={{ borderTop: '1px solid var(--line)', paddingTop: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, background: 'var(--raised)', padding: 4, borderRadius: 10, marginBottom: 10 }}>
-            <button onClick={() => { if (theme !== 'light') toggleTheme() }}
-              style={{ background: theme === 'light' ? 'var(--gold)' : 'none', color: theme === 'light' ? 'var(--night)' : 'oklch(73% .02 151)', borderRadius: 8, padding: '8px 4px', fontSize: 10, border: 0, cursor: 'pointer', fontWeight: theme === 'light' ? 700 : 400 }}>☼ Light</button>
-            <button onClick={() => { if (theme !== 'dark') toggleTheme() }}
-              style={{ background: theme === 'dark' ? 'var(--gold)' : 'none', color: theme === 'dark' ? 'var(--night)' : 'oklch(73% .02 151)', borderRadius: 8, padding: '8px 4px', fontSize: 10, border: 0, cursor: 'pointer', fontWeight: theme === 'dark' ? 700 : 400 }}>◐ Dark</button>
-          </div>
-          <a href="/feed" style={{ display: 'block', textAlign: 'center', padding: '8px 0', borderRadius: 8, color: 'var(--muted)', fontSize: 10, border: '1px solid var(--line)', textDecoration: 'none', marginBottom: 8 }}>← Back to app</a>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '6px 5px' }}>
-            <div style={{ width: 34, height: 34, borderRadius: '50%', display: 'grid', placeItems: 'center', flex: 'none', background: 'var(--night)', color: 'var(--gold)', fontSize: 10, fontWeight: 800 }}>{initials}</div>
-            <div style={{ flex: 1 }}><strong style={{ fontSize: 11, display: 'block', color: '#fff' }}>{profile?.full_name || 'Admin'}</strong><small style={{ display: 'block', color: 'var(--muted)', fontSize: 9, marginTop: 2 }}>Super admin · Online</small></div>
-          </div>
-        </div>
-      </aside>
+    <div className="min-h-screen max-w-[1700px] mx-auto" style={{ background: 'var(--bg)' }}>
+      <div className="flex flex-col md:flex-row">
+        {/* Sidebar overlay for mobile */}
+        {mobileOpen && (
+          <div onClick={() => setMobileOpen(false)} className="fixed inset-0 z-40 bg-black/50 md:hidden" />
+        )}
 
-      {/* Main */}
-      <main style={{ minWidth: 0 }}>
-        <header style={{ height: 74, padding: '0 32px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', gap: 14, position: 'sticky', top: 0, background: 'var(--bg)', zIndex: 4 }}>
-          <button onClick={() => setMobileOpen(true)} className="md:hidden" style={{ background: 'none', color: 'var(--muted)', fontSize: 20, border: 0, cursor: 'pointer' }}>☰</button>
-          <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-            Admin console <span style={{ color: 'var(--faint)' }}>/</span> <b style={{ color: 'var(--ink)' }}>{current.charAt(0).toUpperCase() + current.slice(1)}</b>
+        {/* Sidebar */}
+        <aside className={`
+          fixed md:sticky top-0 z-50 h-full md:h-screen
+          ${mobileOpen ? 'left-0' : '-left-full'} md:left-0
+          transition-[left] duration-300 ease-in-out
+          w-[260px] flex-shrink-0 overflow-y-auto
+          flex flex-col gap-5 p-[22px_15px]
+        `} style={{ background: 'var(--night)', color: '#fff' }}>
+          <div className="flex items-center gap-2.5 px-2">
+            <div className="w-[35px] h-[35px] rounded-[11px] grid place-items-center font-extrabold text-lg flex-shrink-0" style={{ background: 'var(--gold)', color: 'var(--night)', transform: 'rotate(-8deg)' }}>K</div>
+            <div className="flex-1 min-w-0">
+              <b className="font-extrabold text-[15px] tracking-[-.05em] block truncate">KikwetuConnect</b>
+              <small className="block text-[9px] uppercase tracking-[.13em] mt-0.5" style={{ color: 'var(--muted)' }}>Admin console</small>
+            </div>
+            <button onClick={() => setMobileOpen(false)} className="md:hidden bg-none text-white text-[22px] border-0 cursor-pointer">×</button>
           </div>
-          <div style={{ display: 'flex', gap: 5, marginLeft: 'auto' }}>
-            <div style={{ display: 'flex', gap: 4, background: 'var(--raised)', padding: 3, borderRadius: 9 }}>
+
+          <div className="p-3 rounded-[14px]" style={{ border: '1px solid var(--line)', background: 'var(--raised)' }}>
+            <small className="text-[9px] uppercase tracking-[.12em]" style={{ color: 'var(--muted)' }}>Workspace</small>
+            <strong className="block text-[12px] mt-1.5">Ink master&apos;s Workspace</strong>
+            <div className="text-[9px] mt-1" style={{ color: 'var(--muted)' }}>Production · Kenya</div>
+          </div>
+
+          <nav className="flex-1 grid gap-1 overflow-y-auto">
+            {Object.entries(NAV).map(([section, items]) => (
+              <div key={section}>
+                <div className="text-[10px] uppercase tracking-[.13em] mx-2.5 my-[7px_3px]" style={{ color: 'var(--faint)' }}>{section}</div>
+                {items.map(item => (
+                  <button key={item.id} onClick={() => { router.push(`/admin/${item.id}`); setMobileOpen(false) }}
+                    className="w-full flex items-center gap-1.5 h-[42px] rounded-[11px] px-3 text-[12px] text-left border-0 cursor-pointer transition-all"
+                    style={{
+                      background: current === item.id ? 'var(--gold)' : 'none',
+                      color: current === item.id ? 'var(--night)' : 'oklch(73% .025 151)',
+                      fontWeight: current === item.id ? 700 : 400,
+                    }}>
+                    {item.icon} <span className="ml-1">{item.label}</span>
+                    {item.id === 'moderation' && pendingModCount > 0 && (
+                      <span className="ml-auto flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[9px] font-bold px-1" style={{ background: 'var(--red)', color: '#fff' }}>{pendingModCount}</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </nav>
+
+          <div style={{ borderTop: '1px solid var(--line)' }} className="pt-3">
+            <div className="grid grid-cols-2 gap-1 p-1 rounded-[10px] mb-2.5" style={{ background: 'var(--raised)' }}>
               <button onClick={() => { if (theme !== 'light') toggleTheme() }}
-                style={{ background: theme === 'light' ? 'var(--gold)' : 'none', color: theme === 'light' ? 'var(--night)' : 'var(--muted)', borderRadius: 7, padding: '6px 10px', fontSize: 10, border: 0, cursor: 'pointer', fontWeight: theme === 'light' ? 700 : 400 }}>☼</button>
+                className="rounded-[8px] py-2 px-1 text-[10px] border-0 cursor-pointer"
+                style={{ background: theme === 'light' ? 'var(--gold)' : 'none', color: theme === 'light' ? 'var(--night)' : 'oklch(73% .02 151)', fontWeight: theme === 'light' ? 700 : 400 }}>☼ Light</button>
               <button onClick={() => { if (theme !== 'dark') toggleTheme() }}
-                style={{ background: theme === 'dark' ? 'var(--gold)' : 'none', color: theme === 'dark' ? 'var(--night)' : 'var(--muted)', borderRadius: 7, padding: '6px 10px', fontSize: 10, border: 0, cursor: 'pointer', fontWeight: theme === 'dark' ? 700 : 400 }}>◐</button>
+                className="rounded-[8px] py-2 px-1 text-[10px] border-0 cursor-pointer"
+                style={{ background: theme === 'dark' ? 'var(--gold)' : 'none', color: theme === 'dark' ? 'var(--night)' : 'oklch(73% .02 151)', fontWeight: theme === 'dark' ? 700 : 400 }}>◐ Dark</button>
             </div>
-            <button style={{ width: 40, height: 40, borderRadius: 11, background: 'none', color: 'var(--muted)', border: 0, cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 17, transition: 'background .2s' }}
-              onClick={() => toast('Global search ready')}>⌕</button>
-            <button style={{ width: 40, height: 40, borderRadius: 11, background: 'none', color: 'var(--muted)', border: 0, cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 17, transition: 'background .2s' }}
-              onClick={() => toast('3 operational alerts')}>♢</button>
-            <button style={{ width: 40, height: 40, borderRadius: 11, background: 'none', color: 'var(--muted)', border: 0, cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 17, transition: 'background .2s' }}
-              onClick={openDrawer}>＋</button>
-            <button style={{ width: 40, height: 40, borderRadius: 11, background: 'none', color: 'var(--muted)', border: 0, cursor: 'pointer', display: 'grid', placeItems: 'center' }}>
-              <div style={{ width: 29, height: 29, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'var(--earth)', color: 'var(--gold)', fontSize: 9, fontWeight: 800 }}>{initials}</div>
-            </button>
+            <a href="/feed" className="block text-center py-2 rounded-[8px] text-[10px] mb-2 no-underline" style={{ color: 'var(--muted)', border: '1px solid var(--line)' }}>← Back to app</a>
+            <div className="flex items-center gap-2.5 px-1.5 py-1.5">
+              <div className="w-[34px] h-[34px] rounded-full grid place-items-center flex-shrink-0 text-[10px] font-extrabold" style={{ background: 'var(--night)', color: 'var(--gold)' }}>{initials}</div>
+              <div className="flex-1 min-w-0">
+                <strong className="text-[11px] block truncate text-white">{profile?.full_name || 'Admin'}</strong>
+                <small className="block text-[9px] mt-0.5" style={{ color: 'var(--muted)' }}>Super admin · Online</small>
+              </div>
+            </div>
           </div>
-        </header>
-        <div style={{ maxWidth: 1400, padding: '31px 32px 70px', margin: 'auto' }}>{children}</div>
-      </main>
+        </aside>
 
-      {/* Overlay for mobile */}
-      {mobileOpen && <div onClick={() => setMobileOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.5)', zIndex: 40 }} className="md:hidden" />}
+        {/* Main */}
+        <main className="flex-1 min-w-0">
+          <header className="sticky top-0 z-10 flex items-center h-[68px] md:h-[74px] px-4 md:px-8 gap-3" style={{ borderBottom: '1px solid var(--line)', background: 'var(--bg)' }}>
+            <button onClick={() => setMobileOpen(true)} className="md:hidden bg-none border-0 cursor-pointer text-lg" style={{ color: 'var(--muted)' }}>☰</button>
+            <div className="text-[12px] truncate" style={{ color: 'var(--muted)' }}>
+              Admin console <span style={{ color: 'var(--faint)' }}>/</span> <b style={{ color: 'var(--ink)' }}>{current.charAt(0).toUpperCase() + current.slice(1)}</b>
+            </div>
+            <div className="flex gap-1.5 ml-auto">
+              <div className="hidden sm:flex gap-1 p-[3px] rounded-[9px]" style={{ background: 'var(--raised)' }}>
+                <button onClick={() => { if (theme !== 'light') toggleTheme() }}
+                  className="rounded-[7px] px-[10px] py-[6px] text-[10px] border-0 cursor-pointer"
+                  style={{ background: theme === 'light' ? 'var(--gold)' : 'none', color: theme === 'light' ? 'var(--night)' : 'var(--muted)', fontWeight: theme === 'light' ? 700 : 400 }}>☼</button>
+                <button onClick={() => { if (theme !== 'dark') toggleTheme() }}
+                  className="rounded-[7px] px-[10px] py-[6px] text-[10px] border-0 cursor-pointer"
+                  style={{ background: theme === 'dark' ? 'var(--gold)' : 'none', color: theme === 'dark' ? 'var(--night)' : 'var(--muted)', fontWeight: theme === 'dark' ? 700 : 400 }}>◐</button>
+              </div>
+              <button className="w-[38px] h-[38px] md:w-[40px] md:h-[40px] rounded-[11px] grid place-items-center text-base border-0 cursor-pointer" style={{ background: 'none', color: 'var(--muted)' }}
+                onClick={() => toast('Global search ready')}>⌕</button>
+              <button className="w-[38px] h-[38px] md:w-[40px] md:h-[40px] rounded-[11px] grid place-items-center text-base border-0 cursor-pointer" style={{ background: 'none', color: 'var(--muted)' }}
+                onClick={() => toast('3 operational alerts')}>♢</button>
+              <button className="w-[38px] h-[38px] md:w-[40px] md:h-[40px] rounded-[11px] grid place-items-center text-base border-0 cursor-pointer" style={{ background: 'none', color: 'var(--muted)' }}
+                onClick={() => setDrawerOpen(true)}>＋</button>
+              <button className="w-[38px] h-[38px] md:w-[40px] md:h-[40px] rounded-[11px] grid place-items-center border-0 cursor-pointer">
+                <div className="w-[26px] h-[26px] md:w-[29px] md:h-[29px] rounded-full grid place-items-center text-[9px] font-extrabold" style={{ background: 'var(--earth)', color: 'var(--gold)' }}>{initials}</div>
+              </button>
+            </div>
+          </header>
+          <div className="max-w-[1400px] px-4 md:px-8 py-[24px] md:py-[31px] pb-[50px] md:pb-[70px] mx-auto">{children}</div>
+        </main>
+      </div>
 
       {/* Drawer */}
       {drawerOpen && (
-        <div onClick={(e) => { if (e.target === e.currentTarget) setDrawerOpen(false) }} style={{ position: 'fixed', inset: 0, background: 'var(--night) / .6', zIndex: 20, display: 'flex', justifyContent: 'flex-end' }}>
-          <div style={{ width: 'min(520px,100%)', height: '100%', background: 'var(--surface)', borderLeft: '1px solid var(--line)', padding: 22, overflow: 'auto', animation: 'slide .3s var(--ease)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+        <div onClick={(e) => { if (e.target === e.currentTarget) setDrawerOpen(false) }}
+          className="fixed inset-0 z-20 flex justify-end" style={{ background: 'color-mix(in srgb, var(--night) 60%, transparent)' }}>
+          <div className="w-full sm:w-[520px] h-full overflow-y-auto animate-slide-in-right" style={{ background: 'var(--surface)', borderLeft: '1px solid var(--line)', padding: 22 }}>
+            <div className="flex justify-between items-start">
               <div>
-                <div style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--green)', fontWeight: 800 }}>Admin action</div>
-                <h2 style={{ fontWeight: 800, fontSize: 20, letterSpacing: '-.05em', margin: 0, color: 'var(--ink)' }}>Quick admin action</h2>
-                <p style={{ color: 'var(--muted)', fontSize: 12, lineHeight: 1.5 }}>Choose a scoped action. Every change creates an audit record.</p>
+                <div className="text-[10px] uppercase tracking-[.15em] font-extrabold" style={{ color: 'var(--green)' }}>Admin action</div>
+                <h2 className="font-extrabold text-[clamp(1.1rem,2.5vw,1.25rem)] tracking-[-.05em] m-0 mt-1" style={{ color: 'var(--ink)' }}>Quick admin action</h2>
+                <p className="text-[12px] mt-1 leading-relaxed" style={{ color: 'var(--muted)' }}>Choose a scoped action. Every change creates an audit record.</p>
               </div>
-              <button onClick={() => setDrawerOpen(false)} style={{ background: 'none', color: 'var(--muted)', fontSize: 24, border: 0, cursor: 'pointer' }}>×</button>
+              <button onClick={() => setDrawerOpen(false)} className="bg-none border-0 cursor-pointer text-2xl" style={{ color: 'var(--muted)' }}>×</button>
             </div>
-            <div style={{ display: 'grid', gap: 7, margin: '16px 0' }}>
-              <label style={{ fontSize: 10, color: 'var(--muted)' }}>Action type</label>
-              <select style={{ height: 43, border: '1px solid var(--line)', background: 'var(--raised)', borderRadius: 10, padding: '0 11px', fontSize: 11, color: 'var(--ink)' }}>
+            <div className="grid gap-2 my-4">
+              <label className="text-[10px]" style={{ color: 'var(--muted)' }}>Action type</label>
+              <select className="h-[43px] rounded-[10px] px-3 text-[11px]" style={{ border: '1px solid var(--line)', background: 'var(--raised)', color: 'var(--ink)' }}>
                 <option>Publish platform notice</option>
                 <option>Assign Community Jury</option>
                 <option>Pause new marketplace listings</option>
@@ -161,9 +180,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <option>Export operational report</option>
               </select>
             </div>
-            <div style={{ display: 'grid', gap: 7, margin: '16px 0' }}>
-              <label style={{ fontSize: 10, color: 'var(--muted)' }}>Scope</label>
-              <select style={{ height: 43, border: '1px solid var(--line)', background: 'var(--raised)', borderRadius: 10, padding: '0 11px', fontSize: 11, color: 'var(--ink)' }}>
+            <div className="grid gap-2 my-4">
+              <label className="text-[10px]" style={{ color: 'var(--muted)' }}>Scope</label>
+              <select className="h-[43px] rounded-[10px] px-3 text-[11px]" style={{ border: '1px solid var(--line)', background: 'var(--raised)', color: 'var(--ink)' }}>
                 <option>Entire platform</option>
                 <option>Nairobi</option>
                 <option>Professionals</option>
@@ -171,19 +190,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <option>Nyumba Kumi</option>
               </select>
             </div>
-            <div style={{ display: 'grid', gap: 7, margin: '16px 0' }}>
-              <label style={{ fontSize: 10, color: 'var(--muted)' }}>Reason or internal note</label>
-              <textarea placeholder="Add context for the audit trail..." style={{ height: 90, padding: 11, border: '1px solid var(--line)', background: 'var(--raised)', borderRadius: 10, fontSize: 11, resize: 'vertical', color: 'var(--ink)' }} />
+            <div className="grid gap-2 my-4">
+              <label className="text-[10px]" style={{ color: 'var(--muted)' }}>Reason or internal note</label>
+              <textarea placeholder="Add context for the audit trail..." className="h-[90px] p-3 rounded-[10px] text-[11px] resize-y" style={{ border: '1px solid var(--line)', background: 'var(--raised)', color: 'var(--ink)' }} />
             </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 20 }}>
-              <button onClick={() => setDrawerOpen(false)} style={{ minHeight: 42, borderRadius: 10, padding: '0 13px', background: 'var(--raised)', border: '1px solid var(--line)', color: 'var(--ink)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={() => { toast('Action queued for confirmation'); setDrawerOpen(false) }} style={{ minHeight: 42, borderRadius: 10, padding: '0 13px', background: 'var(--gold)', color: 'var(--night)', fontSize: 11, fontWeight: 700, cursor: 'pointer', border: 0 }}>Review action</button>
+            <div className="flex gap-2 justify-end mt-5">
+              <button onClick={() => setDrawerOpen(false)}
+                className="min-h-[42px] rounded-[10px] px-[13px] text-[11px] font-bold cursor-pointer" style={{ background: 'var(--raised)', border: '1px solid var(--line)', color: 'var(--ink)' }}>Cancel</button>
+              <button onClick={() => { toast('Action queued for confirmation'); setDrawerOpen(false) }}
+                className="min-h-[42px] rounded-[10px] px-[13px] text-[11px] font-bold cursor-pointer border-0" style={{ background: 'var(--gold)', color: 'var(--night)' }}>Review action</button>
             </div>
           </div>
         </div>
       )}
-
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes slide{from{transform:translateX(30px);opacity:0}to{transform:translateX(0);opacity:1}}`}</style>
     </div>
   )
 }

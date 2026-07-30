@@ -8,9 +8,11 @@ export default function LogoutPage() {
   const router = useRouter()
 
   useEffect(() => {
+    let cancelled = false
     supabase.auth.signOut().then(() => {
-      router.push('/')
+      if (!cancelled) setTimeout(() => router.push('/'), 100)
     })
+    return () => { cancelled = true }
   }, [supabase, router])
 
   return (

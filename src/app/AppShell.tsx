@@ -6,6 +6,7 @@ import MobileNav from '@/components/MobileNav'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import CreateModal from '@/components/CreateModal'
+import NotificationTray from '@/components/NotificationTray'
 import { ToolbarProvider } from '@/lib/toolbar'
 import { Send, MessageSquare } from 'lucide-react'
 
@@ -30,6 +31,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const chatChannelRef = useRef<any>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const [chatSending, setChatSending] = useState(false)
+  const [showNotifTray, setShowNotifTray] = useState(false)
 
   const fetchUnreadCount = useCallback(async () => {
     if (!profile || !supabase) return
@@ -43,10 +45,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && !profile) {
-      // Only redirect if not already on a public path (avoid loop with middleware)
       const publicPaths = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/onboarding']
       const isPublic = publicPaths.some(p => path === p || path.startsWith(p))
-      if (!isPublic) router.push('/')
+      if (!isPublic) setTimeout(() => router.push('/'), 0)
     }
   }, [loading, profile, router, path])
 
@@ -190,18 +191,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <input aria-label="Search Baraza, spaces, people..." placeholder="Search Baraza, spaces, people..." />
               </div>
               <div className="top-actions">
-                <Link href="/notifications" className="icon" aria-label={unreadNotifCount > 0 ? `${unreadNotifCount} unread notifications` : 'Notifications'} title="Notifications" style={{ position: 'relative' }}>
-                  ♡
-                  {unreadNotifCount > 0 && (
-                    <span style={{
-                      position: 'absolute', top: -2, right: -2,
-                      background: 'var(--red)', color: '#fff',
-                      fontSize: 8, fontWeight: 700, minWidth: 16, height: 16,
-                      borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      padding: '0 3px', lineHeight: 1,
-                    }}>{unreadNotifCount > 99 ? '99+' : unreadNotifCount}</span>
-                  )}
-                </Link>
+                <div style={{ position: 'relative' }}>
+                  <button onClick={() => setShowNotifTray(p => !p)} className="icon" aria-label={unreadNotifCount > 0 ? `${unreadNotifCount} unread notifications` : 'Notifications'} title="Notifications" style={{ position: 'relative', background: 'none', border: 0, cursor: 'pointer' }}>
+                    ♡
+                    {unreadNotifCount > 0 && (
+                      <span style={{
+                        position: 'absolute', top: -2, right: -2,
+                        background: 'var(--red)', color: '#fff',
+                        fontSize: 8, fontWeight: 700, minWidth: 16, height: 16,
+                        borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        padding: '0 3px', lineHeight: 1,
+                      }}>{unreadNotifCount > 99 ? '99+' : unreadNotifCount}</span>
+                    )}
+                  </button>
+                  {showNotifTray && <NotificationTray onClose={() => setShowNotifTray(false)} />}
+                </div>
                 <button className="icon" style={{ position: 'relative' }} onClick={() => { if (chatOpen) { setChatOpen(false) } else { openSupportChat() } }} aria-label={chatOpen ? 'Close chat' : 'Open chat'} title="Messages">
                   ◍
                   {unreadMsgCount > 0 && !chatOpen && (

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useSupabase } from '@/app/providers'
@@ -32,6 +32,10 @@ function EyeBtn({ id }: { id: string }) {
 }
 
 export default function SignupPage() {
+  return <Suspense><SignupForm /></Suspense>
+}
+
+function SignupForm() {
   const router = useRouter()
   const supabase = useSupabase()
   const searchParams = useSearchParams()

@@ -406,8 +406,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 /* Overflow peek — last child in scroll containers signals more content */
 .overflow-x-auto > :last-child { padding-right: 20px; }
 
-/* Min touch target for interactive divs */
-.clickable-box, [class*="cursor-pointer"] { min-height: 44px; }
+/* Min touch target for interactive divs (mobile only) */
+@media (max-width: 760px) {
+  .clickable-box, [class*="cursor-pointer"] { min-height: 44px; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }

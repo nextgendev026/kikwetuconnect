@@ -1,11 +1,10 @@
-import { createServerClient } from '@/lib/supabase'
+import { createApiClient } from '@/lib/server-supabase'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json()
 
-    // Validate input
     if (!email || !password) {
       return NextResponse.json(
         { error: 'Missing email or password' },
@@ -13,9 +12,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createServerClient()
+    const res = NextResponse.json({})
+    const supabase = createApiClient(request, res)
 
-    // Sign in user using signInWithPassword
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -28,7 +27,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Return user data and session
     return NextResponse.json({
       user: data.user,
       session: data.session,

@@ -2,8 +2,9 @@
   "name": "KikwetuConnect",
   "short_name": "Kikwetu",
   "description": "Kenya's Community Platform - Connect, Learn, Grow",
-  "start_url": "/?utm_source=homescreen",
+  "start_url": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#F5F5F0",
   "theme_color": "#438854",
   "orientation": "portrait-primary",
@@ -12,6 +13,30 @@
   "lang": "en-KE",
   "dir": "ltr",
   "prefer_related_applications": false,
+  "categories": ["social", "community", "education"],
+  "screenshots": [
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "KikwetuConnect Feed"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "KikwetuConnect Mobile"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Feed", "url": "/feed", "description": "Your personalized feed" },
+    { "name": "Explore", "url": "/explore", "description": "Browse communities and discover content" },
+    { "name": "Messages", "url": "/messages", "description": "View your messages" },
+    { "name": "Create Post", "url": "/create", "description": "Create a new post" },
+    { "name": "Market", "url": "/market", "description": "Mtaa Exchange marketplace" }
+  ],
   "icons": [
     { "src": "/icons/icon-48x48.png", "sizes": "48x48", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-72x72.png", "sizes": "72x72", "type": "image/png", "purpose": "any" },
@@ -20,34 +45,16 @@
     { "src": "/icons/icon-144x144.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-152x152.png", "sizes": "152x152", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-256x256.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-384x384.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-256x256.png", "sizes": "256x256", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-384x384.png", "sizes": "384x384", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
     { "src": "/icons/icon-192x192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
     { "src": "/icons/icon-512x512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
-  "categories": ["social", "community", "education"],
-  "screenshots": [],
-  "shortcuts": [
-    {
-      "name": "Explore",
-      "url": "/explore",
-      "description": "Browse communities and discover content"
-    },
-    {
-      "name": "Messages",
-      "url": "/messages",
-      "description": "View your messages"
-    },
-    {
-      "name": "Create",
-      "url": "/create",
-      "description": "Create a new post"
-    },
-    {
-      "name": "Market",
-      "url": "/market",
-      "description": "Mtaa Exchange marketplace"
-    }
-  ]
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": "auto"
+  }
 }

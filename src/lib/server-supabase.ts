@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 import type { Database } from './database.types'
 
@@ -13,12 +13,10 @@ export function createApiClient(request: NextRequest, response?: NextResponse) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll().map(function(c: any) {
-            return { name: c.name, value: c.value }
-          })
+          return request.cookies.getAll()
         },
-        setAll(cookiesToSet: any[]) {
-          cookiesToSet.forEach(({ name, value, options }: any) => {
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
             request.cookies.set(name, value)
             res.cookies.set(name, value, options)
           })
@@ -36,12 +34,10 @@ export function createApiClientTyped(request: NextRequest, response?: NextRespon
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll().map(function(c: any) {
-            return { name: c.name, value: c.value }
-          })
+          return request.cookies.getAll()
         },
-        setAll(cookiesToSet: any[]) {
-          cookiesToSet.forEach(({ name, value, options }: any) => {
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
             request.cookies.set(name, value)
             res.cookies.set(name, value, options)
           })

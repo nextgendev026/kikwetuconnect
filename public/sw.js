@@ -1,5 +1,5 @@
-const CACHE = 'kikwetu-v1'
-const DYNAMIC_CACHE = 'kikwetu-dynamic-v1'
+const CACHE = 'kikwetu-v2'
+const DYNAMIC_CACHE = 'kikwetu-dynamic-v2'
 const STATIC_ASSETS = [
   '/',
   '/feed',
@@ -11,19 +11,15 @@ const STATIC_ASSETS = [
   '/favicon.svg',
 ]
 
-// Install: precache static shell
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE).then(cache =>
-      cache.addAll(STATIC_ASSETS).catch(err => {
-        console.warn('Static precache partial failure:', err)
-      })
+      cache.addAll(STATIC_ASSETS).catch(() => {})
     )
   )
   self.skipWaiting()
 })
 
-// Activate: clean old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
@@ -35,31 +31,23 @@ self.addEventListener('activate', event => {
   self.clients.claim()
 })
 
-// Push event: show notification
 self.addEventListener('push', event => {
   if (!event.data) return
   try {
     const data = event.data.json()
     const { title = 'KikwetuConnect', body = '', icon = '/icons/icon-192x192.png', badge = '/icons/icon-72x72.png', tag, data: extraData, actions, requireInteraction, silent, ...rest } = data
-
-    const options = {
-      body,
-      icon,
-      badge,
-      tag,
-      data: extraData || {},
-      actions,
-      requireInteraction,
-      silent,
-      vibrate: [200, 100, 200],
-      ...rest,
-    }
-
     event.waitUntil(
-      self.registration.showNotification(title, options)
+      self.registration.showNotification(title, {
+        body, icon, badge, tag,
+        data: extraData || {},
+        actions,
+        requireInteraction,
+        silent,
+        vibrate: [200, 100, 200],
+        ...rest,
+      })
     )
   } catch {
-    // If not JSON, show raw text
     event.waitUntil(
       self.registration.showNotification('KikwetuConnect', {
         body: event.data.text(),
@@ -70,19 +58,13 @@ self.addEventListener('push', event => {
   }
 })
 
-// Notification click: open app and navigate
 self.addEventListener('notificationclick', event => {
   event.notification.close()
-
   const data = event.notification.data || {}
   const url = data.url || '/'
 
-  // If action button clicked
   if (event.action && data.actions?.[event.action]) {
-    const actionUrl = data.actions[event.action]
-    event.waitUntil(
-      clients.openWindow(actionUrl)
-    )
+    event.waitUntil(clients.openWindow(data.actions[event.action]))
     return
   }
 
@@ -99,46 +81,62 @@ self.addEventListener('notificationclick', event => {
   )
 })
 
-// Fetch: network-first with cache fallback
 self.addEventListener('fetch', event => {
   const { request } = event
   const url = new URL(request.url)
 
-  // Skip non-GET
   if (request.method !== 'GET') return
-
-  // Skip non-HTTP(S)
   if (!url.protocol.startsWith('http')) return
 
   const isSameOrigin = url.origin === self.location.origin
   const isSupabase = url.origin.includes('.supabase.co')
 
-  // Only cache same-origin and supabase requests
   if (!isSameOrigin && !isSupabase) return
 
-  // API: network first, cache fallback
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirst(request))
+  if (request.destination === 'document' && !url.pathname.startsWith('/api/')) {
+    event.respondWith(networkFirstWithRefresh(request))
     return
   }
 
-  // Images/Supabase storage: stale-while-revalidate
+  if (request.destination === 'style' || request.destination === 'script' || request.destination === 'font') {
+    event.respondWith(cacheFirst(request))
+    return
+  }
+
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(networkFirstWithTimeout(request, 5000))
+    return
+  }
+
   if (request.destination === 'image' || url.pathname.match(/\.(jpg|jpeg|png|gif|webp|avif|svg|ico)$/)) {
     event.respondWith(staleWhileRevalidate(request))
     return
   }
 
-  // Navigation: network first, cache fallback
   if (request.mode === 'navigate') {
-    event.respondWith(networkFirst(request))
+    event.respondWith(networkFirstWithRefresh(request))
     return
   }
 
-  // Everything else: network first
-  event.respondWith(networkFirst(request))
+  event.respondWith(networkFirstWithTimeout(request, 5000))
 })
 
-async function networkFirst(request) {
+async function cacheFirst(request) {
+  const cached = await caches.match(request)
+  if (cached) return cached
+  try {
+    const res = await fetch(request)
+    if (res.ok) {
+      const clone = res.clone()
+      caches.open(DYNAMIC_CACHE).then(cache => cache.put(request, clone))
+    }
+    return res
+  } catch {
+    return new Response('', { status: 200 })
+  }
+}
+
+async function networkFirstWithRefresh(request) {
   try {
     const res = await fetch(request)
     if (res.ok) {
@@ -149,9 +147,30 @@ async function networkFirst(request) {
   } catch {
     const cached = await caches.match(request)
     if (cached) return cached
-    // Fallback to root for navigations
+    return caches.match('/')
+  }
+}
+
+async function networkFirstWithTimeout(request, timeout) {
+  const timeoutPromise = new Promise(resolve => setTimeout(resolve, timeout))
+  try {
+    const res = await Promise.race([
+      fetch(request),
+      timeoutPromise.then(() => { throw new Error('timeout') }),
+    ])
+    if (res && res.ok) {
+      const clone = res.clone()
+      caches.open(DYNAMIC_CACHE).then(cache => cache.put(request, clone))
+    }
+    return res
+  } catch {
+    const cached = await caches.match(request)
+    if (cached) return cached
     if (request.mode === 'navigate') return caches.match('/')
-    return new Response('Offline', { status: 503 })
+    return new Response(JSON.stringify({ error: 'offline' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 }
 
@@ -165,7 +184,6 @@ async function staleWhileRevalidate(request) {
   return cached || (await fetchPromise)
 }
 
-// Message handler for client communication
 self.addEventListener('message', event => {
   if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting()

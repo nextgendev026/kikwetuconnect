@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     .eq('user_id', user.id)
     .eq('target_type', target_type)
     .eq('target_id', target_id)
-    .single()
+    .maybeSingle()
   if (existingVote) {
     if (existingVote.vote_type === vote_type) {
       await supabase.from('votes').delete().eq('id', existingVote.id)
@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
     .from(target_type === 'post' ? 'posts' : 'answers')
     .select('user_id')
     .eq('id', target_id)
-    .single()
-  if (target && target.user_id !== user.id && vote_type === 1) {
+    .maybeSingle()
+  if (target?.user_id && target.user_id !== user.id && vote_type === 1) {
     await supabase.from('notifications').insert({
       user_id: target.user_id,
       actor_id: user.id,
