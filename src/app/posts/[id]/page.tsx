@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, MessageCircle, TrendingUp, Share2, Bookmark, Shield, Star } from 'lucide-react'
+import { ArrowLeft, MessageCircle, TrendingUp, Share2, Bookmark, Shield, Star, MoreHorizontal, Edit3, Trash2, EyeOff, Eye } from 'lucide-react'
 import { Button, Textarea } from '@/components/ui/form'
 import { useUser, useSupabase, toast } from '@/app/providers'
 
@@ -27,6 +27,7 @@ interface Post {
   answers_count: number
   bounty_tokens: number
   county_tag: string | null
+  is_hidden: boolean
   created_at: string
   profiles: Profile | null
 }
@@ -55,6 +56,12 @@ export default function PostDetailPage() {
   const [error, setError] = useState('')
   const [userVotes, setUserVotes] = useState<Record<string, number>>({})
   const [userSaved, setUserSaved] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editContent, setEditContent] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     fetchPost()
@@ -216,6 +223,40 @@ export default function PostDetailPage() {
     }
   }
 
+  const handleEditSave = async () => {
+    const res = await fetch(`/api/posts/${postId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: editTitle, content: editContent }),
+    })
+    if (!res.ok) { const j = await res.json(); toast(j.error || 'Failed to update'); return }
+    const j = await res.json()
+    setPost(j.post)
+    toast('Post updated')
+    setEditing(false)
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    const res = await fetch(`/api/posts/${postId}`, { method: 'DELETE' })
+    setDeleting(false)
+    if (!res.ok) { const j = await res.json(); toast(j.error || 'Failed to delete'); return }
+    toast('Post deleted')
+    window.location.href = '/feed'
+  }
+
+  const handleHide = async () => {
+    const hidden = !post!.is_hidden
+    const res = await fetch(`/api/posts/${postId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_hidden: hidden }),
+    })
+    if (!res.ok) { const j = await res.json(); toast(j.error || 'Failed'); return }
+    setPost(prev => prev ? { ...prev, is_hidden: hidden } : prev)
+    toast(hidden ? 'Post hidden' : 'Post unhidden')
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -283,6 +324,29 @@ export default function PostDetailPage() {
           <p className="text-xs text-quiet flex-shrink-0">
             {new Date(post.created_at).toLocaleDateString('en-KE')}
           </p>
+          {profile?.id === post.user_id && (
+            <div className="relative">
+              <button onClick={() => setShowMenu(!showMenu)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-surface transition-colors" aria-label="Post options">
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+              {showMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 min-w-[150px] bg-deep border border-[var(--line)] rounded-lg shadow-xl z-20 animate-rise overflow-hidden">
+                    <button onClick={() => { setShowMenu(false); setEditing(true); setEditTitle(post.title || ''); setEditContent(post.content) }} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-text hover:bg-surface transition-colors">
+                      <Edit3 className="w-4 h-4" /> Edit
+                    </button>
+                    <button onClick={() => { setShowMenu(false); handleHide() }} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-text hover:bg-surface transition-colors">
+                      {post.is_hidden ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />} {post.is_hidden ? 'Unhide' : 'Hide'}
+                    </button>
+                    <button onClick={() => { setShowMenu(false); setConfirmDelete(true) }} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red hover:bg-surface transition-colors">
+                      <Trash2 className="w-4 h-4" /> Delete
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Title and Content */}
@@ -368,6 +432,39 @@ export default function PostDetailPage() {
             </button>
           </div>
         </div>
+
+        {/* Edit modal */}
+        {editing && (
+          <div onClick={(e) => { if (e.target === e.currentTarget) setEditing(false) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(560px, 94%)' }}>
+              <h3 style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink)', margin: '0 0 16px' }}>Edit post</h3>
+              <div style={{ display: 'grid', gap: 12 }}>
+                <input style={{ background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 9, padding: '10px 14px', fontSize: 13, color: 'var(--ink)', outline: 'none' }} placeholder="Title (optional)" value={editTitle} onChange={e => setEditTitle(e.target.value)} />
+                <textarea style={{ background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 9, padding: '10px 14px', fontSize: 14, color: 'var(--ink)', outline: 'none', minHeight: 200, resize: 'vertical' }} placeholder="Write your post..." value={editContent} onChange={e => setEditContent(e.target.value)} />
+              </div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
+                <button onClick={() => setEditing(false)} style={{ minHeight: 36, borderRadius: 9, padding: '0 14px', background: 'var(--raised)', color: 'var(--ink)', fontSize: 11, fontWeight: 700, border: 0, cursor: 'pointer' }}>Cancel</button>
+                <button onClick={handleEditSave} style={{ minHeight: 36, borderRadius: 9, padding: '0 14px', background: 'var(--gold)', color: 'var(--night)', fontSize: 11, fontWeight: 700, border: 0, cursor: 'pointer' }}>Save</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete confirmation */}
+        {confirmDelete && (
+          <div onClick={(e) => { if (e.target === e.currentTarget) setConfirmDelete(false) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(360px, 94%)', textAlign: 'center' }}>
+              <h3 style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink)', margin: '0 0 8px' }}>Delete post?</h3>
+              <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 18px' }}>This action cannot be undone.</p>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                <button onClick={() => setConfirmDelete(false)} style={{ minHeight: 36, borderRadius: 9, padding: '0 14px', background: 'var(--raised)', color: 'var(--ink)', fontSize: 11, fontWeight: 700, border: 0, cursor: 'pointer' }}>Cancel</button>
+                <button onClick={handleDelete} disabled={deleting} style={{ minHeight: 36, borderRadius: 9, padding: '0 14px', background: 'var(--red)', color: '#fff', fontSize: 11, fontWeight: 700, border: 0, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? .5 : 1 }}>
+                  {deleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Answers Section */}

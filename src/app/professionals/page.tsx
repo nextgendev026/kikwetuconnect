@@ -180,8 +180,9 @@ export default function ProfessionalsPage() {
                 return (
                   <div key={pro.id} style={s.card} className="card-hover">
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--green), var(--gold))', color: 'var(--night)' }}>
-                        {p.avatar_url ? <img src={p.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover" /> : getInitials(p.full_name || p.username)}
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 relative" style={{ background: 'linear-gradient(135deg, var(--green), var(--gold))', color: 'var(--night)' }}>
+                        {p.avatar_url ? <img src={p.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-p'); if (fb) fb.classList.remove('hidden') }} /> : null}
+                        <span className={`af-p ${p.avatar_url ? 'hidden' : ''}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{getInitials(p.full_name || p.username)}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">

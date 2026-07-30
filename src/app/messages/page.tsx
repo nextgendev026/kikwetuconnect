@@ -126,11 +126,25 @@ export default function MessagesPage() {
       }, (payload: any) => {
         const msg = payload.new as Message
         setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
+        fetchConversations()
       })
       .subscribe()
     channelRef.current = channel
     return () => { if (channelRef.current) supabase.removeChannel(channelRef.current) }
-  }, [activeConv, supabase])
+  }, [activeConv, supabase, fetchConversations])
+
+  // Realtime conversation updates (last_message, etc.)
+  useEffect(() => {
+    if (!supabase || !user) return
+    const channel = supabase.channel('conversations-updates')
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'conversations',
+      }, () => {
+        fetchConversations()
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [supabase, user, fetchConversations])
 
   const selectConversation = async (convId: string) => {
     setActiveConv(convId)
@@ -243,10 +257,11 @@ export default function MessagesPage() {
                 onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--raised)' }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
               >
-                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--gold-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--gold)', flexShrink: 0, overflow: 'hidden' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--gold-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--gold)', flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
                   {avatarUser?.avatar_url ? (
-                    <img src={avatarUser.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : getInitials(avatarUser?.full_name || avatarUser?.username || 'S')}
+                    <img src={avatarUser.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-m1'); if (fb) fb.classList.remove('hidden') }} />
+                  ) : null}
+                  <span className={`af-m1 ${avatarUser?.avatar_url ? 'hidden' : ''}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{getInitials(avatarUser?.full_name || avatarUser?.username || 'S')}</span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -276,12 +291,15 @@ export default function MessagesPage() {
               <button onClick={() => setActiveConv(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'none', padding: 4 }} className="back-btn">
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--gold-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gold)', flexShrink: 0, overflow: 'hidden' }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--gold-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gold)', flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
                 {activeConvData ? (() => {
                   const others = getOtherParticipants(activeConvData)
                   const u = others[0]
-                  return u?.avatar_url ? <img src={u.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : getInitials(u?.full_name || u?.username || '?')
-                })() : '?'}
+                  return u?.avatar_url ? <img src={u.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-m2'); if (fb) fb.classList.remove('hidden') }} /> : null
+                })() : null}
+                <span className={`af-m2 ${(() => { try { const others = getOtherParticipants(activeConvData!); const u = others[0]; return u?.avatar_url } catch { return false } })() ? 'hidden' : ''}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
+                  {(() => { try { const others = getOtherParticipants(activeConvData!); const u = others[0]; return getInitials(u?.full_name || u?.username || '?') } catch { return '?' } })()}
+                </span>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--ink)' }}>{activeConvData ? conversationTitle(activeConvData) : 'Loading...'}</span>
@@ -306,8 +324,9 @@ export default function MessagesPage() {
                     return (
                       <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: 6 }}>
                         {showAvatar && (
-                          <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--raised)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, flexShrink: 0, overflow: 'hidden' }}>
-                            {msg.sender?.avatar_url ? <img src={msg.sender.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : getInitials(msg.sender?.full_name || msg.sender?.username || '?')}
+                          <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--raised)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
+                            {msg.sender?.avatar_url ? <img src={msg.sender.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-m3'); if (fb) fb.classList.remove('hidden') }} /> : null}
+                            <span className={`af-m3 ${msg.sender?.avatar_url ? 'hidden' : ''}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{getInitials(msg.sender?.full_name || msg.sender?.username || '?')}</span>
                           </div>
                         )}
                         <div style={{ maxWidth: '70%', minWidth: 60 }}>

@@ -100,12 +100,11 @@ export default function SettingsPage() {
           {success && <div className="mb-4 p-3 rounded-xl flex items-center gap-2 text-sm" style={{ background: 'color-mix(in oklab, var(--green) 15%, var(--surface))', border: '1px solid color-mix(in oklab, var(--green) 30%, transparent)', color: 'var(--green)' }}><CheckCircle className="w-4 h-4 flex-shrink-0" />{success}</div>}
           <div className="flex items-center gap-6">
             <div className="relative">
-              <div className="w-24 h-24 rounded-full flex items-center justify-center overflow-hidden" style={{ border: '3px solid color-mix(in oklab, var(--green) 30%, transparent)', background: 'linear-gradient(135deg, var(--green), var(--gold))' }}>
+              <div className="w-24 h-24 rounded-full flex items-center justify-center overflow-hidden relative" style={{ border: '3px solid color-mix(in oklab, var(--green) 30%, transparent)', background: 'linear-gradient(135deg, var(--green), var(--gold))' }}>
                 {avatarPreview || profile?.avatar_url ? (
-                  <img src={avatarPreview || profile?.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-3xl font-bold" style={{ color: 'var(--night)' }}>{initials}</span>
-                )}
+                  <img src={avatarPreview || profile?.avatar_url} alt="Avatar" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-st'); if (fb) fb.classList.remove('hidden') }} />
+                ) : null}
+                <span className={`af-st ${avatarPreview || profile?.avatar_url ? 'hidden' : ''}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 800 }}>{initials}</span>
               </div>
             </div>
             <div className="flex-1">

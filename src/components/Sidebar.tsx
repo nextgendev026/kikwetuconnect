@@ -61,12 +61,19 @@ export default function Sidebar({ initials, profile, theme, toggleTheme, onlineC
 
   const handleFollow = async (userId: string, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation()
-    if (following.has(userId)) {
-      setFollowing(prev => { const n = new Set(prev); n.delete(userId); return n })
-      toast('Unfollowed')
-    } else {
+    const res = await fetch('/api/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'follow', target_user_id: userId }),
+    })
+    if (!res.ok) return toast('Follow failed')
+    const d = await res.json()
+    if (d.following) {
       setFollowing(prev => { const n = new Set(prev); n.add(userId); return n })
       toast('Following')
+    } else {
+      setFollowing(prev => { const n = new Set(prev); n.delete(userId); return n })
+      toast('Unfollowed')
     }
   }
 

@@ -180,11 +180,14 @@ export default function ProfileHeader({
                 display: 'grid', placeItems: 'center',
                 fontSize: 28, fontWeight: 800, color: 'var(--gold)',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                position: 'relative',
               }}>
                 {(avatarPreview || profile.avatar_url) ? (
                   <img src={avatarPreview || profile.avatar_url!} alt={`${profile.full_name || profile.username}'s avatar`}
-                    className="w-full h-full object-cover" />
-                ) : initials}
+                    className="w-full h-full object-cover"
+                    onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-ph'); if (fb) fb.classList.remove('hidden') }} />
+                ) : null}
+                <span className={`af-ph ${avatarPreview || profile.avatar_url ? 'hidden' : ''}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: 'var(--gold)' }}>{initials}</span>
               </div>
               {isOwn && (
                 <label style={{

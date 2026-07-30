@@ -70,12 +70,11 @@ export function PostCard({
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-start gap-3 flex-1">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green to-gold flex items-center justify-center text-sm font-bold text-bg flex-shrink-0">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green to-gold flex items-center justify-center text-sm font-bold text-bg flex-shrink-0 relative">
             {authorAvatar ? (
-              <img src={authorAvatar} alt={authorName} className="w-10 h-10 rounded-full" />
-            ) : (
-              initials
-            )}
+              <img src={authorAvatar} alt={authorName} className="w-10 h-10 rounded-full" onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-pc'); if (fb) fb.classList.remove('hidden') }} />
+            ) : null}
+            <span className={`af-pc ${authorAvatar ? 'hidden' : ''}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{initials}</span>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">

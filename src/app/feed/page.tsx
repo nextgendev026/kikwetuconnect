@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { ArrowUp, MessageCircle, Smile, Share2, Globe, Star, Flag } from 'lucide-react'
+import { ArrowUp, MessageCircle, Smile, Share2, Globe, Star, Flag, MoreHorizontal, Edit3, Trash2, EyeOff, Eye } from 'lucide-react'
 
 const COUNTIES = [
   'Nairobi', 'Mombasa', 'Kisumu', 'Eldoret', 'Kitale', 'Nakuru', 'Thika', 'Kericho',
@@ -58,6 +58,7 @@ interface Post {
   upvotes_count: number
   answers_count: number
   is_pinned: boolean
+  is_hidden: boolean
   created_at: string
   category: string
   profiles: Profile | null
@@ -165,6 +166,49 @@ function PostCardComponent({
   const [reactions, setReactions] = useState<Record<string, number>>({})
   const [translatedText, setTranslatedText] = useState<string | null>(null)
   const [loadingTrans, setLoadingTrans] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState(post.title || '')
+  const [editContent, setEditContent] = useState(post.content)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [hidden, setHidden] = useState(post.is_hidden)
+
+  const handleEditSave = async () => {
+    const res = await fetch(`/api/posts/${post.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: editTitle, content: editContent }),
+    })
+    if (!res.ok) { const j = await res.json(); toast(j.error || 'Failed to update'); return }
+    const j = await res.json()
+    post.title = j.post.title
+    post.content = j.post.content
+    toast('Post updated')
+    setEditing(false)
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    const res = await fetch(`/api/posts/${post.id}`, { method: 'DELETE' })
+    setDeleting(false)
+    if (!res.ok) { const j = await res.json(); toast(j.error || 'Failed to delete'); return }
+    toast('Post deleted')
+    onVote(post.id, null)
+    window.location.reload()
+  }
+
+  const handleHide = async () => {
+    const res = await fetch(`/api/posts/${post.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_hidden: !hidden }),
+    })
+    if (!res.ok) { const j = await res.json(); toast(j.error || 'Failed'); return }
+    setHidden(!hidden)
+    if (!hidden) window.location.reload()
+    toast(hidden ? 'Post unhidden' : 'Post hidden')
+  }
 
   useEffect(() => {
     const stored = localStorage.getItem(`reactions-${post.id}`)
@@ -240,6 +284,29 @@ function PostCardComponent({
             </span>
           )}
           <span className="text-[var(--muted)] text-[11px] whitespace-nowrap">{timeAgo(post.created_at)}</span>
+          {currentUserId === post.user_id && (
+            <div className="relative">
+              <button onClick={() => setShowMenu(!showMenu)} className="action-button w-[28px] h-[28px]" aria-label="Post options">
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+              {showMenu && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 min-w-[140px] bg-deep border border-[var(--line)] rounded-lg shadow-xl z-20 animate-rise overflow-hidden">
+                    <button onClick={() => { setShowMenu(false); setEditing(true); setEditTitle(post.title || ''); setEditContent(post.content) }} className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-cream hover:bg-[var(--surface)] transition-colors">
+                      <Edit3 className="w-3.5 h-3.5" /> Edit
+                    </button>
+                    <button onClick={() => { setShowMenu(false); handleHide() }} className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-cream hover:bg-[var(--surface)] transition-colors">
+                      {hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />} {hidden ? 'Unhide' : 'Hide'}
+                    </button>
+                    <button onClick={() => { setShowMenu(false); setConfirmDelete(true) }} className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-red hover:bg-[var(--surface)] transition-colors">
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -377,6 +444,39 @@ function PostCardComponent({
           ))}
         </div>
       )}
+
+      {/* Edit modal */}
+      {editing && (
+        <div onClick={(e) => { if (e.target === e.currentTarget) setEditing(false) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(520px, 94%)' }}>
+            <h3 style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink)', margin: '0 0 16px' }}>Edit post</h3>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <input style={{ background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 9, padding: '10px 14px', fontSize: 13, color: 'var(--ink)', outline: 'none' }} placeholder="Title (optional)" value={editTitle} onChange={e => setEditTitle(e.target.value)} />
+              <textarea style={{ background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 9, padding: '10px 14px', fontSize: 13, color: 'var(--ink)', outline: 'none', minHeight: 150, resize: 'vertical' }} placeholder="Write your post..." value={editContent} onChange={e => setEditContent(e.target.value)} />
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
+              <button onClick={() => setEditing(false)} style={{ minHeight: 36, borderRadius: 9, padding: '0 14px', background: 'var(--raised)', color: 'var(--ink)', fontSize: 11, fontWeight: 700, border: 0, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleEditSave} style={{ minHeight: 36, borderRadius: 9, padding: '0 14px', background: 'var(--gold)', color: 'var(--night)', fontSize: 11, fontWeight: 700, border: 0, cursor: 'pointer' }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {confirmDelete && (
+        <div onClick={(e) => { if (e.target === e.currentTarget) setConfirmDelete(false) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(360px, 94%)', textAlign: 'center' }}>
+            <h3 style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink)', margin: '0 0 8px' }}>Delete post?</h3>
+            <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 18px' }}>This action cannot be undone.</p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+              <button onClick={() => setConfirmDelete(false)} style={{ minHeight: 36, borderRadius: 9, padding: '0 14px', background: 'var(--raised)', color: 'var(--ink)', fontSize: 11, fontWeight: 700, border: 0, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleDelete} disabled={deleting} style={{ minHeight: 36, borderRadius: 9, padding: '0 14px', background: 'var(--red)', color: '#fff', fontSize: 11, fontWeight: 700, border: 0, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? .5 : 1 }}>
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -429,6 +529,7 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
             const json = await res.json()
             const rawPosts = (json.posts || []).map((p: any) => ({
               ...p,
+              is_hidden: false,
               profiles: {
                 id: p.author_id,
                 full_name: p.author_name,
@@ -494,6 +595,9 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
         if (ids.length > 0) { query = query.in('id', ids) }
         else { setPosts([]); setLoading(false); return }
       }
+
+      if (profile) query = query.or(`is_hidden.neq.true,user_id.eq.${profile.id}`)
+      else query = query.neq('is_hidden', true)
 
       const { data, error: fetchError } = await query
       if (fetchError) throw new Error(fetchError.message)

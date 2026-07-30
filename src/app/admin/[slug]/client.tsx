@@ -341,12 +341,22 @@ function SpacesPage() {
   const supabase = useSupabase()
   const [spaces, setSpaces] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState<any>(null)
+  const [editForm, setEditForm] = useState({ name: '', description: '', icon: '', category: '' })
   useEffect(() => {
     if (typeof supabase?.from !== 'function') return
     supabase.from('spaces').select('id, name, slug, description, icon, category, member_count, post_count, is_private, created_at').order('member_count', { ascending: false }).limit(30).then(({ data }: { data: any }) => {
       if (data) setSpaces(data); setLoading(false)
     })
   }, [supabase])
+  const openEdit = (sp: any) => { setEditing(sp); setEditForm({ name: sp.name, description: sp.description || '', icon: sp.icon || '📁', category: sp.category || 'General' }) }
+  const saveEdit = async () => {
+    if (!editing || !editForm.name.trim()) { toast('Name required'); return }
+    const { error } = await supabase.from('spaces').update({ name: editForm.name, description: editForm.description, icon: editForm.icon, category: editForm.category }).eq('id', editing.id)
+    if (error) { toast(error.message); return }
+    setSpaces(prev => prev.map(s => s.id === editing.id ? { ...s, name: editForm.name, description: editForm.description, icon: editForm.icon, category: editForm.category } : s))
+    toast('Space updated'); setEditing(null)
+  }
   if (loading) return s.spinner()
   return (
     <>
@@ -355,7 +365,8 @@ function SpacesPage() {
         {spaces.length === 0 ? (
           <div style={{ ...s.card(), gridColumn: '1/-1', textAlign: 'center' }}><p style={{ color: 'var(--muted)', fontSize: 12 }}>No spaces created yet</p></div>
         ) : spaces.map((sp: any) => (
-          <div key={sp.id} style={s.card()}>
+          <div key={sp.id} style={s.card({ position: 'relative' })}>
+            <button onClick={() => openEdit(sp)} style={{ position: 'absolute', top: 10, right: 10, background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 7, width: 28, height: 28, cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--muted)', fontSize: 13, lineHeight: 1 }}>✎</button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
               <span style={{ fontSize: 20 }}>{sp.icon || '📁'}</span>
               <div><b style={{ fontSize: 13, color: 'var(--ink)' }}>{sp.name}</b><small style={{ display: 'block', color: 'var(--muted)', fontSize: 9 }}>/{sp.slug}</small></div>
@@ -369,6 +380,26 @@ function SpacesPage() {
           </div>
         ))}
       </div>
+
+      {editing && (
+        <div onClick={(e) => { if (e.target === e.currentTarget) setEditing(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(440px, 94%)' }}>
+            <h2 style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink)', margin: '0 0 16px' }}>Edit Space</h2>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div><label style={s.label}>Name</label><input style={s.input()} value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} /></div>
+              <div><label style={s.label}>Description</label><textarea style={{ ...s.input(), minHeight: 60, resize: 'vertical' }} value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} /></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div><label style={s.label}>Icon</label><input style={s.input()} value={editForm.icon} onChange={e => setEditForm(p => ({ ...p, icon: e.target.value }))} placeholder="📁" /></div>
+                <div><label style={s.label}>Category</label><input style={s.input()} value={editForm.category} onChange={e => setEditForm(p => ({ ...p, category: e.target.value }))} /></div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
+              <button onClick={() => setEditing(null)} style={s.btn('var(--raised)', 'var(--ink)')}>Cancel</button>
+              <button onClick={saveEdit} style={s.btn()}>Save changes</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
