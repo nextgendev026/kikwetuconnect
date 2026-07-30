@@ -34,7 +34,7 @@ export async function middleware(req: NextRequest) {
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
     if (!profile || profile.role !== 'admin') {
       return NextResponse.redirect(new URL('/feed', req.url))

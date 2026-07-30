@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
         .from('marketplace_orders')
         .select('id, total_price, status, buyer_id')
         .eq('id', order_id)
-        .single()
+        .maybeSingle()
 
       if (orderErr || !order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
       if (order.buyer_id !== user.id) return NextResponse.json({ error: 'Not your order' }, { status: 403 })
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
         .from('marketplace_orders')
         .select('id, total_price, status, buyer_id')
         .eq('id', order_id)
-        .single()
+        .maybeSingle()
 
       if (orderErr || !order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
       if (order.buyer_id !== user.id) return NextResponse.json({ error: 'Not your order' }, { status: 403 })

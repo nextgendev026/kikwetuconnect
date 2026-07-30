@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
         .select('*')
         .eq('user_id', user.id)
         .eq('topic_id', topicId)
-        .single()
+        .maybeSingle()
 
       if (existing) {
         return NextResponse.json(

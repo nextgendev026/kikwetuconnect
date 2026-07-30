@@ -69,7 +69,7 @@ export default function ProfessionalsPage() {
 
   const checkAdmin = async () => {
     if (!profile) return
-    const { data } = await supabase.from('profiles').select('is_expert').eq('id', profile.id).single()
+    const { data } = await supabase.from('profiles').select('is_expert').eq('id', profile.id).maybeSingle()
     if (data?.is_expert) setIsAdmin(true)
   }
 

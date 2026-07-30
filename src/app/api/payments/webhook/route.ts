@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
         .from('marketplace_orders')
         .select('id, status, buyer_id, total_price')
         .eq('payment_reference', CheckoutRequestID)
-        .single()
+        .maybeSingle()
 
       if (!order) {
         console.error(`No order found for CheckoutRequestID: ${CheckoutRequestID}`)

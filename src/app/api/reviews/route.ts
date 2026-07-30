@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const { order_id, listing_id, rating, comment } = parsed.data
 
     const { data: order } = await supabase
-      .from('marketplace_orders').select('id, buyer_id, status').eq('id', order_id).single()
+      .from('marketplace_orders').select('id, buyer_id, status').eq('id', order_id).maybeSingle()
     if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     if (order.buyer_id !== user.id) return NextResponse.json({ error: 'Only the buyer can review' }, { status: 403 })
     if (order.status !== 'delivered') return NextResponse.json({ error: 'Can only review delivered orders' }, { status: 400 })

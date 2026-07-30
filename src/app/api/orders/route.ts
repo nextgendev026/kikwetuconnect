@@ -51,7 +51,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'Order cancelled' })
     }
 
-    const { data: order } = await supabase.from('marketplace_orders').select('*').eq('id', order_id).single()
+    const { data: order } = await supabase.from('marketplace_orders').select('*').eq('id', order_id).maybeSingle()
     if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
 
     const isBuyer = order.buyer_id === user.id

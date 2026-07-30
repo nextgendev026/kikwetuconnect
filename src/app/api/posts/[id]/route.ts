@@ -10,7 +10,7 @@ export async function PATCH(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: post } = await supabase.from('posts').select('user_id').eq('id', id).single()
+  const { data: post } = await supabase.from('posts').select('user_id').eq('id', id).maybeSingle()
   if (!post) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (post.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -22,7 +22,7 @@ export async function PATCH(
   }
   if (Object.keys(updates).length === 0) return NextResponse.json({ error: 'No valid fields' }, { status: 400 })
 
-  const { data: updated, error } = await supabase.from('posts').update(updates).eq('id', id).select().single()
+  const { data: updated, error } = await supabase.from('posts').update(updates).eq('id', id).select().maybeSingle()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ post: updated })
 }
@@ -36,7 +36,7 @@ export async function DELETE(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: post } = await supabase.from('posts').select('user_id').eq('id', id).single()
+  const { data: post } = await supabase.from('posts').select('user_id').eq('id', id).maybeSingle()
   if (!post) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (post.user_id !== user.id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 

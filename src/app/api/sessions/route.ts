@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     if (!request_id) return NextResponse.json({ error: 'Missing request_id' }, { status: 400 })
 
     const { data: helpReq, error: reqErr } = await supabase
-      .from('student_help_requests').select('id, student_id, status').eq('id', request_id).single()
+      .from('student_help_requests').select('id, student_id, status').eq('id', request_id).maybeSingle()
     if (reqErr || !helpReq) return NextResponse.json({ error: 'Help request not found' }, { status: 404 })
     if (helpReq.status !== 'open') return NextResponse.json({ error: 'Request is no longer open' }, { status: 400 })
     if (helpReq.student_id === user.id) return NextResponse.json({ error: 'Cannot help yourself' }, { status: 400 })
@@ -52,7 +52,7 @@ export async function PATCH(request: NextRequest) {
     if (!session_id) return NextResponse.json({ error: 'Missing session_id' }, { status: 400 })
 
     const { data: session, error: sessErr } = await supabase
-      .from('student_sessions').select('id, expert_id, student_id, status, started_at').eq('id', session_id).single()
+      .from('student_sessions').select('id, expert_id, student_id, status, started_at').eq('id', session_id).maybeSingle()
     if (sessErr || !session) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     if (session.expert_id !== user.id && session.student_id !== user.id) {
       return NextResponse.json({ error: 'Not a participant' }, { status: 403 })

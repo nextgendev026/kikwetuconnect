@@ -90,7 +90,7 @@ export default function NyumbaPage() {
       .channel('nyumba-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'nyumba_kumi_alerts' }, (payload: any) => {
         const newAlert = payload.new as any
-        supabase.from('nyumba_kumi_alerts').select(`*, profiles:user_id (id, full_name, username, avatar_url)`).eq('id', newAlert.id).single().then((result: any) => { const data = result.data
+        supabase.from('nyumba_kumi_alerts').select(`*, profiles:user_id (id, full_name, username, avatar_url)`).eq('id', newAlert.id).maybeSingle().then((result: any) => { const data = result.data
           if (data) setAlerts(prev => {
             if (prev.some(a => a.id === data.id)) return prev
             return [data as Alert, ...prev]
