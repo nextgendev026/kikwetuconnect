@@ -2,7 +2,6 @@
 import { useSupabase, toast } from '@/app/providers'
 import { useUser } from '@/app/providers'
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 
 const PAGE_META: Record<string, { title: string; desc: string }> = {
   analytics: { title: 'Analytics that answer real questions.', desc: 'Track growth, trust, learning, local activity, and money movement.' },
@@ -56,9 +55,11 @@ function KpiCards({ items }: { items: { label: string; value: string | number; s
 }
 
 // =============== ANALYTICS ===============
-function AnalyticsPage({ supabase }: { supabase: any }) {
+function AnalyticsPage() {
+  const supabase = useSupabase()
   const [data, setData] = useState<any>(null)
   useEffect(() => {
+    if (typeof supabase?.from !== 'function') return
     Promise.all([
       supabase.from('profiles').select('*', { count: 'exact', head: true }),
       supabase.from('posts').select('*', { count: 'exact', head: true }),
@@ -122,9 +123,11 @@ function AnalyticsPage({ supabase }: { supabase: any }) {
 }
 
 // =============== HEALTH ===============
-function HealthPage({ supabase }: { supabase: any }) {
+function HealthPage() {
+  const supabase = useSupabase()
   const [health, setHealth] = useState<any>(null)
   useEffect(() => {
+    if (typeof supabase?.from !== 'function') return
     Promise.all([
       supabase.rpc('get_admin_stats'),
       supabase.from('translations').select('*', { count: 'exact', head: true }),
@@ -165,11 +168,13 @@ function HealthPage({ supabase }: { supabase: any }) {
 }
 
 // =============== VERIFICATION ===============
-function VerificationPage({ supabase }: { supabase: any }) {
+function VerificationPage() {
+  const supabase = useSupabase()
   const { profile } = useUser()
   const [pros, setPros] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const fetchPros = () => {
+    if (typeof supabase?.from !== 'function') return
     supabase.from('professionals').select('*, profiles(id, full_name, username, avatar_url, heshima_rating)').order('created_at', { ascending: false }).then(({ data }: { data: any }) => {
       if (data) setPros(data); setLoading(false)
     })
@@ -240,7 +245,8 @@ function VerificationPage({ supabase }: { supabase: any }) {
 }
 
 // =============== USERS ===============
-function UsersPage({ supabase }: { supabase: any }) {
+function UsersPage() {
+  const supabase = useSupabase()
   const { profile: admin } = useUser()
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -248,6 +254,7 @@ function UsersPage({ supabase }: { supabase: any }) {
   const [suspendModal, setSuspendModal] = useState<any>(null)
   const [reason, setReason] = useState('')
   const fetchUsers = useCallback(async () => {
+    if (typeof supabase?.from !== 'function') return
     let q = supabase.from('profiles').select('id, username, full_name, avatar_url, role, heshima_rating, is_verified_expert, county_hub, created_at, is_online').order('created_at', { ascending: false }).limit(50)
     if (search) q = supabase.from('profiles').select('id, username, full_name, avatar_url, role, heshima_rating, is_verified_expert, county_hub, created_at, is_online').ilike('username', `%${search}%`).limit(50)
     const { data } = await q
@@ -330,10 +337,12 @@ function UsersPage({ supabase }: { supabase: any }) {
 }
 
 // =============== SPACES ===============
-function SpacesPage({ supabase }: { supabase: any }) {
+function SpacesPage() {
+  const supabase = useSupabase()
   const [spaces, setSpaces] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   useEffect(() => {
+    if (typeof supabase?.from !== 'function') return
     supabase.from('spaces').select('id, name, slug, description, icon, category, member_count, post_count, is_private, created_at').order('member_count', { ascending: false }).limit(30).then(({ data }: { data: any }) => {
       if (data) setSpaces(data); setLoading(false)
     })
@@ -365,10 +374,12 @@ function SpacesPage({ supabase }: { supabase: any }) {
 }
 
 // =============== MARKETPLACE ===============
-function MarketplacePage({ supabase }: { supabase: any }) {
+function MarketplacePage() {
+  const supabase = useSupabase()
   const [listings, setListings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   useEffect(() => {
+    if (typeof supabase?.from !== 'function') return
     supabase.from('marketplace_listings').select('*, profiles(id, full_name, username)').order('created_at', { ascending: false }).limit(30).then(({ data }: { data: any }) => {
       if (data) setListings(data); setLoading(false)
     })
@@ -428,10 +439,12 @@ function MarketplacePage({ supabase }: { supabase: any }) {
 }
 
 // =============== SAFETY ===============
-function SafetyPage({ supabase }: { supabase: any }) {
+function SafetyPage() {
+  const supabase = useSupabase()
   const [alerts, setAlerts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   useEffect(() => {
+    if (typeof supabase?.from !== 'function') return
     supabase.from('nyumba_kumi_alerts').select('*, profiles(id, full_name, username)').order('created_at', { ascending: false }).limit(30).then(({ data }: { data: any }) => {
       if (data) setAlerts(data); setLoading(false)
     })
@@ -495,9 +508,11 @@ function SafetyPage({ supabase }: { supabase: any }) {
 }
 
 // =============== PAYMENTS ===============
-function PaymentsPage({ supabase }: { supabase: any }) {
+function PaymentsPage() {
+  const supabase = useSupabase()
   const [data, setData] = useState<any>(null)
   useEffect(() => {
+    if (typeof supabase?.from !== 'function') return
     Promise.all([
       supabase.from('tips').select('*', { count: 'exact', head: true }),
       supabase.from('payouts').select('*', { count: 'exact', head: true }),
@@ -551,7 +566,8 @@ function PaymentsPage({ supabase }: { supabase: any }) {
 }
 
 // =============== SETTINGS ===============
-function SettingsPage({ supabase }: { supabase: any }) {
+function SettingsPage() {
+  const supabase = useSupabase()
   const [saving, setSaving] = useState('')
   const [settings, setSettings] = useState({
     allowPublicSignup: true, defaultLanguage: 'en', requireVerification: false,
@@ -611,10 +627,12 @@ function SettingsPage({ supabase }: { supabase: any }) {
 }
 
 // =============== AUDIT ===============
-function AuditPage({ supabase }: { supabase: any }) {
+function AuditPage() {
+  const supabase = useSupabase()
   const [logs, setLogs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   useEffect(() => {
+    if (typeof supabase?.from !== 'function') return
     supabase.from('audit_logs').select('*, profiles(id, full_name, username)').order('created_at', { ascending: false }).limit(50).then(({ data }: { data: any }) => {
       if (data) setLogs(data); setLoading(false)
     })
@@ -658,19 +676,17 @@ export default function AdminPageClient({ slug }: { slug: string }) {
   const supabase = useSupabase()
   const meta = PAGE_META[slug] || { title: slug, desc: 'Manage this section.' }
 
-  if (!supabase) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>Connecting...</div>
-
-  const pages: Record<string, (s: any) => React.ReactNode> = {
-    analytics: (s) => <AnalyticsPage supabase={s} />,
-    health: (s) => <HealthPage supabase={s} />,
-    verification: (s) => <VerificationPage supabase={s} />,
-    users: (s) => <UsersPage supabase={s} />,
-    spaces: (s) => <SpacesPage supabase={s} />,
-    marketplace: (s) => <MarketplacePage supabase={s} />,
-    safety: (s) => <SafetyPage supabase={s} />,
-    payments: (s) => <PaymentsPage supabase={s} />,
-    settings: (s) => <SettingsPage supabase={s} />,
-    audit: (s) => <AuditPage supabase={s} />,
+  const pages: Record<string, () => React.ReactNode> = {
+    analytics: () => <AnalyticsPage />,
+    health: () => <HealthPage />,
+    verification: () => <VerificationPage />,
+    users: () => <UsersPage />,
+    spaces: () => <SpacesPage />,
+    marketplace: () => <MarketplacePage />,
+    safety: () => <SafetyPage />,
+    payments: () => <PaymentsPage />,
+    settings: () => <SettingsPage />,
+    audit: () => <AuditPage />,
   }
 
   const Page = pages[slug]
@@ -683,5 +699,5 @@ export default function AdminPageClient({ slug }: { slug: string }) {
     )
   }
 
-  return <Page supabase={supabase} />
+  return <Page />
 }
