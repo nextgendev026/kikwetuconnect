@@ -31,7 +31,7 @@ interface QuizQuestion { id: string; quiz_id: string; question: string; options:
 interface LeaderboardEntry { user_id: string; full_name: string; username: string; total_score: number; quizzes_taken: number }
 
 export default function QuizzesPage() {
-  const { user, profile } = useUser()
+  const { user, profile, refreshProfile } = useUser()
   const supabase = useSupabase()
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
@@ -50,6 +50,10 @@ export default function QuizzesPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [badges, setBadges] = useState<any[]>([])
   const [randomQuiz, setRandomQuiz] = useState(false)
+  const [heshimaRating, setHeshimaRating] = useState(profile?.heshima_rating || 0)
+
+  // Sync local heshima with profile context
+  useEffect(() => { setHeshimaRating(profile?.heshima_rating || 0) }, [profile?.heshima_rating])
 
   useEffect(() => { fetchQuizzes(); fetchProgress(); fetchLeaderboard(); fetchBadges() }, [activeCategory])
 
@@ -57,8 +61,8 @@ export default function QuizzesPage() {
   useEffect(() => {
     if (!user) return
     const channel = supabase.channel(`quiz-progress-${user.id}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'quiz_attempts', filter: `user_id=eq.${user.id}` }, () => { fetchProgress(); fetchLeaderboard() })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, () => { fetchProgress() })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'quiz_attempts', filter: `user_id=eq.${user.id}` }, () => { fetchProgress(); fetchLeaderboard(); refreshProfile() })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, () => { fetchProgress(); refreshProfile() })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [user, supabase])
@@ -72,16 +76,27 @@ export default function QuizzesPage() {
     } finally { setLoading(false) }
   }
 
+  const calcStreak = (dates: Date[]) => {
+    if (dates.length === 0) return 0
+    const unique = [...new Set(dates.map(d => d.toDateString()))].sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
+    let streak = 0; const today = new Date().toDateString()
+    for (let i = 0; i < unique.length; i++) {
+      const expected = new Date(); expected.setDate(expected.getDate() - i)
+      if (unique[i] === expected.toDateString()) streak++
+      else if (i === 0 && unique[i] === new Date(Date.now() - 86400000).toDateString()) streak++
+      else break
+    }
+    return streak
+  }
+
   const fetchProgress = async () => {
     if (!user) return
     const { data: results } = await supabase.from('quiz_attempts').select('score, total_questions, completed_at').eq('user_id', user.id)
-    if (results && results.length > 0) {
-      const totalScore = (results as any[]).reduce((s: number, r: any) => s + (r.score || 0), 0)
-      const completed = results.length
-      const today = new Date().toDateString()
-      const recent = (results as any[]).filter(r => r.completed_at && new Date(r.completed_at).toDateString() === today).length
-      setProgress({ streak: recent > 0 ? 1 : 0, totalScore, completed })
-    }
+    const totalScore = (results as any[] || []).reduce((s: number, r: any) => s + (r.score || 0), 0)
+    const completed = (results || []).length
+    const dates = (results || []).filter((r: any) => r.completed_at).map((r: any) => new Date(r.completed_at))
+    const streak = calcStreak(dates)
+    setProgress({ streak, totalScore, completed })
   }
 
   const fetchBadges = async () => {
@@ -130,10 +145,10 @@ export default function QuizzesPage() {
     setScore(correct); setQuizComplete(true)
     const { error } = await supabase.from('quiz_attempts').insert({
       user_id: user.id, quiz_id: selectedQuiz?.id || 'random', score: correct, total_questions: questions.length,
-      answers: selectedAnswers.map((a, i) => ({ question: questions[i]?.question, selected: a, correct: questions[i]?.correct_index })),
+      answers: selectedAnswers.map((a: any, i: number) => ({ question: questions[i]?.question, selected: a, correct: questions[i]?.correct_index })),
     })
     if (error) { console.error('Quiz submission error:', error); toast('Failed to save results') }
-    else toast(`+10 Heshima earned!`)
+    else { toast(`+10 Heshima earned!`); fetchProgress(); fetchLeaderboard(); refreshProfile() }
   }
 
   const fetchLeaderboard = async () => {
@@ -166,10 +181,10 @@ export default function QuizzesPage() {
     setScore(correct); setQuizComplete(true)
     const { error } = await supabase.from('quiz_attempts').insert({
       user_id: user.id, quiz_id: selectedQuiz.id, score: correct, total_questions: questions.length,
-      answers: selectedAnswers.map((a, i) => ({ question: questions[i]?.question, selected: a, correct: questions[i]?.correct_index })),
+      answers: selectedAnswers.map((a: any, i: number) => ({ question: questions[i]?.question, selected: a, correct: questions[i]?.correct_index })),
     })
     if (error) { console.error('Quiz submission error:', error); toast('Failed to save results') }
-    fetchProgress(); fetchLeaderboard()
+    fetchProgress(); fetchLeaderboard(); refreshProfile()
   }
 
   const generateAiQuiz = async () => {
@@ -224,7 +239,7 @@ export default function QuizzesPage() {
           { icon: Flame, label: 'Daily Streak', value: `${progress.streak} day`, color: 'var(--gold)' },
           { icon: BarChart3, label: 'Total Score', value: String(progress.totalScore), color: 'var(--green)' },
           { icon: CheckCircle2, label: 'Completed', value: String(progress.completed), color: 'var(--blue)' },
-          { icon: Award, label: 'Heshima', value: String(profile?.heshima_rating || 0), color: 'var(--gold)' },
+          { icon: Award, label: 'Heshima', value: String(heshimaRating), color: 'var(--gold)' },
         ].map((s, i) => (
           <div key={i} style={style.statCard} className="card-hover">
             <div className="flex items-center gap-2 mb-2">
