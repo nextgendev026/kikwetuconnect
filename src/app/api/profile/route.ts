@@ -40,15 +40,17 @@ export async function POST(request: NextRequest) {
       }
 
       const { data: { publicUrl } } = supabase.storage.from('public-media').getPublicUrl(path)
+      const ts = Date.now()
+      const versionedUrl = publicUrl.includes('?') ? `${publicUrl}&t=${ts}` : `${publicUrl}?t=${ts}`
 
       const updateField = type === 'avatar' ? 'avatar_url' : 'cover_url'
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ [updateField]: publicUrl, updated_at: new Date().toISOString() })
+        .update({ [updateField]: versionedUrl, updated_at: new Date().toISOString() })
         .eq('id', user.id)
       if (updateError) throw updateError
 
-      return NextResponse.json({ url: publicUrl })
+      return NextResponse.json({ url: versionedUrl })
     }
 
     // Follow/unfollow a user

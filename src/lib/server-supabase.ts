@@ -54,3 +54,5 @@ export async function requireUser(request: NextRequest): Promise<{ supabase: Ret
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) as any
   return { supabase, user: { id: user.id, email: user.email } }
 }
+
+

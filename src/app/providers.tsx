@@ -74,6 +74,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0)
   const notifChannelRef = useRef<any>(null)
   const heshimaChannelRef = useRef<any>(null)
+  const profileChannelRef = useRef<any>(null)
 
   useEffect(() => {
     const saved = localStorage.getItem('kikwetu-theme') || 'light'
@@ -181,6 +182,26 @@ export function Providers({ children }: { children: React.ReactNode }) {
     }
   }, [supabase])
 
+  const subscribeToProfile = useCallback(() => {
+    if (!user || profileChannelRef.current) return
+    const channel = supabase.channel(`profile-${user.id}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
+        (payload: any) => {
+          setProfile((payload.new as any) || null)
+        }
+      )
+      .subscribe()
+    profileChannelRef.current = channel
+  }, [supabase, user])
+
+  const unsubscribeFromProfile = useCallback(() => {
+    if (profileChannelRef.current) {
+      supabase.removeChannel(profileChannelRef.current)
+      profileChannelRef.current = null
+    }
+  }, [supabase])
+
   useEffect(() => {
     let cancelled = false
     const timeout = setTimeout(() => { if (!cancelled) setLoading(false) }, 8000)
@@ -208,14 +229,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
       fetchNotifications()
       subscribeToNotifications()
       subscribeToHeshima()
+      subscribeToProfile()
     } else {
       setNotifications([])
       setUnreadCount(0)
       unsubscribeFromNotifications()
       unsubscribeFromHeshima()
+      unsubscribeFromProfile()
     }
-    return () => { unsubscribeFromNotifications(); unsubscribeFromHeshima() }
-  }, [user, fetchNotifications, subscribeToNotifications, unsubscribeFromNotifications, subscribeToHeshima, unsubscribeFromHeshima])
+    return () => { unsubscribeFromNotifications(); unsubscribeFromHeshima(); unsubscribeFromProfile() }
+  }, [user, fetchNotifications, subscribeToNotifications, unsubscribeFromNotifications, subscribeToHeshima, unsubscribeFromHeshima, subscribeToProfile, unsubscribeFromProfile])
 
   // Admin activity logging helper
   const logAdminActivity = useCallback(async (action: string, targetType?: string, targetId?: string, details?: Record<string, any>) => {
