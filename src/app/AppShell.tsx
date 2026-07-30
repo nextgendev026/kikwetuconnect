@@ -19,7 +19,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [chatInput, setChatInput] = useState('')
   const [onlineCount, setOnlineCount] = useState(0)
   const [onlineUsers, setOnlineUsers] = useState<any[]>([])
-  const [recentProfiles, setRecentProfiles] = useState<any[]>([])
   const [trendingTopics, setTrendingTopics] = useState<any[]>([])
   const [postCount, setPostCount] = useState(0)
   const [userCount, setUserCount] = useState(0)
@@ -59,7 +58,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!supabase) return
     supabase.from('profiles').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setUserCount(count ?? 0) })
-    supabase.from('profiles').select('id, username, full_name').limit(5).then(({ data }: { data: any }) => { if (data) setRecentProfiles(data) })
     supabase.from('posts').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setPostCount(count ?? 0) })
     supabase.from('topics').select('name').order('follower_count', { ascending: false }).limit(3).then(({ data }: { data: any }) => { if (data) setTrendingTopics(data) })
     supabase.from('moderation_queue').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setModerationCount(count ?? 0) })
@@ -237,16 +235,35 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {/* Right Panel */}
           <aside className="right-panel">
           <details className="side-section" open>
-            <summary>Community members <span style={{ color: 'var(--green)', fontSize: 10, fontWeight: 400 }}>{userCount} total</span></summary>
+            <summary>Community <span style={{ color: 'var(--green)', fontSize: 10, fontWeight: 400 }}>{onlineCount} online</span></summary>
             <div className="side-body">
-              {recentProfiles.length === 0 ? (
-                <small className="text-muted">No members yet</small>
-              ) : recentProfiles.map((p, idx) => (
-                <div key={p.id || idx} className="list-row">
-                  <span className="avatar g">{(p.full_name || p.username || '?').slice(0, 2).toUpperCase()}</span>
-                  <div className="side-copy"><b>{p.full_name || p.username}</b><small>Member</small></div>
-                </div>
-              ))}
+              {onlineUsers.length === 0 ? (
+                <small className="text-muted">No members online</small>
+              ) : onlineUsers.slice(0, 8).map((p) => {
+                const name = p.full_name || p.username || 'User'
+                const initials = name.slice(0, 2).toUpperCase()
+                return (
+                  <div key={p.id} className="list-row" style={{ position: 'relative', cursor: 'pointer' }}
+                    onClick={() => window.location.href = `/profile/${p.id}`}>
+                    <span className="avatar" style={{ width: 32, height: 32, fontSize: 9, overflow: 'hidden', position: 'relative' }}>
+                      {p.avatar_url ? (
+                        <img src={p.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy"
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.textContent = initials }} />
+                      ) : initials}
+                      <span style={{ position: 'absolute', bottom: 0, right: 0, width: 9, height: 9, borderRadius: '50%', background: 'var(--green)', border: '2px solid var(--surface)' }} />
+                    </span>
+                    <div className="side-copy"><b style={{ fontSize: 11 }}>{name}</b><small style={{ fontSize: 9 }}>{p.county_hub || 'Online'}</small></div>
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 2, flex: 'none' }} onClick={e => e.stopPropagation()}>
+                      <button onClick={() => { fetch('/api/follows', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ following_id: p.id }) }).then(() => { /* follow toggled */ }).catch(() => {}) }}
+                        style={{ width: 24, height: 24, borderRadius: 6, border: 0, background: 'var(--raised)', color: 'var(--muted)', cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 9 }}
+                        title="Follow">♡</button>
+                      <button onClick={() => window.location.href = `/messages?user=${p.id}`}
+                        style={{ width: 24, height: 24, borderRadius: 6, border: 0, background: 'var(--raised)', color: 'var(--muted)', cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 9 }}
+                        title="Message">◍</button>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </details>
 
