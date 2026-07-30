@@ -46,3 +46,11 @@ export function createApiClientTyped(request: NextRequest, response?: NextRespon
     }
   )
 }
+
+/** Require authenticated user in API routes — returns 401 JSON if missing */
+export async function requireUser(request: NextRequest): Promise<{ supabase: ReturnType<typeof createApiClient>; user: { id: string; email?: string | null } } | NextResponse> {
+  const supabase = createApiClient(request)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) as any
+  return { supabase, user: { id: user.id, email: user.email } }
+}
