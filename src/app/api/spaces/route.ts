@@ -84,6 +84,9 @@ export async function POST(request: NextRequest) {
       })
       if (joinError) throw joinError
 
+      const { data: sp } = await supabase.from('spaces').select('member_count').eq('id', space_id).maybeSingle()
+      if (sp) await supabase.from('spaces').update({ member_count: (sp.member_count || 0) + 1 }).eq('id', space_id)
+
       return NextResponse.json({ success: true })
     }
 
@@ -94,6 +97,9 @@ export async function POST(request: NextRequest) {
       const { error: leaveError } = await supabase.from('space_members')
         .delete().eq('space_id', space_id).eq('user_id', user.id)
       if (leaveError) throw leaveError
+
+      const { data: sp } = await supabase.from('spaces').select('member_count').eq('id', space_id).maybeSingle()
+      if (sp) await supabase.from('spaces').update({ member_count: Math.max(0, (sp.member_count || 0) - 1) }).eq('id', space_id)
 
       return NextResponse.json({ success: true })
     }

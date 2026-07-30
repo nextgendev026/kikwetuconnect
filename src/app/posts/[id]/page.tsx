@@ -83,22 +83,10 @@ export default function PostDetailPage() {
   const fetchPost = async () => {
     try {
       const { data, error } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          profiles:user_id (
-            id,
-            full_name,
-            username,
-            heshima_rating,
-            is_verified_expert
-          )
-        `)
-        .eq('id', postId)
-        .single()
+        .rpc('get_post_by_id', { p_post_id: postId })
 
       if (error) throw error
-      setPost(data as Post)
+      setPost(data as unknown as Post)
     } catch (err) {
       console.error('Error fetching post:', err)
     } finally {

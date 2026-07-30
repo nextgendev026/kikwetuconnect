@@ -239,7 +239,7 @@ export function useMessages(conversationId: string | null) {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_typing', filter: `conversation_id=eq.${conversationId}` }, async (payload: any) => {
         const t = payload.new as any
         if (t.user_id === user.id) return
-        const { data: prof } = await supabase.from('profiles').select('username, full_name').eq('id', t.user_id).single()
+        const { data: prof } = await supabase.from('profiles').select('username, full_name').eq('id', t.user_id).maybeSingle()
         if (prof) setTypingUsers(prev => prev.some(u => u.user_id === t.user_id) ? prev : [...prev, { user_id: t.user_id, ...prof }])
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'user_typing', filter: `conversation_id=eq.${conversationId}` }, (payload: any) => {

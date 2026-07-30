@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Notify post owner (if not answering own post)
     const { data: answeredPost } = await supabase
-      .from('posts').select('user_id, title').eq('id', postId).single()
+      .from('posts').select('user_id, title').eq('id', postId).maybeSingle()
     if (answeredPost && answeredPost.user_id !== user.id) {
       await supabase.from('notifications').insert({
         user_id: answeredPost.user_id,

@@ -12,9 +12,12 @@ export async function GET(request: NextRequest) {
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
     return NextResponse.json({ profile })
   } catch {

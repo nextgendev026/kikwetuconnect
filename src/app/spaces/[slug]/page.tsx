@@ -13,12 +13,12 @@ interface Space {
 
 interface Post {
   id: string; content: string; title: string; created_at: string; user_id: string
-  profiles: { id: string; full_name: string; username: string; avatar_url: string | null }[] | null
+  profiles: { id: string; full_name: string; username: string; avatar_url: string | null } | null
 }
 
 interface Member {
   user_id: string; role: string
-  profiles: { id: string; full_name: string; username: string; avatar_url: string | null }[] | null
+  profiles: { id: string; full_name: string; username: string; avatar_url: string | null } | null
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -59,23 +59,23 @@ export default function SpaceDetailPage() {
   const fetchSpace = async () => {
     setLoading(true)
     try {
-      const { data: sData } = await supabase.from('spaces').select('*').eq('slug', slug).single()
+      const { data: sData } = await supabase.from('spaces').select('*').eq('slug', slug).maybeSingle()
       if (!sData) { toast('Space not found'); router.push('/spaces'); return }
       setSpace(sData as Space)
 
       const { data: pData } = await supabase
         .from('posts').select('*, profiles:user_id(id, full_name, username, avatar_url)')
         .eq('space_id', sData.id).order('created_at', { ascending: false }).limit(50)
-      if (pData) setPosts(pData as Post[])
+      if (pData) setPosts(pData as unknown as Post[])
 
       const { data: mData } = await supabase
         .from('space_members').select('user_id, role, profiles:user_id(id, full_name, username, avatar_url)')
         .eq('space_id', sData.id).limit(50)
-      if (mData) setMembers(mData as Member[])
+      if (mData) setMembers(mData as unknown as Member[])
 
       if (profile) {
         const { data: membership } = await supabase.from('space_members')
-          .select('role').eq('space_id', sData.id).eq('user_id', profile.id).single()
+          .select('role').eq('space_id', sData.id).eq('user_id', profile.id).maybeSingle()
         if (membership) { setIsMember(true); if (membership.role === 'admin') setIsAdmin(true) }
       }
     } catch { toast('Error loading space') }
@@ -90,7 +90,7 @@ export default function SpaceDetailPage() {
       await supabase.from('spaces').update({ member_count: (space.member_count || 0) + 1 }).eq('id', space.id)
       setIsMember(true)
       setSpace(prev => prev ? { ...prev, member_count: (prev.member_count || 0) + 1 } : prev)
-      setMembers(prev => [...prev, { user_id: profile.id, role: 'member', profiles: [{ id: profile.id, full_name: profile.full_name, username: profile.username, avatar_url: profile.avatar_url }] }])
+      setMembers(prev => [...prev, { user_id: profile.id, role: 'member', profiles: { id: profile.id, full_name: profile.full_name, username: profile.username, avatar_url: profile.avatar_url } }])
       toast(`Joined ${space.name}`)
     } catch { toast('Failed to join') }
   }
@@ -208,10 +208,10 @@ export default function SpaceDetailPage() {
                   {members.map(m => (
                     <div key={m.user_id} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'var(--raised)' }}>
                       <div className="w-7 h-7 rounded-full grid place-items-center text-[9px] font-bold flex-shrink-0" style={{ background: 'var(--earth)', color: 'var(--gold)' }}>
-                        {(m.profiles?.[0]?.full_name || m.profiles?.[0]?.username || '?')[0].toUpperCase()}
+                        {(m.profiles?.full_name || m.profiles?.username || '?')[0].toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[11px] font-medium truncate" style={{ color: 'var(--ink)' }}>{m.profiles?.[0]?.full_name || m.profiles?.[0]?.username || 'User'}</p>
+                        <p className="text-[11px] font-medium truncate" style={{ color: 'var(--ink)' }}>{m.profiles?.full_name || m.profiles?.username || 'User'}</p>
                         <p className="text-[8px]" style={{ color: 'var(--muted)' }}>{m.role}</p>
                       </div>
                     </div>
@@ -268,11 +268,11 @@ export default function SpaceDetailPage() {
               <div key={post.id} style={s.card} className="feature-card">
                 <div className="flex items-start gap-3 mb-3">
                   <div className="w-8 h-8 rounded-full grid place-items-center text-[10px] font-bold flex-shrink-0" style={{ background: 'var(--earth)', color: 'var(--gold)' }}>
-                    {(post.profiles?.[0]?.full_name || post.profiles?.[0]?.username || '?')[0].toUpperCase()}
+                    {(post.profiles?.full_name || post.profiles?.username || '?')[0].toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold" style={{ color: 'var(--ink)' }}>{post.profiles?.[0]?.full_name || post.profiles?.[0]?.username || 'User'}</span>
+                      <span className="text-xs font-semibold" style={{ color: 'var(--ink)' }}>{post.profiles?.full_name || post.profiles?.username || 'User'}</span>
                       <span className="text-[9px]" style={{ color: 'var(--muted)' }}>{formatTime(post.created_at)}</span>
                     </div>
                     <p className="text-sm mt-1 leading-relaxed" style={{ color: 'var(--ink)' }}>{post.content}</p>

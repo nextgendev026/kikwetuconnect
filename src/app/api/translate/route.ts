@@ -28,9 +28,9 @@ export async function POST(request: NextRequest) {
       .from(source_type)
       .select(source_type === 'posts' ? 'id, title, content' : 'id, title, description')
       .eq('id', post_id)
-      .single()
+      .maybeSingle()
 
-    if (fetchError || !row) return NextResponse.json({ error: 'Content not found' }, { status: 404 })
+    if (!row) return NextResponse.json({ error: 'Content not found' }, { status: 404 })
 
     const title = (row as any).title || ''
     const text = (row as any).content || (row as any).description || ''

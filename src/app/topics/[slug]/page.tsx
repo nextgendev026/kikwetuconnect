@@ -71,7 +71,7 @@ export default function TopicDetailPage() {
         .from('topics')
         .select('*')
         .eq('slug', slug)
-        .single()
+        .maybeSingle()
 
       if (error) throw error
       setTopic(data as Topic)
@@ -126,7 +126,7 @@ export default function TopicDetailPage() {
         .select('*')
         .eq('user_id', profile.id)
         .eq('topic_id', topic.id)
-        .single()
+        .maybeSingle()
 
       setIsFollowing(!!data)
     } catch (err) {

@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .eq('target_id', targetId)
       .eq('target_type', targetType)
-      .single()
+      .maybeSingle()
 
     if (existingVote) {
       // If same vote type, remove it (toggle off)
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         .from('votes')
         .select('vote_type')
         .eq('id', existingVote.id)
-        .single()
+        .maybeSingle()
 
       if (currentVote?.vote_type === voteType) {
         // Delete vote
