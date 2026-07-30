@@ -55,47 +55,46 @@ export default function ProfilePage() {
   const fetchAllData = useCallback(async () => {
     if (!profile) return
     setLoadingData(true)
-    try {
-      const [answersRes, questionsRes, tokensRes, badgesRes, postsRes, savesRes, countRes, featuredRes, earningsRes] = await Promise.all([
-        supabase.from('answers').select('id').eq('user_id', profile.id),
-        supabase.from('posts').select('id').eq('user_id', profile.id).eq('post_type', 'inquiry'),
-        supabase.from('tokens').select('amount').eq('user_id', profile.id),
-        supabase.from('user_badges').select('badge_id, awarded_at, badges:badge_id(id, name, description, icon)').eq('user_id', profile.id),
-        supabase.from('posts').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(5),
-        supabase.from('saves').select('id, target_id, target_type, created_at, posts:target_id!left(id, title, content, post_type)').eq('user_id', profile.id).eq('target_type', 'post').order('created_at', { ascending: false }).limit(5),
-        supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profile.id),
-        profile.featured_post_id
-          ? supabase.from('posts').select('*').eq('id', profile.featured_post_id).single()
-          : Promise.resolve({ data: null }),
-        supabase.from('heshima_earnings').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(10),
-      ])
 
-      setStats({
-        answers: answersRes.data?.length || 0,
-        questions: questionsRes.data?.length || 0,
-        tokens: tokensRes.data?.reduce((sum: number, t: any) => sum + t.amount, 0) || 0,
-        heshima: profile.heshima_rating || 0,
-      })
-      setPostCount(countRes.count || 0)
+    const safeQuery = async (fn: () => any, fb: any = null) => { try { return await fn() } catch { return { data: fb } } }
 
-      if (badgesRes.data) {
-        setBadges(badgesRes.data.map((b: any) => ({
-          id: b.badges?.id || b.badge_id,
-          name: b.badges?.name || 'Unknown',
-          description: b.badges?.description || '',
-          icon: b.badges?.icon || '🏅',
-          awarded_at: b.awarded_at,
-        })))
-      }
-      setRecentPosts((postsRes.data as Post[]) || [])
-      setSavedItems((savesRes.data as unknown as SavedItem[]) || [])
-      if (featuredRes.data) setFeaturedPost(featuredRes.data as Post)
-      if (earningsRes.data) setRecentEarnings(earningsRes.data)
-    } catch (err) {
-      console.error('Error fetching profile data:', err)
-    } finally {
-      setLoadingData(false)
+    const [answersRes, questionsRes, tokensRes, badgesRes, postsRes, savesRes, countRes, featuredRes, earningsRes] = await Promise.all([
+      safeQuery(() => supabase.from('answers').select('id').eq('user_id', profile.id)),
+      safeQuery(() => supabase.from('posts').select('id').eq('user_id', profile.id).eq('post_type', 'inquiry')),
+      safeQuery(() => supabase.from('tokens').select('amount').eq('user_id', profile.id)),
+      safeQuery(() => supabase.from('user_badges').select('badge_id, awarded_at, badges:badge_id(id, name, description, icon)').eq('user_id', profile.id)),
+      safeQuery(() => supabase.from('posts').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(5)),
+      safeQuery(() => supabase.from('saves').select('id, target_id, target_type, created_at, posts:target_id!left(id, title, content, post_type)').eq('user_id', profile.id).eq('target_type', 'post').order('created_at', { ascending: false }).limit(5)),
+      safeQuery(() => supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profile.id)),
+      profile.featured_post_id
+        ? safeQuery(() => supabase.from('posts').select('*').eq('id', profile.featured_post_id).maybeSingle())
+        : Promise.resolve({ data: null }),
+      safeQuery(() => supabase.from('heshima_earnings').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(10)),
+    ])
+
+    setStats({
+      answers: answersRes.data?.length || 0,
+      questions: questionsRes.data?.length || 0,
+      tokens: (tokensRes.data as any[] | null)?.reduce((sum: number, t: any) => sum + t.amount, 0) || 0,
+      heshima: profile.heshima_rating || 0,
+    })
+    setPostCount(countRes.count || 0)
+
+    if (badgesRes.data) {
+      setBadges((badgesRes.data as any[]).map((b: any) => ({
+        id: b.badges?.id || b.badge_id,
+        name: b.badges?.name || 'Unknown',
+        description: b.badges?.description || '',
+        icon: b.badges?.icon || '🏅',
+        awarded_at: b.awarded_at,
+      })))
     }
+    setRecentPosts((postsRes.data as Post[]) || [])
+    setSavedItems((savesRes.data as unknown as SavedItem[]) || [])
+    if (featuredRes.data) setFeaturedPost(featuredRes.data as Post)
+    if (earningsRes.data) setRecentEarnings(earningsRes.data as any[])
+
+    setLoadingData(false)
   }, [profile, supabase])
 
   useEffect(() => {

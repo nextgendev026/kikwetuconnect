@@ -40,3 +40,5 @@ begin
   return result;
 end;
 $$;
+
+grant execute on function get_post_by_id to authenticated, anon;
