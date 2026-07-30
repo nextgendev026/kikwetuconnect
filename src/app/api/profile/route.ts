@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { action } = body
 
-    // Generate signed upload URL for avatar or cover (private bucket)
+    // Generate signed upload URL for avatar or cover
     if (action === 'upload-url') {
       const { type, mimeType } = body
       if (!type || !['avatar', 'cover'].includes(type)) {
@@ -20,33 +20,37 @@ export async function POST(request: NextRequest) {
       const path = `${type}s/${user.id}-${Date.now()}.${ext}`
 
       const { data: signedData, error: signedError } = await supabase.storage
-        .from('media')
+        .from('public-media')
         .createSignedUploadUrl(path)
       if (signedError) throw signedError
 
       return NextResponse.json({
         signedUrl: signedData.signedUrl,
         path,
-        fullPath: `media/${path}`,
+        fullPath: `public-media/${path}`,
         token: signedData.token,
       })
     }
 
-    // Confirm upload: copy to public prefix, update profile
+    // Confirm upload: verify file, update profile
     if (action === 'confirm-upload') {
       const { type, path } = body
       if (!type || !['avatar', 'cover'].includes(type)) {
         return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
       }
 
-      // Copy from private to public location
-      const publicPath = `public/${path}`
-      const { error: copyErr } = await supabase.storage
-        .from('media')
-        .copy(path, publicPath)
-      if (copyErr) throw copyErr
+      // Verify file exists
+      const { data: files, error: listErr } = await supabase.storage
+        .from('public-media')
+        .list(path.split('/').slice(0, -1).join('/'), {
+          search: path.split('/').pop(),
+          limit: 1,
+        })
+      if (listErr || !files?.length) {
+        throw new Error('File not found after upload')
+      }
 
-      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(publicPath)
+      const { data: { publicUrl } } = supabase.storage.from('public-media').getPublicUrl(path)
 
       const updateField = type === 'avatar' ? 'avatar_url' : 'cover_url'
       const { error: updateError } = await supabase
@@ -72,9 +76,10 @@ export async function POST(request: NextRequest) {
           .from('follows').delete().eq('id', existing.id)
         if (delError) throw delError
 
-        // Decrement counts
-        await supabase.rpc('decrement_follower_count', { user_id: target_user_id })
-        await supabase.rpc('decrement_following_count', { user_id: user.id })
+        const { error: rpc1 } = await supabase.rpc('decrement_follower_count', { user_id: target_user_id })
+        if (rpc1) console.error('decrement_follower_count error:', rpc1)
+        const { error: rpc2 } = await supabase.rpc('decrement_following_count', { user_id: user.id })
+        if (rpc2) console.error('decrement_following_count error:', rpc2)
 
         return NextResponse.json({ following: false })
       }
@@ -83,12 +88,12 @@ export async function POST(request: NextRequest) {
         .from('follows').insert({ follower_id: user.id, following_id: target_user_id })
       if (insError) throw insError
 
-      // Increment counts
-      await supabase.rpc('increment_follower_count', { user_id: target_user_id })
-      await supabase.rpc('increment_following_count', { user_id: user.id })
+      const { error: rpc3 } = await supabase.rpc('increment_follower_count', { user_id: target_user_id })
+      if (rpc3) console.error('increment_follower_count error:', rpc3)
+      const { error: rpc4 } = await supabase.rpc('increment_following_count', { user_id: user.id })
+      if (rpc4) console.error('increment_following_count error:', rpc4)
 
-      // Create follow notification
-      await supabase.rpc('create_notification', {
+      const { error: notifErr } = await supabase.rpc('create_notification', {
         p_user_id: target_user_id,
         p_actor_id: user.id,
         p_type: 'follow',
@@ -96,6 +101,7 @@ export async function POST(request: NextRequest) {
         p_target_type: 'profile',
         p_content: 'started following you',
       })
+      if (notifErr) console.error('create_notification error:', notifErr)
 
       return NextResponse.json({ following: true })
     }

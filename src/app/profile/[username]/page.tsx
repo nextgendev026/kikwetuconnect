@@ -55,7 +55,11 @@ export default function UserProfilePage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'follow', target_user_id: profile.id }),
     })
-    if (!res.ok) { toast('Follow failed'); return }
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}))
+      toast(errBody?.error || 'Follow failed')
+      return
+    }
     const { following } = await res.json()
     setIsFollowing(following)
     setProfile((prev: any) => ({ ...prev, follower_count: Math.max(0, (prev?.follower_count || 0) + (following ? 1 : -1)) }))
