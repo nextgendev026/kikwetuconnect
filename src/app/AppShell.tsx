@@ -6,6 +6,7 @@ import MobileNav from '@/components/MobileNav'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import CreateModal from '@/components/CreateModal'
+import { ToolbarProvider } from '@/lib/toolbar'
 import { Send, MessageSquare } from 'lucide-react'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -215,7 +216,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </header>
 
           <section className="page active" style={{ paddingTop: 33, paddingBottom: 94, minHeight: 'calc(100vh - 33px)' }}>
-            {children}
+            <ToolbarProvider>
+              {children}
+            </ToolbarProvider>
           </section>
 
           <MobileNav />

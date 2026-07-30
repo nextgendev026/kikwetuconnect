@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, MapPin, Users, TrendingUp } from 'lucide-react'
+import { ArrowLeft, MapPin, Users, TrendingUp, Plus } from 'lucide-react'
 import { PostCard } from '@/components/ui/post-card-component'
 import { useUser, useSupabase } from '@/app/providers'
+import { useToolbar } from '@/lib/toolbar'
 
 interface CountyStats {
   county: string
@@ -100,9 +101,21 @@ export default function CountyHubPage() {
     topContributors: [],
   })
 
+  const { setConfig } = useToolbar()
+
   useEffect(() => {
     fetchCountyData()
   }, [countyName])
+
+  useEffect(() => {
+    setConfig({
+      backUrl: '/baraza',
+      actions: [
+        { icon: Plus, label: 'Create Post', onClick: () => document.dispatchEvent(new CustomEvent('open-create-modal', { detail: { countyTag: countyName, barazaId } })), variant: 'gold' },
+      ],
+    })
+    return () => setConfig(null)
+  }, [countyName, barazaId, setConfig])
 
   const fetchCountyData = async () => {
     setLoading(true)

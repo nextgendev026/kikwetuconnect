@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { MessageSquare, Search, ArrowLeft, Send, Check, CheckCheck, Clock } from 'lucide-react'
+import { useToolbar } from '@/lib/toolbar'
+import { MessageSquare, Search, ArrowLeft, Send, Check, CheckCheck, Clock, Edit3 } from 'lucide-react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
@@ -35,6 +36,16 @@ export default function MessagesPage() {
   const { user, profile } = useUser()
   const supabase = useSupabase()
   const searchParams = useSearchParams()
+  const { setConfig } = useToolbar()
+
+  useEffect(() => {
+    setConfig({
+      actions: [
+        { icon: Edit3 as any, label: 'New Chat', onClick: () => document.getElementById('msg-new-btn')?.click(), variant: 'gold' },
+      ],
+    })
+    return () => setConfig(null)
+  }, [setConfig])
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [loading, setLoading] = useState(true)
   const [activeConv, setActiveConv] = useState<string | null>(null)

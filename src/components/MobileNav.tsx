@@ -3,7 +3,8 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { useUser, useSupabase } from '@/app/providers'
-import { Home, Search, User, Plus, Grid3X3, Trophy, Store, Shield, X, Menu as MenuIcon, GraduationCap, Briefcase, Building2, MessageSquare } from 'lucide-react'
+import { useToolbar } from '@/lib/toolbar'
+import { Home, Search, User, Plus, Grid3X3, Trophy, Store, Shield, X, Menu as MenuIcon, GraduationCap, Briefcase, Building2, MessageSquare, ArrowLeft } from 'lucide-react'
 
 const mainItems = [
   { href: '/feed', label: 'Home', icon: Home },
@@ -28,6 +29,7 @@ export default function MobileNav() {
   const path = usePathname()
   const { user } = useUser()
   const supabase = useSupabase()
+  const { config } = useToolbar()
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -62,8 +64,64 @@ export default function MobileNav() {
     return path.startsWith(href)
   }
 
+  // Determine if we should render contextual toolbar
+  const hasContext = config.actions && config.actions.length > 0
+
   return (
     <>
+      {/* Contextual action bar (slides in above bottom nav) */}
+      {hasContext && (
+        <div className="fixed z-50 animate-rise" style={{
+          left: '50%', transform: 'translateX(-50%)',
+          bottom: 82,
+          width: 'calc(100vw - 20px)',
+          maxWidth: 400,
+        }}>
+          <div className="flex gap-1.5 justify-center" style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--line)',
+            borderRadius: 16,
+            padding: '6px 8px',
+            boxShadow: '0 4px 20px color-mix(in oklab, var(--night) 15%, transparent)',
+          }}>
+            {config.backUrl && (
+              <Link href={config.backUrl} onClick={config.onBack}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-[10px] text-[11px] font-semibold"
+                style={{ background: 'var(--raised)', color: 'var(--muted)', textDecoration: 'none' }}>
+                <ArrowLeft className="w-3.5 h-3.5" /> Back
+              </Link>
+            )}
+            {config.actions!.map((action, i) => {
+              const Icon = action.icon
+              const bgMap = { default: 'var(--raised)', primary: 'var(--gold)', gold: 'var(--gold)', danger: 'var(--red)' }
+              const colorMap = { default: 'var(--ink)', primary: 'var(--night)', gold: 'var(--night)', danger: '#fff' }
+              return (
+                <button key={i} onClick={action.onClick}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-[10px] text-[11px] font-semibold border-0 cursor-pointer transition-all whitespace-nowrap"
+                  style={{
+                    background: action.variant ? bgMap[action.variant] || 'var(--raised)' : action.active ? 'var(--gold)' : 'var(--raised)',
+                    color: action.variant ? colorMap[action.variant] || 'var(--ink)' : action.active ? 'var(--night)' : 'var(--ink)',
+                    position: 'relative',
+                  }}>
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{action.label}</span>
+                  {action.badge !== undefined && action.badge > 0 && (
+                    <span style={{
+                      position: 'absolute', top: -3, right: -3,
+                      background: 'var(--red)', color: '#fff',
+                      fontSize: 7, fontWeight: 700, minWidth: 14, height: 14,
+                      borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: '0 2px',
+                    }}>{action.badge > 99 ? '99+' : action.badge}</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Bottom navigation */}
       <nav style={{
         position: 'fixed', display: 'flex', zIndex: 12,
         left: '50%', transform: 'translateX(-50%)',

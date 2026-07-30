@@ -3,8 +3,9 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
+import { useToolbar } from '@/lib/toolbar'
 import ProfileHeader from '@/components/profile/ProfileHeader'
-import { MessageCircle, Award, Calendar, MapPin, Globe, ThumbsUp, MessageSquare, ChevronDown } from 'lucide-react'
+import { MessageCircle, Heart, Award, Calendar, MapPin, Globe, ThumbsUp, MessageSquare, ChevronDown } from 'lucide-react'
 
 type Tab = 'posts' | 'about' | 'heshima'
 
@@ -27,6 +28,7 @@ export default function UserProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false)
   const { user } = useUser()
   const router = useRouter()
+  const { setConfig } = useToolbar()
 
   useEffect(() => {
     if (!username) return
@@ -47,6 +49,18 @@ export default function UserProfilePage() {
     supabase.from('follows').select('id').eq('follower_id', user.id).eq('following_id', profile.id).maybeSingle()
       .then(({ data }: { data: any }) => setIsFollowing(!!data))
   }, [profile, user, supabase])
+
+  useEffect(() => {
+    if (!profile || !user) return
+    if (profile.id === user.id) { setConfig(null); return }
+    setConfig({
+      actions: [
+        { icon: Heart, label: isFollowing ? 'Following' : 'Follow', onClick: handleFollow, variant: isFollowing ? 'default' : 'gold', active: isFollowing },
+        { icon: MessageCircle, label: 'Message', onClick: handleMessage },
+      ],
+    })
+    return () => setConfig(null)
+  }, [profile, user, isFollowing, setConfig])
 
   const handleFollow = async () => {
     if (!profile) return

@@ -3,7 +3,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { ArrowLeft, Users, Hash, Sparkles, Plus, Send, Clock, MessageCircle, Heart, Share2, Flag, MoreHorizontal, Globe, BookOpen } from 'lucide-react'
+import { useToolbar } from '@/lib/toolbar'
+import { ArrowLeft, Users, Hash, Sparkles, Plus, Send, Clock, MessageCircle, Heart, Share2, Flag, MoreHorizontal, Globe, BookOpen, LogIn, LogOut } from 'lucide-react'
 
 interface Space {
   id: string; name: string; slug: string; description: string; icon: string; category: string
@@ -123,6 +124,21 @@ export default function SpaceDetailPage() {
     finally { setPosting(false) }
   }
 
+  const { setConfig } = useToolbar()
+
+  useEffect(() => {
+    if (!space) return
+    setConfig({
+      backUrl: '/spaces',
+      actions: [
+        ...(isMember
+          ? [{ icon: Plus as any, label: 'Post', onClick: () => { setShowNewPost(true); setTimeout(() => document.getElementById('space-post-input')?.focus(), 100) }, variant: 'gold' as const }]
+          : [{ icon: LogIn as any, label: 'Join', onClick: handleJoin, variant: 'primary' as const }]),
+      ],
+    })
+    return () => setConfig(null)
+  }, [space, isMember, setConfig])
+
   const formatTime = (d: string) => {
     const diff = Date.now() - new Date(d).getTime()
     const m = Math.floor(diff / 60000)
@@ -217,7 +233,7 @@ export default function SpaceDetailPage() {
             </button>
           ) : (
             <div className="animate-rise">
-              <textarea value={newPost} onChange={e => setNewPost(e.target.value)}
+              <textarea id="space-post-input" value={newPost} onChange={e => setNewPost(e.target.value)}
                 placeholder={`Share with ${space.name}...`} rows={3}
                 style={{ ...s.input, resize: 'none', minHeight: 80, marginBottom: 12 }} />
               <div className="flex gap-2 justify-end">
