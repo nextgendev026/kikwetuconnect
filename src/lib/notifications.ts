@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 
 interface NotifyOptions {
