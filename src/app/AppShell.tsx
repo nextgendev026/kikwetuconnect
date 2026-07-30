@@ -164,67 +164,67 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <div className="app">
-        {/* Sidebar */}
-        <Sidebar initials={initials} profile={profile} theme={theme} toggleTheme={toggleTheme} />
+      <ToolbarProvider>
+        <div className="app">
+          {/* Sidebar */}
+          <Sidebar initials={initials} profile={profile} theme={theme} toggleTheme={toggleTheme} />
 
-        {/* Main */}
-        <main className="main">
-          <header className="topbar">
-            <Link href="/feed" className="topbar-brand">
-              <span className="mark" style={{ width: 30, height: 30, fontSize: 15, transform: 'rotate(-6deg)' }}>K</span>
-              <span className="topbar-brand-text">KikwetuConnect</span>
-            </Link>
-            <div className="search" id="global-search">
-              <button className="search-toggle" onClick={() => document.getElementById('global-search')?.classList.toggle('expanded')}>⌕</button>
-              <input aria-label="Search Baraza, spaces, people..." placeholder="Search Baraza, spaces, people..." />
-            </div>
-            <div className="top-actions">
-              <Link href="/notifications" className="icon" aria-label={unreadNotifCount > 0 ? `${unreadNotifCount} unread notifications` : 'Notifications'} title="Notifications" style={{ position: 'relative' }}>
-                ♡
-                {unreadNotifCount > 0 && (
-                  <span style={{
-                    position: 'absolute', top: -2, right: -2,
-                    background: 'var(--red)', color: '#fff',
-                    fontSize: 8, fontWeight: 700, minWidth: 16, height: 16,
-                    borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: '0 3px', lineHeight: 1,
-                  }}>{unreadNotifCount > 99 ? '99+' : unreadNotifCount}</span>
-                )}
+          {/* Main */}
+          <main className="main">
+            <header className="topbar">
+              <Link href="/feed" className="topbar-brand">
+                <span className="mark" style={{ width: 30, height: 30, fontSize: 15, transform: 'rotate(-6deg)' }}>K</span>
+                <span className="topbar-brand-text">KikwetuConnect</span>
               </Link>
-              <button className="icon" style={{ position: 'relative' }} onClick={() => { if (chatOpen) { setChatOpen(false) } else { openSupportChat() } }} aria-label={chatOpen ? 'Close chat' : 'Open chat'} title="Messages">
-                ◍
-                {unreadMsgCount > 0 && !chatOpen && (
-                  <span style={{
-                    position: 'absolute', top: -2, right: -2,
-                    background: 'var(--red)', color: '#fff',
-                    fontSize: 8, fontWeight: 700, minWidth: 16, height: 16,
-                    borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: '0 3px', lineHeight: 1,
-                  }}>{unreadMsgCount > 99 ? '99+' : unreadMsgCount}</span>
-                )}
-              </button>
-              <Link href="/profile" className="icon" aria-label="Profile" title="Profile">
-                <span className="avatar" style={{ width: 30, height: 30, fontSize: 10, overflow: 'hidden' }}>
-                  {profile.avatar_url ? (
-                    <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.textContent = initials }} />
-                  ) : initials}
-                </span>
-              </Link>
-            </div>
-          </header>
+              <div className="search" id="global-search">
+                <button className="search-toggle" onClick={() => document.getElementById('global-search')?.classList.toggle('expanded')}>⌕</button>
+                <input aria-label="Search Baraza, spaces, people..." placeholder="Search Baraza, spaces, people..." />
+              </div>
+              <div className="top-actions">
+                <Link href="/notifications" className="icon" aria-label={unreadNotifCount > 0 ? `${unreadNotifCount} unread notifications` : 'Notifications'} title="Notifications" style={{ position: 'relative' }}>
+                  ♡
+                  {unreadNotifCount > 0 && (
+                    <span style={{
+                      position: 'absolute', top: -2, right: -2,
+                      background: 'var(--red)', color: '#fff',
+                      fontSize: 8, fontWeight: 700, minWidth: 16, height: 16,
+                      borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: '0 3px', lineHeight: 1,
+                    }}>{unreadNotifCount > 99 ? '99+' : unreadNotifCount}</span>
+                  )}
+                </Link>
+                <button className="icon" style={{ position: 'relative' }} onClick={() => { if (chatOpen) { setChatOpen(false) } else { openSupportChat() } }} aria-label={chatOpen ? 'Close chat' : 'Open chat'} title="Messages">
+                  ◍
+                  {unreadMsgCount > 0 && !chatOpen && (
+                    <span style={{
+                      position: 'absolute', top: -2, right: -2,
+                      background: 'var(--red)', color: '#fff',
+                      fontSize: 8, fontWeight: 700, minWidth: 16, height: 16,
+                      borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: '0 3px', lineHeight: 1,
+                    }}>{unreadMsgCount > 99 ? '99+' : unreadMsgCount}</span>
+                  )}
+                </button>
+                <Link href="/profile" className="icon" aria-label="Profile" title="Profile">
+                  <span className="avatar" style={{ width: 30, height: 30, fontSize: 10, overflow: 'hidden' }}>
+                    {profile.avatar_url ? (
+                      <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.textContent = initials }} />
+                    ) : initials}
+                  </span>
+                </Link>
+              </div>
+            </header>
 
-          <ToolbarProvider>
             <section className="page active" style={{ paddingTop: 33, paddingBottom: 94, minHeight: 'calc(100vh - 33px)' }}>
               {children}
             </section>
-            <MobileNav />
-          </ToolbarProvider>
-        </main>
+          </main>
 
-        {/* Right Panel */}
-        <aside className="right-panel">
+          <MobileNav />
+
+          {/* Right Panel */}
+          <aside className="right-panel">
           <details className="side-section" open>
             <summary>Community members <span style={{ color: 'var(--green)', fontSize: 10, fontWeight: 400 }}>{userCount} total</span></summary>
             <div className="side-body">
@@ -269,6 +269,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </details>
         </aside>
       </div>
+      </ToolbarProvider>
 
       {/* Chat widget — support conversation */}
       <div className={`chat${chatOpen ? ' open' : ''}`} role="dialog" aria-label="Support chat" aria-live="polite">

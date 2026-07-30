@@ -76,6 +76,7 @@ export default function MobileNav() {
           bottom: 82,
           width: 'calc(100vw - 20px)',
           maxWidth: 400,
+          touchAction: 'manipulation',
         }}>
           <div className="flex gap-1.5 justify-center" style={{
             background: 'var(--surface)',
@@ -83,6 +84,7 @@ export default function MobileNav() {
             borderRadius: 16,
             padding: '6px 8px',
             boxShadow: '0 4px 20px color-mix(in oklab, var(--night) 15%, transparent)',
+            touchAction: 'manipulation',
           }}>
             {config.backUrl && (
               <Link href={config.backUrl} onClick={config.onBack}
@@ -134,6 +136,8 @@ export default function MobileNav() {
         justifyContent: 'space-around',
         alignItems: 'center',
         boxShadow: '0 16px 40px color-mix(in oklab, var(--night) 20%, transparent)',
+        touchAction: 'manipulation',
+        pointerEvents: 'auto',
       }}>
         {mainItems.map(i => {
           const Icon = i.icon

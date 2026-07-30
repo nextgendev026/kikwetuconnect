@@ -263,7 +263,7 @@ function PostCardComponent({
 
       {/* Media */}
       {post.media_url && (
-        <div className="mb-[12px] rounded-[12px] overflow-hidden bg-deep border border-[var(--line)]">
+        <Link href={`/posts/${post.id}`} className="mb-[12px] rounded-[12px] overflow-hidden bg-deep border border-[var(--line)] block">
           {post.media_type?.startsWith('video/') ? (
             <div className="h-[200px] flex items-center justify-center bg-deep">
               <span className="text-[40px] opacity-50">🎥</span>
@@ -271,7 +271,7 @@ function PostCardComponent({
           ) : (
             <img src={post.media_url} alt="" className="w-full h-auto max-h-[300px] object-cover" loading="lazy" />
           )}
-        </div>
+        </Link>
       )}
 
       {/* County & Bounty */}
