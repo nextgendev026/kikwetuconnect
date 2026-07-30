@@ -97,7 +97,12 @@ export default function Sidebar({ initials, profile, theme, toggleTheme }: { ini
 
       {/* User mini */}
       <div className="user-mini" style={{ marginTop: 'auto' }}>
-        <div className="avatar">{initials}</div>
+        <div className="avatar" style={{ position: 'relative', overflow: 'hidden' }}>
+          {profile?.avatar_url ? (
+            <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy"
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.textContent = initials }} />
+          ) : initials}
+        </div>
         <div style={{ flex: 1 }}>
           <strong>{profile?.full_name || profile?.username || 'User'}</strong>
           <small><span className="online" style={{ verticalAlign: -1, marginRight: 4 }} />Online · {profile?.county_hub || 'Kenya'}</small>
