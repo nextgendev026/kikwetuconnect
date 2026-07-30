@@ -115,9 +115,9 @@ export function PostCard({
         <p className="text-sm text-text line-clamp-3 mb-3">{content}</p>
 
         {media && (
-          <div className="mb-3 rounded-lg overflow-hidden bg-surface border border-line h-40">
-            <img src={media} alt="Post media" className="w-full h-full object-cover" />
-          </div>
+          <Link href={`/posts/${id}`} className="block mb-3 rounded-lg overflow-hidden bg-surface border border-line h-40 hover:brightness-110 transition-all">
+            <img src={media} alt="Post media" className="w-full h-full object-cover" loading="lazy" />
+          </Link>
         )}
       </div>
 
