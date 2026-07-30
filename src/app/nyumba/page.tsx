@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
+import { isAdmin as checkAdminRole } from '@/lib/roles'
 import { AlertTriangle, AlertCircle, Droplets, Zap, Users, Shield, Share2, Bookmark, Flag, Plus, MapPin, Clock, Check, X, ChevronDown, ChevronUp, MessageCircle, Home, Bell, Eye, EyeOff, ThumbsUp, UserPlus, UserCheck, LogIn, Gavel, Search, RefreshCw, Languages } from 'lucide-react'
 
 interface Alert {
@@ -80,7 +81,7 @@ export default function NyumbaPage() {
     fetchTrustedNeighbours()
     checkRateLimit()
     fetchMyGroups()
-    if (profile?.role === 'admin') setIsAdmin(true)
+    if (checkAdminRole(profile?.role)) setIsAdmin(true)
   }, [profile, supabase])
 
   // Real-time subscription for new alerts

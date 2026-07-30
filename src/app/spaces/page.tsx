@@ -1,7 +1,7 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import { useUser, toast } from '@/app/providers'
+import { useUser, useSupabase, toast } from '@/app/providers'
 import BottomSheet from '@/components/ui/bottom-sheet'
 import { Users, Hash, Plus, X, Filter, Search, Globe, Sparkles, Sprout, Cpu, Ship, BookOpen, Coins, Leaf, Building2, Microscope, Scale, HeartPulse } from 'lucide-react'
 
@@ -63,6 +63,7 @@ function SkeletonCard() {
 
 export default function SpacesPage() {
   const { profile, loading: userLoading } = useUser()
+  const supabase = useSupabase()
   const [spaces, setSpaces] = useState<Space[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -82,6 +83,38 @@ export default function SpacesPage() {
   const firstFieldRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { if (!userLoading) { fetchSpaces(); fetchMemberships() } }, [userLoading])
+
+  // Realtime: subscribe to space changes
+  useEffect(() => {
+    if (!supabase) return
+    const channel = supabase.channel('spaces-live')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'spaces' },
+        (payload: any) => {
+          const newSpace = payload.new as Space
+          if (category === 'All' || newSpace.category === category) {
+            if (!searchTerm || newSpace.name.toLowerCase().includes(searchTerm.toLowerCase()) || newSpace.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+              setSpaces(prev => prev.some(s => s.id === newSpace.id) ? prev : [newSpace, ...prev])
+              setTotalCount(prev => prev + 1)
+            }
+          }
+        })
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'spaces' },
+        (payload: any) => {
+          const updated = payload.new as Space
+          setSpaces(prev => prev.map(s => s.id === updated.id ? { ...s, ...updated } : s))
+        })
+      .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'spaces' },
+        (payload: any) => {
+          const deletedId = payload.old.id
+          setSpaces(prev => prev.filter(s => s.id !== deletedId))
+          setTotalCount(prev => Math.max(0, prev - 1))
+        })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [supabase, category, searchTerm])
 
   useEffect(() => {
     if (showCreate && firstFieldRef.current) setTimeout(() => firstFieldRef.current?.focus(), 100)

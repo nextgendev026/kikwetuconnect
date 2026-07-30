@@ -1,6 +1,7 @@
 import { createApiClient } from '@/lib/server-supabase'
-import { sendPushToUser } from '@/lib/push'
 import { NextRequest, NextResponse } from 'next/server'
+import { sendPushToUser, sendPushToMultipleUsers } from '@/lib/push-notifications'
+import { ROLES } from '@/lib/roles'
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,32 +9,26 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { userId, title, body, data, tag } = await request.json()
-    if (!userId || !title || !body) {
-      return NextResponse.json({ error: 'Missing required fields (userId, title, body)' }, { status: 400 })
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    if (profile?.role !== ROLES.ADMIN) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const body = await request.json()
+    const { userId, userIds, payload } = body
+    if (!payload?.title) return NextResponse.json({ error: 'Missing payload.title' }, { status: 400 })
+
+    let sentCount = 0
+    if (userIds && Array.isArray(userIds)) {
+      sentCount = await sendPushToMultipleUsers(userIds, payload)
+    } else if (userId) {
+      const ok = await sendPushToUser(userId, payload)
+      if (ok) sentCount = 1
+    } else {
+      return NextResponse.json({ error: 'Provide userId or userIds' }, { status: 400 })
     }
 
-    // Only allow sending to yourself or being admin
-    if (userId !== user.id) {
-      const { data: profile } = await supabase
-        .from('profiles').select('role').eq('id', user.id).maybeSingle()
-      if (profile?.role !== 'admin') {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-      }
-    }
-
-    const result = await sendPushToUser(supabase, userId, {
-      title,
-      body,
-      data,
-      tag,
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-72x72.png',
-    })
-
-    return NextResponse.json(result)
+    return NextResponse.json({ sent: sentCount })
   } catch (e: any) {
     console.error('Push send error:', e)
-    return NextResponse.json({ error: e.message || 'Send failed' }, { status: 500 })
+    return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }

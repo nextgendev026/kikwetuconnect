@@ -3,8 +3,9 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { useUser, useSupabase } from '@/app/providers'
+import { isAdmin } from '@/lib/roles'
 import { useToolbar } from '@/lib/toolbar'
-import { Home, Search, User, Plus, Grid3X3, Trophy, Store, Shield, X, Menu as MenuIcon, GraduationCap, Briefcase, MessageSquare, ArrowLeft } from 'lucide-react'
+import { Home, Search, User, Plus, Grid3X3, Trophy, Store, Shield, X, Menu as MenuIcon, GraduationCap, Briefcase, MessageSquare, ArrowLeft, Compass, Calendar, Wallet, Settings, Zap } from 'lucide-react'
 
 const mainItems = [
   { href: '/feed', label: 'Home', icon: Home },
@@ -15,18 +16,22 @@ const mainItems = [
 ]
 
 const menuItems = [
+  { href: '/baraza', label: 'Baraza', icon: Compass, desc: 'Community discussions' },
   { href: '/spaces', label: 'Spaces', icon: Grid3X3, desc: 'Topic communities & orgs' },
+  { href: '/sessions', label: 'Sessions', icon: Calendar, desc: 'Booked sessions' },
+  { href: '/wallet', label: 'Wallet', icon: Wallet, desc: 'Tips & earnings' },
   { href: '/quizzes', label: 'Quizzes', icon: Trophy, desc: 'Test your knowledge' },
   { href: '/market', label: 'Market', icon: Store, desc: 'Buy & sell locally' },
   { href: '/nyumba', label: 'Nyumba Kumi', icon: Shield, desc: 'Neighbourhood safety' },
   { href: '/students', label: 'Students', icon: GraduationCap, desc: 'Learning resources' },
   { href: '/professionals', label: 'Professionals', icon: Briefcase, desc: 'Find experts' },
   { href: '/messages', label: 'Messages', icon: MessageSquare, desc: 'Chat with people' },
+  { href: '/settings', label: 'Settings', icon: Settings, desc: 'Account settings' },
 ]
 
 export default function MobileNav() {
   const path = usePathname()
-  const { user } = useUser()
+  const { user, profile } = useUser()
   const supabase = useSupabase()
   const { config } = useToolbar()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -234,9 +239,20 @@ export default function MobileNav() {
                     </div>
                     <span className="font-bold text-xs">{item.label}</span>
                     <span className="text-[9px]" style={{ color: active ? 'var(--night)' : 'var(--muted)' }}>{item.desc}</span>
-                  </Link>
-                )
-              })}
+              </Link>
+            )
+          })}
+          {isAdmin(profile?.role) && (
+                <Link key="/admin/dashboard" href="/admin/dashboard" onClick={() => setMenuOpen(false)}
+                  className="col-span-2 flex items-center gap-2 p-3.5 rounded-xl transition-all mt-1"
+                  style={{ background: 'var(--red)', color: '#fff' }}>
+                  <Zap className="w-5 h-5" />
+                  <div>
+                    <span className="font-bold text-xs block">Admin console</span>
+                    <span className="text-[9px]" style={{ color: 'rgba(255,255,255,.7)' }}>Platform management</span>
+                  </div>
+                </Link>
+              )}
             </div>
           </div>
         </div>

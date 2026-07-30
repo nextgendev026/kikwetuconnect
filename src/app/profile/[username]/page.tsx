@@ -157,7 +157,7 @@ export default function UserProfilePage() {
 
   return (
     <section className="page active" style={{ paddingTop: 33, paddingBottom: 94 }}>
-      <ProfileHeader profile={profile} isOwn={false} postCount={postCount}
+      <ProfileHeader profile={profile} isOwn={false} supabase={supabase} postCount={postCount}
         isFollowing={isFollowing} onFollow={handleFollow} onMessage={handleMessage} />
 
       {/* Sticky Tab Bar */}

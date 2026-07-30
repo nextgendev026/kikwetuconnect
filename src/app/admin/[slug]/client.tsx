@@ -2,6 +2,7 @@
 import { useSupabase, toast } from '@/app/providers'
 import { useUser } from '@/app/providers'
 import { useEffect, useState, useCallback } from 'react'
+import { ROLES } from '@/lib/roles'
 
 const PAGE_META: Record<string, { title: string; desc: string }> = {
   analytics: { title: 'Analytics that answer real questions.', desc: 'Track growth, trust, learning, local activity, and money movement.' },
@@ -128,34 +129,44 @@ function HealthPage() {
   const [health, setHealth] = useState<any>(null)
   useEffect(() => {
     if (typeof supabase?.from !== 'function') return
+    const start = performance.now()
     Promise.all([
       supabase.rpc('get_admin_stats'),
       supabase.from('translations').select('*', { count: 'exact', head: true }),
-    ]).then(([stats, trans]) => {
-      const s = stats.data || {}
+      supabase.from('profiles').select('id', { count: 'exact', head: true }).limit(1),
+      supabase.storage.getBucket('media'),
+      supabase.from('moderation_queue').select('id', { count: 'exact', head: true }),
+    ]).then(([stats, trans, dbCheck, bucket, modQueue]) => {
+      const latency = (performance.now() - start).toFixed(0)
       setHealth({
-        dbConnections: 'Normal', apiLatency: '120ms', realtimeActive: true,
-        storageAvailable: true, searchIndexed: true, translationCount: trans.count || 0,
-        onlineNow: s.online_now || 0,
+        apiLatency: `${latency}ms`,
+        dbStatus: dbCheck.error ? 'Error' : 'Normal',
+        storageAvailable: !bucket.error,
+        translationCount: trans.count || 0,
+        onlineNow: stats.data?.online_now || 0,
+        pendingReports: modQueue.count || 0,
+        lastChecked: new Date().toISOString(),
       })
     })
   }, [supabase])
   if (!health) return s.spinner()
+  const latencyNum = parseInt(health.apiLatency)
+  const latencyColor = latencyNum < 200 ? 'green' : latencyNum < 500 ? 'gold' : 'red'
   return (
     <>
       <PageHeader slug="health" meta={PAGE_META.health} />
       <KpiCards items={[
-        { label: 'API latency', value: health.apiLatency, color: 'green' },
+        { label: 'API latency', value: health.apiLatency, color: latencyColor },
         { label: 'Users online now', value: health.onlineNow, color: 'green' },
         { label: 'Translations', value: health.translationCount, sub: 'stored' },
-        { label: 'Realtime sync', value: health.realtimeActive ? 'Active' : 'Inactive', color: health.realtimeActive ? 'green' : 'red' },
+        { label: 'Pending reports', value: health.pendingReports, color: health.pendingReports > 0 ? 'orange' : 'green' },
       ]} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
         {[
-          { label: 'Database', status: 'Normal', color: 'green' },
-          { label: 'Storage bucket', status: 'Available', color: 'green' },
-          { label: 'Full-text search', status: 'Indexed', color: 'green' },
+          { label: 'Database', status: health.dbStatus, color: health.dbStatus === 'Normal' ? 'green' : 'red' },
+          { label: 'Storage bucket', status: health.storageAvailable ? 'Available' : 'Error', color: health.storageAvailable ? 'green' : 'red' },
           { label: 'Auth provider', status: 'Online', color: 'green' },
+          { label: 'Last checked', status: new Date(health.lastChecked).toLocaleTimeString(), color: 'green' },
         ].map((h, i) => (
           <div key={i} style={s.card()}>
             <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 6 }}>{h.label}</div>
@@ -300,7 +311,7 @@ function UsersPage() {
                   <div className="avatar" style={{ width: 28, height: 28, fontSize: 8, overflow: 'hidden' }}>{(u.full_name || u.username || '?').slice(0, 2).toUpperCase()}</div>
                   <div><b style={{ color: 'var(--ink)', fontSize: 11 }}>{u.full_name || u.username}</b><small style={{ display: 'block', color: 'var(--muted)', fontSize: 9 }}>@{u.username}</small></div>
                 </td>
-                <td style={{ padding: '12px 14px' }}><span style={s.tag(u.role === 'admin')}>{u.role || 'general'}</span></td>
+                <td style={{ padding: '12px 14px' }}><span style={s.tag(u.role === ROLES.ADMIN)}>{u.role || 'general'}</span></td>
                 <td style={{ padding: '12px 14px', textAlign: 'center', color: 'var(--ink)' }}>{u.heshima_rating || 0}</td>
                 <td style={{ padding: '12px 14px', textAlign: 'center', color: 'var(--muted)' }}>{u.county_hub || '—'}</td>
                 <td style={{ padding: '12px 14px', textAlign: 'center' }}>
@@ -600,57 +611,97 @@ function PaymentsPage() {
 function SettingsPage() {
   const supabase = useSupabase()
   const [saving, setSaving] = useState('')
-  const [settings, setSettings] = useState({
-    allowPublicSignup: true, defaultLanguage: 'en', requireVerification: false,
-    maxPostsPerDay: 10, maintenanceMode: false,
-  })
-  const saveSetting = async (key: string, value: any) => {
+  const [loading, setLoading] = useState(true)
+  const [settings, setSettings] = useState<Record<string, string>>({})
+  useEffect(() => {
+    if (typeof supabase?.from !== 'function') return
+    supabase.from('platform_settings').select('*').then(({ data }: { data: any }) => {
+      if (data) {
+        const map: Record<string, string> = {}
+        data.forEach((r: any) => { map[r.key] = r.value })
+        setSettings(map)
+      }
+      setLoading(false)
+    })
+  }, [supabase])
+  const saveSetting = async (key: string, value: string) => {
     setSaving(key)
-    await new Promise(r => setTimeout(r, 400))
+    const { error } = await supabase.from('platform_settings').upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+    if (error) { toast(error.message); setSaving(''); return }
     setSettings(prev => ({ ...prev, [key]: value }))
     toast(`${key} updated`)
     setSaving('')
   }
+  if (loading) return s.spinner()
+  const fields = [
+    { key: 'allow_public_signup', label: 'Allow public registration', type: 'toggle' },
+    { key: 'require_verification', label: 'Require email verification', type: 'toggle' },
+    { key: 'maintenance_mode', label: 'Maintenance mode', type: 'toggle', danger: true },
+    { key: 'maintenance_message', label: 'Maintenance message', type: 'text' },
+    { key: 'default_language', label: 'Default language', type: 'select', options: ['en', 'sw', 'both'] },
+    { key: 'max_posts_per_day', label: 'Max posts per day', type: 'number' },
+  ]
   return (
     <>
       <PageHeader slug="settings" meta={PAGE_META.settings} />
       <div style={s.card()}>
         <div style={{ display: 'grid', gap: 20 }}>
-          {[
-            { key: 'allowPublicSignup', label: 'Allow public registration', type: 'toggle' },
-            { key: 'requireVerification', label: 'Require email verification', type: 'toggle' },
-            { key: 'maintenanceMode', label: 'Maintenance mode', type: 'toggle', danger: true },
-            { key: 'defaultLanguage', label: 'Default language', type: 'select', options: ['en', 'sw', 'both'] },
-            { key: 'maxPostsPerDay', label: 'Max posts per day', type: 'number' },
-          ].map((field: any) => (
-            <div key={field.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <strong style={{ fontSize: 12, color: 'var(--ink)' }}>{field.label}</strong>
-                <small style={{ display: 'block', fontSize: 9, color: 'var(--muted)' }}>{field.key}</small>
+          {fields.map((field: any) => {
+            const val = settings[field.key] ?? ''
+            const isOn = val === 'true'
+            return (
+              <div key={field.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <strong style={{ fontSize: 12, color: 'var(--ink)' }}>{field.label}</strong>
+                  <small style={{ display: 'block', fontSize: 9, color: 'var(--muted)' }}>{field.key}</small>
+                </div>
+                {field.type === 'toggle' ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {saving === field.key && <span style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid var(--gold)', borderTopColor: 'transparent', animation: 'spin .5s linear infinite' }} />}
+                    <button onClick={() => saveSetting(field.key, isOn ? 'false' : 'true')}
+                      style={{
+                        width: 44, height: 24, borderRadius: 12, border: 0, cursor: 'pointer', position: 'relative',
+                        background: isOn ? (field.danger ? 'var(--red)' : 'var(--gold)') : 'var(--line)',
+                        transition: 'background .2s',
+                      }}>
+                      <span style={{
+                        position: 'absolute', top: 2, left: isOn ? 22 : 2,
+                        width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left .2s',
+                      }} />
+                    </button>
+                  </div>
+                ) : field.type === 'select' ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {saving === field.key && <span style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid var(--gold)', borderTopColor: 'transparent', animation: 'spin .5s linear infinite' }} />}
+                    <select value={val} onChange={e => saveSetting(field.key, e.target.value)}
+                      style={s.input('160px')}>
+                      {field.options.map((o: string) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                ) : field.type === 'text' ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input type="text" value={val} onChange={e => {
+                      setSettings(prev => ({ ...prev, [field.key]: e.target.value }))
+                    }} style={s.input('240px')} placeholder="Message shown during maintenance" />
+                    <button onClick={() => saveSetting(field.key, settings[field.key] ?? '')}
+                      disabled={saving === field.key}
+                      style={s.btn(saving === field.key ? 'var(--muted)' : 'var(--gold)', 'var(--night)')}>
+                      {saving === field.key ? '...' : 'Save'}
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {saving === field.key && <span style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid var(--gold)', borderTopColor: 'transparent', animation: 'spin .5s linear infinite' }} />}
+                    <input type="number" value={val} onChange={e => saveSetting(field.key, e.target.value)}
+                      style={s.input('100px')} />
+                  </div>
+                )}
               </div>
-              {field.type === 'toggle' ? (
-                <button onClick={() => saveSetting(field.key, !(settings as any)[field.key])}
-                  style={{
-                    width: 44, height: 24, borderRadius: 12, border: 0, cursor: 'pointer', position: 'relative',
-                    background: (settings as any)[field.key] ? (field.danger ? 'var(--red)' : 'var(--gold)') : 'var(--line)',
-                    transition: 'background .2s',
-                  }}>
-                  <span style={{
-                    position: 'absolute', top: 2, left: (settings as any)[field.key] ? 22 : 2,
-                    width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left .2s',
-                  }} />
-                </button>
-              ) : field.type === 'select' ? (
-                <select value={(settings as any)[field.key]} onChange={e => saveSetting(field.key, e.target.value)}
-                  style={s.input('160px')}>
-                  {field.options.map((o: string) => <option key={o} value={o}>{o}</option>)}
-                </select>
-              ) : (
-                <input type="number" value={(settings as any)[field.key]} onChange={e => saveSetting(field.key, e.target.value)}
-                  style={s.input('100px')} />
-              )}
-            </div>
-          ))}
+            )
+          })}
+        </div>
+        <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--line)', fontSize: 10, color: 'var(--muted)' }}>
+          Settings are persisted to the platform_settings table and updated in real time.
         </div>
       </div>
     </>

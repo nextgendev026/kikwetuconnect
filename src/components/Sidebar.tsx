@@ -3,6 +3,7 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState } from 'react'
 import { toast } from '@/app/providers'
+import { isAdmin, ROLES } from '@/lib/roles'
 import {
   Home, Compass, Search, Grid3X3, GraduationCap, Briefcase,
   MessageSquare, Calendar, Store, Shield, Trophy,
@@ -11,27 +12,27 @@ import {
 
 const sections = [
   { label: 'Main', items: [
-    { href: '/feed', label: 'Home', icon: Home },
-    { href: '/baraza', label: 'Baraza', icon: Compass },
-    { href: '/explore', label: 'Explore', icon: Search },
-    { href: '/spaces', label: 'Spaces', icon: Grid3X3 },
+    { href: '/feed', label: 'Home', icon: Home, iconClass: 'icon-home' },
+    { href: '/baraza', label: 'Baraza', icon: Compass, iconClass: 'icon-compass' },
+    { href: '/explore', label: 'Explore', icon: Search, iconClass: 'icon-search' },
+    { href: '/spaces', label: 'Spaces', icon: Grid3X3, iconClass: 'icon-spaces' },
   ]},
   { label: 'Guidance', items: [
-    { href: '/students', label: 'Students Area', icon: GraduationCap },
-    { href: '/professionals', label: 'Professionals', icon: Briefcase },
-    { href: '/messages', label: 'Messages', icon: MessageSquare },
-    { href: '/sessions', label: 'My sessions', icon: Calendar },
+    { href: '/students', label: 'Students Area', icon: GraduationCap, iconClass: 'icon-students' },
+    { href: '/professionals', label: 'Professionals', icon: Briefcase, iconClass: 'icon-professionals' },
+    { href: '/messages', label: 'Messages', icon: MessageSquare, iconClass: 'icon-messages' },
+    { href: '/sessions', label: 'My sessions', icon: Calendar, iconClass: 'icon-sessions' },
   ]},
   { label: 'Community', items: [
-    { href: '/market', label: 'Mtaa Market', icon: Store },
-    { href: '/nyumba', label: 'Nyumba Kumi', icon: Shield },
-    { href: '/quizzes', label: 'Quizzes', icon: Trophy },
+    { href: '/market', label: 'Mtaa Market', icon: Store, iconClass: 'icon-market' },
+    { href: '/nyumba', label: 'Nyumba Kumi', icon: Shield, iconClass: 'icon-nyumba' },
+    { href: '/quizzes', label: 'Quizzes', icon: Trophy, iconClass: 'icon-quizzes' },
   ]},
   { label: 'You', items: [
-    { href: '/wallet', label: 'Wallet & tips', icon: Wallet },
-    { href: '/profile', label: 'Profile', icon: User },
-    { href: '/settings', label: 'Settings', icon: Settings },
-    { href: '/admin/dashboard', label: 'Admin console', icon: Zap, adminOnly: true },
+    { href: '/wallet', label: 'Wallet & tips', icon: Wallet, iconClass: 'icon-wallet' },
+    { href: '/profile', label: 'Profile', icon: User, iconClass: 'icon-profile' },
+    { href: '/settings', label: 'Settings', icon: Settings, iconClass: 'icon-settings' },
+    { href: '/admin/dashboard', label: 'Admin console', icon: Zap, iconClass: 'icon-admin', adminOnly: true },
   ]},
 ]
 
@@ -56,7 +57,7 @@ export default function Sidebar({ initials, profile, theme, toggleTheme, onlineC
   onlineCount?: number; onlineUsers?: any[]
 }) {
   const path = usePathname()
-  const isAdmin = profile?.role === 'admin'
+  const adminUser = isAdmin(profile?.role)
   const [following, setFollowing] = useState<Set<string>>(new Set())
 
   const handleFollow = async (userId: string, e: React.MouseEvent) => {
@@ -109,12 +110,12 @@ export default function Sidebar({ initials, profile, theme, toggleTheme, onlineC
         {sections.map(s => (
           <div key={s.label}>
             <div className="nav-label">{s.label}</div>
-            {s.items.filter(i => !i.adminOnly || isAdmin).map(i => {
+            {s.items.filter(i => !i.adminOnly || adminUser).map(i => {
               const Icon = i.icon
               const isActive = path === i.href || (i.href !== '/feed' && path.startsWith(i.href))
               return (
                 <Link key={i.href} href={i.href} style={navLinkStyle(isActive)}>
-                  <Icon className="w-4 h-4" />
+                  <Icon className={`icon ${i.iconClass || ''} w-4 h-4`} />
                   <span style={{ flex: 1 }}>{i.label}</span>
                 </Link>
               )

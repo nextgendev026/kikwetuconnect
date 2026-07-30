@@ -1,10 +1,13 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { useSupabase, useUser, toast } from '@/app/providers'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { Bell, MapPin, Download, X, Check, RefreshCw } from 'lucide-react'
 
 export default function PwaSetup() {
+  const { profile } = useUser()
+  const supabase = useSupabase()
   const [installable, setInstallable] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
   const [installed, setInstalled] = useState(false)
@@ -12,7 +15,7 @@ export default function PwaSetup() {
   const [swRegistration, setSwRegistration] = useState<ServiceWorkerRegistration | null>(null)
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false)
   const [dismissedPerms, setDismissedPerms] = useState(false)
-  const { permitted: locationPermitted, loading: locationLoading, requestPosition } = useGeolocation()
+  const { permitted: locationPermitted, loading: locationLoading, position, requestPosition } = useGeolocation()
   const { permitted: notifPermitted, subscribed, loading: notifLoading, subscribe, unsubscribe } = usePushNotifications()
 
   // Service worker registration
@@ -72,6 +75,15 @@ export default function PwaSetup() {
       setDeferredPrompt(null)
     }
   }
+
+  // Sync location to profile when position updates
+  useEffect(() => {
+    if (!position || !profile?.id || !supabase) return
+    const { latitude, longitude } = position.coords
+    ;(async () => {
+      try { await supabase.rpc('update_user_location', { p_lat: latitude, p_lng: longitude }) } catch {}
+    })()
+  }, [position, profile?.id, supabase])
 
   // Show permission prompt after delay
   useEffect(() => {

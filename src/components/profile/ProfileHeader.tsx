@@ -3,6 +3,8 @@ import { useState, useRef, useCallback, DragEvent } from 'react'
 import Link from 'next/link'
 import { Edit3, Settings, MapPin, Globe, MessageCircle, Heart, Users, BookOpen, Award, Sparkles, Camera, X, Check, Shield, Calendar, Upload } from 'lucide-react'
 import { toast } from '@/app/providers'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/database.types'
 
 interface Profile {
   id: string
@@ -24,6 +26,7 @@ interface Profile {
 interface ProfileHeaderProps {
   profile: Profile
   isOwn: boolean
+  supabase: SupabaseClient<Database>
   isFollowing?: boolean
   postCount?: number
   onFollow?: () => void
@@ -36,6 +39,7 @@ interface ProfileHeaderProps {
 export default function ProfileHeader({
   profile,
   isOwn,
+  supabase,
   isFollowing = false,
   postCount = 0,
   onFollow,
@@ -103,40 +107,34 @@ export default function ProfileHeader({
     uploading(true)
     try {
       const type = cropType
-      const res = await fetch('/api/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'upload-url', type, mimeType: pendingFile.type }),
-      })
-      if (!res.ok) throw new Error('Failed to get upload URL')
-      const { signedUrl, path } = await res.json()
+      const ext = (pendingFile.name.split('.').pop() || 'jpg').replace(/[^a-zA-Z0-9]/g, '')
+      const path = `${type}s/${profile.id}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
-      const uploadRes = await fetch(signedUrl, {
-        method: 'PUT',
-        body: pendingFile,
-        headers: { 'Content-Type': pendingFile.type },
-      })
-      if (!uploadRes.ok) throw new Error('Upload failed')
+      const { error: upErr } = await supabase.storage.from('public-media').upload(path, pendingFile, { upsert: true })
+      if (upErr) throw upErr
 
-      const confirmRes = await fetch('/api/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'confirm-upload', type, path }),
-      })
-      if (!confirmRes.ok) throw new Error('Confirmation failed')
-      const { url } = await confirmRes.json()
+      const { data: { publicUrl } } = supabase.storage.from('public-media').getPublicUrl(path)
+      const ts = Date.now()
+      const versionedUrl = publicUrl.includes('?') ? `${publicUrl}&t=${ts}` : `${publicUrl}?t=${ts}`
+
+      const updateField = type === 'avatar' ? 'avatar_url' : 'cover_url'
+      const { error: updateError } = await (supabase.from('profiles') as any)
+        .update({ [updateField]: versionedUrl, updated_at: new Date().toISOString() })
+        .eq('id', profile.id)
+      if (updateError) throw updateError
 
       if (type === 'avatar') {
-        onAvatarChange?.(url)
+        onAvatarChange?.(versionedUrl)
       } else {
-        onCoverChange?.(url)
+        onCoverChange?.(versionedUrl)
       }
       setShowCropModal(false)
       setAvatarPreview(null)
       setCoverPreview(null)
       setPendingFile(null)
       toast(`${type === 'avatar' ? 'Profile photo' : 'Cover image'} updated!`)
-    } catch {
+    } catch (e) {
+      console.error('Upload error:', e)
       toast('Upload failed. Please try again.')
     } finally {
       uploading(false)

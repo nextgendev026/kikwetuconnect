@@ -1,5 +1,6 @@
 import { clsx } from 'clsx'
 import { LucideIcon } from 'lucide-react'
+import { ROLES } from '@/lib/roles'
 
 interface PostCardProps {
   post: {

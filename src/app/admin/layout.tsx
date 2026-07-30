@@ -2,6 +2,7 @@
 import { useRouter, usePathname } from 'next/navigation'
 import { useUser, useSupabase, useTheme, toast } from '@/app/providers'
 import { useEffect, useState } from 'react'
+import { isAdmin } from '@/lib/roles'
 
 const NAV = {
   Monitor: [
@@ -38,11 +39,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [pendingModCount, setPendingModCount] = useState(0)
 
   useEffect(() => {
-    if (!loading && (!user || profile?.role !== 'admin')) setTimeout(() => router.push('/feed'), 0)
+    if (!loading && (!user || !isAdmin(profile?.role))) setTimeout(() => router.push('/feed'), 0)
   }, [user, profile, loading, router])
 
   useEffect(() => {
-    if (!supabase || profile?.role !== 'admin') return
+    if (!supabase || !isAdmin(profile?.role)) return
     supabase.from('moderation_queue').select('id', { count: 'exact', head: true }).eq('status', 'pending')
       .then(({ count }: { count: number | null }) => { if (count !== null) setPendingModCount(count) })
   }, [supabase, profile])
@@ -51,7 +52,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const initials = (profile?.full_name || profile?.username || 'AD').slice(0, 2).toUpperCase()
 
   if (loading) return <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}><div className="w-[32px] h-[32px] rounded-full animate-spin" style={{ border: '3px solid var(--gold)', borderTopColor: 'transparent' }} /></div>
-  if (!user || profile?.role !== 'admin') return null
+  if (!user || !isAdmin(profile?.role)) return null
 
   return (
     <div className="min-h-screen max-w-[1700px] mx-auto" style={{ background: 'var(--bg)' }}>

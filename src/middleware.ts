@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { ROLES } from '@/lib/roles'
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
@@ -36,7 +37,7 @@ export async function middleware(req: NextRequest) {
       .eq('id', user.id)
       .maybeSingle()
 
-    if (!profile || profile.role !== 'admin') {
+    if (!profile || profile.role !== ROLES.ADMIN) {
       return NextResponse.redirect(new URL('/feed', req.url))
     }
   }

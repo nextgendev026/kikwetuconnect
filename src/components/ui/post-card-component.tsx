@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Heart, MessageCircle, Share2, Bookmark, Shield, TrendingUp } from 'lucide-react'
 import { clsx } from 'clsx'
+import PostActions from '@/components/PostActions'
 
 export interface PostCardProps {
   id: string
@@ -9,9 +10,12 @@ export interface PostCardProps {
   postType: 'baraza' | 'inquiry' | 'article'
   authorName: string
   authorHandle: string
+  authorId?: string
+  currentUserId?: string
   authorAvatar?: string
   authorHeshima?: number
   isVerifiedExpert?: boolean
+  isHidden?: boolean
   upvotesCount: number
   answersCount?: number
   commentsCount?: number
@@ -43,6 +47,9 @@ export function PostCard({
   bountyTokens = 0,
   createdAt,
   media,
+  authorId,
+  currentUserId,
+  isHidden,
   onUpvote,
   onSave,
   userVoted = false,
@@ -101,7 +108,12 @@ export function PostCard({
             )}
           </div>
         </div>
-        <div className="text-xs text-quiet flex-shrink-0">{timeAgo}</div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <span className="text-xs text-quiet">{timeAgo}</span>
+          {authorId && currentUserId && (
+            <PostActions postId={id} currentUserId={currentUserId} authorId={authorId} isHidden={isHidden} />
+          )}
+        </div>
       </div>
 
       {/* Content */}

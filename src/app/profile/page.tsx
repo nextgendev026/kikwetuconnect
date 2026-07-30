@@ -287,6 +287,7 @@ export default function ProfilePage() {
       <ProfileHeader
         profile={displayProfile || profile}
         isOwn={true}
+        supabase={supabase}
         postCount={postCount}
         onAvatarChange={handleAvatarChange}
         onCoverChange={handleCoverChange}

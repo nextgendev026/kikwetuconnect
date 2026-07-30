@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
 import { useToolbar } from '@/lib/toolbar'
 import { ArrowLeft, Users, Hash, Sparkles, Plus, Send, Clock, MessageCircle, Heart, Share2, Flag, MoreHorizontal, Globe, BookOpen, LogIn, LogOut } from 'lucide-react'
+import PostActions from '@/components/PostActions'
 
 interface Space {
   id: string; name: string; slug: string; description: string; icon: string; category: string
@@ -55,6 +56,54 @@ export default function SpaceDetailPage() {
     if (!slug || userLoading) return
     fetchSpace()
   }, [slug, userLoading])
+
+  // Realtime: subscribe to space, posts, and member changes
+  useEffect(() => {
+    if (!space || !supabase) return
+    const channel = supabase.channel(`space-${space.id}`)
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'spaces', filter: `id=eq.${space.id}` },
+        (payload: any) => {
+          setSpace(prev => prev ? { ...prev, ...payload.new } : prev)
+        })
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'posts', filter: `space_id=eq.${space.id}` },
+        (payload: any) => {
+          const newPost = payload.new as Post
+          supabase.from('profiles').select('id, full_name, username, avatar_url').eq('id', newPost.user_id).single()
+            .then(({ data }) => {
+              setPosts(prev => {
+                if (prev.some(p => p.id === newPost.id)) return prev
+                return [{ ...newPost, profiles: data }, ...prev]
+              })
+            })
+          setSpace(prev => prev ? { ...prev, post_count: (prev.post_count || 0) + 1 } : prev)
+        })
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'space_members', filter: `space_id=eq.${space.id}` },
+        (payload: any) => {
+          const newMember = payload.new as any
+          setMembers(prev => {
+            if (prev.some(m => m.user_id === newMember.user_id)) return prev
+            supabase.from('profiles').select('id, full_name, username, avatar_url').eq('id', newMember.user_id).single()
+              .then(({ data }) => {
+                if (data) setMembers(p => p.some(m => m.user_id === newMember.user_id) ? p : [...p, { user_id: newMember.user_id, role: newMember.role, profiles: data }])
+              })
+            return prev
+          })
+          setSpace(prev => prev ? { ...prev, member_count: (prev.member_count || 0) + 1 } : prev)
+        })
+      .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'space_members', filter: `space_id=eq.${space.id}` },
+        (payload: any) => {
+          const deletedUserId = payload.old.user_id
+          setMembers(prev => prev.filter(m => m.user_id !== deletedUserId))
+          setSpace(prev => prev ? { ...prev, member_count: Math.max(0, (prev.member_count || 0) - 1) } : prev)
+          if (deletedUserId === profile?.id) setIsMember(false)
+        })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [space?.id, supabase])
 
   const fetchSpace = async () => {
     setLoading(true)
@@ -270,13 +319,18 @@ export default function SpaceDetailPage() {
                   <div className="w-8 h-8 rounded-full grid place-items-center text-[10px] font-bold flex-shrink-0" style={{ background: 'var(--earth)', color: 'var(--gold)' }}>
                     {(post.profiles?.full_name || post.profiles?.username || '?')[0].toUpperCase()}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold" style={{ color: 'var(--ink)' }}>{post.profiles?.full_name || post.profiles?.username || 'User'}</span>
-                      <span className="text-[9px]" style={{ color: 'var(--muted)' }}>{formatTime(post.created_at)}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold" style={{ color: 'var(--ink)' }}>{post.profiles?.full_name || post.profiles?.username || 'User'}</span>
+                        <span className="text-[9px]" style={{ color: 'var(--muted)' }}>{formatTime(post.created_at)}</span>
+                        <div style={{ marginLeft: 'auto' }}>
+                          {profile && (
+                            <PostActions postId={post.id} currentUserId={profile.id} authorId={post.user_id} />
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm mt-1 leading-relaxed" style={{ color: 'var(--ink)' }}>{post.content}</p>
                     </div>
-                    <p className="text-sm mt-1 leading-relaxed" style={{ color: 'var(--ink)' }}>{post.content}</p>
-                  </div>
                 </div>
                 <div className="flex gap-3 pt-3" style={{ borderTop: '1px solid var(--line)', color: 'var(--muted)', fontSize: 11 }}>
                   <button style={{ background: 'none', border: 0, cursor: 'pointer', color: 'inherit', display: 'flex', alignItems: 'center', gap: 4 }}>
