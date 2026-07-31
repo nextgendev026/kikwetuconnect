@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { X, PenSquare, HelpCircle, BarChart3, ShoppingBag, Shield, Image, Video, Mic, Trash2, Upload, Plus, Minus, Coins, MapPin, Tag } from 'lucide-react'
+import { X, PenSquare, HelpCircle, BarChart3, ShoppingBag, Shield, Image, Video, Mic, Trash2, Upload, Plus, Minus, Coins, MapPin, Tag, Play } from 'lucide-react'
 import imageCompress from 'browser-image-compression'
 import MediaEditor from '@/components/MediaEditor'
 
@@ -11,6 +11,7 @@ const TYPES = [
   { id: 'poll', label: 'Poll', icon: BarChart3, color: 'var(--blue)' },
   { id: 'listing', label: 'Mtaa listing', icon: ShoppingBag, color: 'var(--earth)' },
   { id: 'alert', label: 'Safety update', icon: Shield, color: 'var(--red)' },
+  { id: 'story', label: 'Story (24h)', icon: Play, color: 'var(--blue)' },
 ]
 
 const LABELS: Record<string, string> = {
@@ -39,7 +40,7 @@ export default function CreateModal() {
   const [type, setType] = useState('post')
   const [text, setText] = useState('')
   const [title, setTitle] = useState('')
-  const [mediaFiles, setMediaFiles] = useState<{ file: File; preview: string; type: string }[]>([])
+  const [mediaFiles, setMediaFiles] = useState<{ file: File; preview: string; type: string; duration?: number }[]>([])
   const [uploading, setUploading] = useState(false)
   const [countyTag, setCountyTag] = useState<string | null>(null)
   const [barazaId, setBarazaId] = useState<string | null>(null)
@@ -108,7 +109,8 @@ export default function CreateModal() {
   const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>, mediaType: string) => {
     const files = Array.from(e.target.files || [])
     for (const file of files) {
-      if (file.size > 10 * 1024 * 1024) { toast(`${file.name} is too large (max 10MB)`); continue }
+      const sizeLimit = type === 'story' ? 50 * 1024 * 1024 : 10 * 1024 * 1024
+      if (file.size > sizeLimit) { toast(`${file.name} is too large (max ${type === 'story' ? 50 : 10}MB)`); continue }
       try {
         const processed = mediaType === 'image' && file.type.startsWith('image/')
           ? await imageCompress(file, { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true })
@@ -141,6 +143,16 @@ export default function CreateModal() {
       urls.push(publicUrl)
     }
     return urls
+  }
+
+  const uploadStoryMedia = async (m: { file: File; type: string }): Promise<string> => {
+    const ext = (m.file.name.split('.').pop() || 'bin').replace(/[^a-zA-Z0-9]/g, '')
+    const path = `stories/${user!.id}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const bucket = 'stories'
+    const { error: upErr } = await supabase.storage.from(bucket).upload(path, m.file, { upsert: true })
+    if (upErr) throw upErr
+    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path)
+    return publicUrl
   }
 
   const resetForm = () => {
@@ -197,6 +209,35 @@ export default function CreateModal() {
         if (error) throw error
         toast('Alert sent to neighbours!')
         window.location.href = '/nyumba'
+        resetForm()
+        return
+      }
+
+      // Story publishing: single media required, 15s video cap, 24h expiry (via RPC)
+      if (type === 'story') {
+        if (mediaFiles.length === 0) { toast('Add a photo or 15s video for your story'); return }
+        if (mediaFiles.length > 1) { toast('Stories support a single image or video'); return }
+        const m = mediaFiles[0]
+        const isVideo = m.type.startsWith('video/')
+        const fileSizeMb = m.file.size / (1024 * 1024)
+        if (fileSizeMb > 50) { toast('Story media too large (max 50MB)'); return }
+        if (isVideo && m.duration && m.duration > 15) {
+          toast('Video stories are capped at 15 seconds. Re-trim your clip.')
+          setEditingMedia({ file: m.file, type: 'video' })
+          setMediaFiles(prev => prev.filter(x => x !== m))
+          return
+        }
+        const url = await uploadStoryMedia(m)
+        const { error: storyErr } = await supabase.rpc('create_story', {
+          p_media_url: url,
+          p_media_type: isVideo ? 'video' : 'image',
+          p_caption: text || title || null,
+          p_duration: isVideo ? (m.duration || 15) : null,
+          p_thumbnail_url: null,
+        })
+        if (storyErr) throw storyErr
+        toast('Story shared! Visible for 24h.')
+        window.location.href = '/feed'
         resetForm()
         return
       }
@@ -289,9 +330,15 @@ export default function CreateModal() {
         {/* Media editor overlay */}
         {editingMedia && (
           <MediaEditor file={editingMedia.file} type={editingMedia.type}
-            onComplete={(editedFile) => {
+            maxDuration={type === 'story' && editingMedia.type === 'video' ? 15 : 30}
+            onComplete={(editedFile, cropData) => {
               const preview = URL.createObjectURL(editedFile)
-              setMediaFiles(prev => [...prev, { file: editedFile, preview, type: editingMedia.type }])
+              const dur = typeof cropData?.duration === 'number'
+                ? cropData.duration
+                : typeof cropData?.end === 'number' && typeof cropData?.start === 'number'
+                  ? Math.round(cropData.end - cropData.start)
+                  : undefined
+              setMediaFiles(prev => [...prev, { file: editedFile, preview, type: editingMedia.type, duration: dur }])
               setEditingMedia(null)
             }}
             onCancel={() => setEditingMedia(null)} />

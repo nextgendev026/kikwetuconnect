@@ -5,6 +5,7 @@ import { useSupabase, useUser, toast } from '@/app/providers'
 import { ArrowUp, MessageCircle, Smile, Globe, Star, Flag, MoreHorizontal, Edit3, Trash2, EyeOff, Eye, Plus, Play, Zap } from 'lucide-react'
 import FeedAd from '@/components/FeedAd'
 import ShareMenu from '@/components/ShareMenu'
+import StoryStrip from '@/components/StoryStrip'
 import { COUNTIES, TABS, TYPE_FILTERS, EMOJI_REACTIONS } from '@/lib/feed-config'
 import type { TabId, TypeFilter } from '@/lib/feed-config'
 
@@ -839,6 +840,9 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
           </button>
         ))}
       </div>
+
+      {/* Stories strip — Facebook-style 24h reels */}
+      <StoryStrip profile={profile} />
 
       {/* New idea shorts strip */}
       {activeTab === 'for_you' && <NewIdeaStrip profile={profile} />}

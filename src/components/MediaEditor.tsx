@@ -7,6 +7,7 @@ interface MediaEditorProps {
   onComplete: (editedFile: File, cropData?: any) => void
   onCancel: () => void
   aspect?: 'square' | 'cover'
+  maxDuration?: number
 }
 
 function constrainCrop(w: number, h: number, aspect: 'square' | 'cover', maxSide: number) {
@@ -32,10 +33,10 @@ const FILTERS: Record<string, string> = {
   Fade: 'contrast(.92) brightness(1.08) saturate(.85)',
 }
 
-export default function MediaEditor({ file, type, onComplete, onCancel }: MediaEditorProps) {
-  if (type === 'image') return <ImageCropper file={file} type={type} onComplete={onComplete} onCancel={onCancel} />
+export default function MediaEditor({ file, type, onComplete, onCancel, maxDuration = 30, aspect = 'square' }: MediaEditorProps) {
+  if (type === 'image') return <ImageCropper file={file} type={type} aspect={aspect} onComplete={onComplete} onCancel={onCancel} />
   if (type === 'audio') return <AudioTrimmer file={file} type={type} onComplete={onComplete} onCancel={onCancel} />
-  return <VideoTrimmer file={file} type={type} onComplete={onComplete} onCancel={onCancel} />
+  return <VideoTrimmer file={file} type={type} maxDuration={maxDuration} onComplete={onComplete} onCancel={onCancel} />
 }
 
 export { ImageCropper, VideoTrimmer, AudioTrimmer }
@@ -245,10 +246,10 @@ async function recordSegment(
   return { file: trimmedFile, mime: type }
 }
 
-function VideoTrimmer({ file, onComplete, onCancel }: MediaEditorProps) {
+function VideoTrimmer({ file, onComplete, onCancel, maxDuration = 30 }: MediaEditorProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [startTime, setStartTime] = useState(0)
-  const [endTime, setEndTime] = useState(30)
+  const [endTime, setEndTime] = useState(maxDuration)
   const [duration, setDuration] = useState(0)
   const [previewUrl, setPreviewUrl] = useState('')
   const [trimming, setTrimming] = useState(false)
@@ -263,7 +264,7 @@ function VideoTrimmer({ file, onComplete, onCancel }: MediaEditorProps) {
     if (!videoRef.current) return
     const dur = videoRef.current.duration
     setDuration(dur)
-    setEndTime(Math.min(30, dur))
+    setEndTime(Math.min(maxDuration, dur))
   }
 
   const fallback = () => file
@@ -290,9 +291,9 @@ function VideoTrimmer({ file, onComplete, onCancel }: MediaEditorProps) {
         <div className="px-2">
           <div className="relative h-2 rounded-full mb-2" style={{ background: 'var(--raised)' }}>
             <div className="absolute h-full rounded-full" style={{ left: `${(startTime / (duration || 1)) * 100}%`, right: `${100 - (endTime / (duration || 1)) * 100}%`, background: 'var(--gold)' }} />
-            <input type="range" min={0} max={duration || 1} step={0.1} value={startTime} onChange={e => setStartTime(Math.min(Number(e.target.value), endTime - 0.1))}
+            <input type="range" min={0} max={Math.min(duration || 1, maxDuration) || 1} step={0.1} value={startTime} onChange={e => setStartTime(Math.min(Number(e.target.value), endTime - 0.1))}
               className="absolute inset-0 w-full opacity-0 cursor-pointer" aria-label="Start time" />
-            <input type="range" min={0} max={duration || 1} step={0.1} value={endTime} onChange={e => setEndTime(Math.max(Number(e.target.value), startTime + 0.1))}
+            <input type="range" min={0} max={Math.min(duration || 1, maxDuration) || 1} step={0.1} value={endTime} onChange={e => setEndTime(Math.max(Number(e.target.value), startTime + 0.1))}
               className="absolute inset-0 w-full opacity-0 cursor-pointer" aria-label="End time" />
           </div>
           <div className="flex justify-between text-[10px]" style={{ color: 'var(--muted)' }}>
