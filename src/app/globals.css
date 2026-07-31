@@ -389,9 +389,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
     background-attachment: scroll;
   }
 
-  /* side-section pop-outs: keep within viewport height and scroll natively */
-  .side-section > div { max-height: 70vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .side-section summary { padding: 12px; }
+  /* Larger, legible text + comfortable line height on the toggle */
+  .side-section summary { padding: 12px; font-size: 16px; line-height: 1.5; }
+  /* side-section pop-outs: keep within viewport height, scroll natively,
+     and hint the compositor for a jank-free expand animation */
+  .side-section > div { max-height: 70vh; overflow-y: auto; -webkit-overflow-scrolling: touch; will-change: max-height; }
+  .side-body { padding: 0 12px 16px; }
 }
 
 /* Bottom safe area for modern phones */
