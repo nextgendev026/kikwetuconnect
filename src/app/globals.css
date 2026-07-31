@@ -368,7 +368,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 
   /* Mobile performance optimizations */
   * { -webkit-tap-highlight-color: transparent; }
-  .animate-rise, .animate-fade-in-up, .animate-slide-in-right { will-change: transform, opacity; }
+  /* NOTE: no persistent `will-change: transform` here — it creates a containing block
+     that traps position:fixed modals (modal-center-scroll) inside these animated
+     page wrappers. Fixed overlays are promoted by the compositor during animation. */
+  .animate-rise, .animate-fade-in-up, .animate-slide-in-right { will-change: auto; }
   [style*="backdrop-filter"] { will-change: backdrop-filter; }
   img, video { content-visibility: auto; }
   .post, .card, .panel, .side-section { content-visibility: auto; contain-intrinsic-size: 200px; }
