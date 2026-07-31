@@ -2,8 +2,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { ArrowUp, MessageCircle, Smile, Share2, Globe, Star, Flag, MoreHorizontal, Edit3, Trash2, EyeOff, Eye } from 'lucide-react'
+import { ArrowUp, MessageCircle, Smile, Globe, Star, Flag, MoreHorizontal, Edit3, Trash2, EyeOff, Eye } from 'lucide-react'
 import FeedAd from '@/components/FeedAd'
+import ShareMenu from '@/components/ShareMenu'
 
 const COUNTIES = [
   'Nairobi', 'Mombasa', 'Kisumu', 'Eldoret', 'Kitale', 'Nakuru', 'Thika', 'Kericho',
@@ -409,13 +410,7 @@ function PostCardComponent({
         </div>
 
         <div className="action-group">
-          <button
-            onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/posts/${post.id}`); toast('Link copied to clipboard') }}
-            className="action-button"
-            aria-label="Share post"
-          >
-            <Share2 className="w-4 h-4" />
-          </button>
+          <ShareMenu url={`/posts/${post.id}`} title={post.title || post.content?.slice(0, 90)} />
 
           <button
             onClick={handleTranslate}

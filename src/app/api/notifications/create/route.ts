@@ -6,9 +6,16 @@ export async function POST(request: NextRequest) {
     const supabase = createApiClient(request);
   try {
 
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const body = await request.json()
     const {
-      userId,
       actorId,
       type,
       targetId,
@@ -16,17 +23,19 @@ export async function POST(request: NextRequest) {
       content,
     } = body
 
-    if (!userId || !type || !content) {
+    if (!type || !content) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       )
     }
 
+    // Security: a notification can only be created for the caller themself.
+    // Server-side flows must use the service role / create_notification RPC.
     const { data: notification, error } = await supabase
       .from('notifications')
       .insert({
-        user_id: userId,
+        user_id: user.id,
         actor_id: actorId || null,
         type,
         target_id: targetId || null,

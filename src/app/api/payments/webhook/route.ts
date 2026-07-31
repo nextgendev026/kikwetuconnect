@@ -1,10 +1,12 @@
-import { createApiClient } from '@/lib/server-supabase'
+import { createServiceClient } from '@/lib/server-supabase'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const supabase = createApiClient(request)
+    // M-Pesa callbacks run as the server with the service role key so the
+    // payment/credit RPCs (service_role-only) can be invoked safely.
+    const supabase = createServiceClient()
 
     // --- STK Push Callback (Lipa Na MPESA) ---
     if (body.Body?.stkCallback) {
@@ -174,7 +176,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const supabase = createApiClient(request)
+  const supabase = createServiceClient()
   const { data: recent } = await supabase
     .from('marketplace_orders')
     .select('id, total_price, status, payment_provider, payment_reference, updated_at')

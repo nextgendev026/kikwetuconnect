@@ -47,8 +47,11 @@ export async function middleware(req: NextRequest) {
   const publicPaths = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/auth/callback', '/onboarding']
   const isPublicPath = publicPaths.some(p => pathname.startsWith(p))
   const isLanding = pathname === '/' || pathname === ''
+  // Shared posts must be readable by anyone (anonymous read-only), while
+  // logged-in users stay on the post without being bounced back to /feed.
+  const isSharedPostRead = pathname.startsWith('/posts')
 
-  if (!user && !isPublicPath && !isLanding) return NextResponse.redirect(new URL('/login', req.url))
+  if (!user && !isPublicPath && !isLanding && !isSharedPostRead) return NextResponse.redirect(new URL('/login', req.url))
   if (user && (isPublicPath || isLanding)) return NextResponse.redirect(new URL('/feed', req.url))
 
   return res

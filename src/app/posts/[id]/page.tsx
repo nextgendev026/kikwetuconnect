@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, MessageCircle, TrendingUp, Share2, Bookmark, Shield, Star, MoreHorizontal, Edit3, Trash2, EyeOff, Eye } from 'lucide-react'
+import { ArrowLeft, MessageCircle, TrendingUp, Bookmark, Shield, Star, MoreHorizontal, Edit3, Trash2, EyeOff, Eye } from 'lucide-react'
 import { Button, Textarea } from '@/components/ui/form'
 import { useUser, useSupabase, toast } from '@/app/providers'
+import ShareMenu from '@/components/ShareMenu'
 
 interface Profile {
   id: string
@@ -397,12 +398,7 @@ export default function PostDetailPage() {
               <TrendingUp className="w-4 h-4" />
               Upvote
             </button>
-            <button onClick={() => { navigator.clipboard.writeText(window.location.href); toast('Link copied') }}
-              className="min-h-[44px] px-4 py-2 rounded-full text-sm font-medium text-muted hover:bg-surface transition-colors flex items-center gap-1"
-              aria-label="Share post">
-              <Share2 className="w-4 h-4" />
-              Share
-            </button>
+            <ShareMenu url={`/posts/${post.id}`} title={post.title || post.content.slice(0, 80)} />
             <button onClick={async () => {
               if (!profile) { toast('Sign in to save'); return }
               const res = await fetch('/api/saves', {
@@ -484,7 +480,7 @@ export default function PostDetailPage() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-bold text-sm">{answerAuthor?.full_name}</p>
+                          <p className="font-bold text-sm">{answerAuthor?.full_name || 'Kikwetu Member'}</p>
                           {answerAuthor?.is_verified_expert && (
                             <Shield className="w-3 h-3 text-green" />
                           )}
@@ -494,7 +490,7 @@ export default function PostDetailPage() {
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-quiet">@{answerAuthor?.username}</p>
+                        <p className="text-xs text-quiet">{answerAuthor?.username ? `@${answerAuthor.username}` : ''}</p>
                       </div>
                     </div>
                     <p className="text-xs text-quiet">
@@ -524,9 +520,7 @@ export default function PostDetailPage() {
                         <TrendingUp className="w-3 h-3" />
                         Upvote
                       </button>
-                      <button className="min-h-[36px] px-3 py-1.5 rounded-full text-xs font-medium text-muted hover:bg-surface transition-colors">
-                        Share
-                      </button>
+                      <ShareMenu compact url={`/posts/${post.id}`} title={`Answer on "${post.title || 'KikwetuConnect'}"`} />
                     </div>
                   </div>
                 </div>

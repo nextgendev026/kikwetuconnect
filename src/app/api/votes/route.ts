@@ -1,8 +1,9 @@
-import { createApiClient } from '@/lib/server-supabase'
+import { createApiClient, createServiceClient } from '@/lib/server-supabase'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   const supabase = createApiClient(request)
+  const svc = createServiceClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
     .eq('id', target_id)
     .maybeSingle()
   if (target?.user_id && target.user_id !== user.id && vote_type === 1) {
-    await supabase.from('notifications').insert({
+    await svc.from('notifications').insert({
       user_id: target.user_id,
       actor_id: user.id,
       type: 'upvote',

@@ -55,11 +55,14 @@ const publicPaths = ['/', '/login', '/signup', '/forgot-password', '/reset-passw
 
 export function ShellRouter({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const { user } = useUser()
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
   const isPublic = publicPaths.some(p => pathname === p || pathname.startsWith(p + '/')) || pathname.startsWith('/admin')
+  // Shared posts are anonymous read-only: no app chrome, no login redirect.
+  const isAnonymousSharedPost = !user && pathname.startsWith('/posts')
   if (!mounted) return <div style={{ minHeight: '100vh', background: 'var(--bg)' }} />
-  return <>{isPublic ? children : <AppShell>{children}</AppShell>}</>
+  return <>{isPublic || isAnonymousSharedPost ? children : <AppShell>{children}</AppShell>}</>
 }
 
 import AppShell from './AppShell'
@@ -75,6 +78,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const notifChannelRef = useRef<any>(null)
   const heshimaChannelRef = useRef<any>(null)
   const profileChannelRef = useRef<any>(null)
+  // Guards against cross-account "fusing": when switching users quickly,
+  // a slow fetchProfile(A) must never overwrite the profile of user B.
+  const activeUserIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     const saved = localStorage.getItem('kikwetu-theme') || 'light'
@@ -94,7 +100,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const fetchProfile = useCallback(async (id: string) => {
     try {
       const { data } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle()
-      if (data) setProfile(data)
+      // Only apply if this user is STILL the active session (prevents account fusing)
+      if (data && activeUserIdRef.current === id) setProfile(data)
       return data
     } catch (e) {
       console.error('fetchProfile error:', e)
@@ -208,6 +215,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (cancelled) return
+      // Mark the active session synchronously so stale fetches can't leak across accounts
+      activeUserIdRef.current = session?.user?.id ?? null
       setUser(session?.user ?? null)
       if (session?.user) {
         const p = await fetchProfile(session.user.id)
