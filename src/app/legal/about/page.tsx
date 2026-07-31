@@ -58,7 +58,7 @@ export default function AboutPage() {
 
             <section className="card-hover feature-card" style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: 20 }}>
               <h2 className="text-lg font-bold tracking-tight mb-3" style={{ fontFamily: "'Plus Jakarta Sans'" }}>Why We Exist</h2>
-              <p className="text-[var(--muted)] text-sm leading-[1.7] m-0">Kenya has incredible local expertise — farmers who know the soil, professionals who understand the system, community members who have navigated the same challenges. But this knowledge stays locked in counties and communities. KikwetuConnect unlocks it, making local wisdom accessible to every Kenyan, everywhere.</p>
+              <p className="text-[var(--muted)] text-sm leading-[1.7] m-0">Kenya has incredible local expertise — farmers who know the soil, experts who understand the system, community members who have navigated the same challenges. But this knowledge stays locked in counties and communities. KikwetuConnect unlocks it, making local wisdom accessible to every Kenyan, everywhere.</p>
             </section>
 
             <section className="card-hover feature-card" style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: 20 }}>
@@ -68,7 +68,7 @@ export default function AboutPage() {
                   { step: '1', text: 'Create a profile and set your county hub' },
                   { step: '2', text: 'Join Barazas — public or private community rooms for your county' },
                   { step: '3', text: 'Ask questions, share knowledge, build Heshima reputation' },
-                  { step: '4', text: 'Connect with verified professionals and experts nearby' },
+                  { step: '4', text: 'Connect with verified experts nearby' },
                   { step: '5', text: 'Grow your reputation through helpful contributions' },
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-3">

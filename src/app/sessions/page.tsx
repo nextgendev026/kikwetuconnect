@@ -277,7 +277,7 @@ export default function SessionsPage() {
             <div className="card section text-center py-12">
               <Calendar className="w-12 h-12 text-[var(--muted)] mx-auto mb-4 opacity-50" />
               <p className="text-[var(--muted)] mb-2">No sessions found</p>
-              <p className="text-xs text-[var(--muted)]">Book a session with a professional to get started</p>
+              <p className="text-xs text-[var(--muted)]">Book a session with an expert to get started</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -303,7 +303,7 @@ export default function SessionsPage() {
                               {otherUser?.full_name || otherUser?.username || 'Unknown'}
                             </Link>
                             <span className="text-[10px] text-[var(--muted)]">
-                              ({isStudent ? 'Professional' : 'Student'})
+                              ({isStudent ? 'Expert' : 'Student'})
                             </span>
                           </div>
                           <h3 className="text-sm font-semibold text-cream mt-0.5">{session.topic}</h3>

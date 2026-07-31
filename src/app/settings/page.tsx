@@ -61,6 +61,10 @@ export default function SettingsPage() {
   const [fullName, setFullName] = useState('')
   const [username, setUsername] = useState('')
   const [county, setCounty] = useState('')
+  const [area, setArea] = useState('')
+  const [phone, setPhone] = useState('')
+  const [notifPref, setNotifPref] = useState('important')
+  const [visibility, setVisibility] = useState('public')
   const [bio, setBio] = useState('')
   const [language, setLanguage] = useState('en')
   const [translationHelper, setTranslationHelper] = useState(false)
@@ -83,6 +87,10 @@ export default function SettingsPage() {
     setFullName(profile.full_name || '')
     setUsername(profile.username || '')
     setCounty(profile.county_hub || '')
+    setArea(profile.area || '')
+    setPhone(profile.phone || '')
+    setNotifPref(profile.notif_pref || 'important')
+    setVisibility(profile.visibility || 'public')
     setBio(profile.bio || '')
     setLanguage(profile.preferred_language || 'en')
     loadLocalPrefs()
@@ -135,7 +143,7 @@ export default function SettingsPage() {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ full_name: fullName, username, county_hub: county, bio, preferred_language: language })
+        .update({ full_name: fullName, username, county_hub: county, area: area || null, phone: phone || null, bio, preferred_language: language, notif_pref: notifPref, visibility })
         .eq('id', user.id)
       if (error) throw error
       await refreshProfile()
@@ -206,8 +214,33 @@ export default function SettingsPage() {
             <input value={county} onChange={e => setCounty(e.target.value)} style={s.input} placeholder="e.g. Nairobi, Uasin Gishu" />
           </div>
           <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>Town or area</label>
+            <input value={area} onChange={e => setArea(e.target.value)} style={s.input} placeholder="e.g. Westlands, Eldoret" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>Phone number</label>
+            <input value={phone} onChange={e => setPhone(e.target.value)} style={s.input} placeholder="07XX XXX XXX" />
+          </div>
+          <div>
             <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>Bio</label>
             <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3} style={{ ...s.input, resize: 'none', minHeight: 80 }} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>Notifications</label>
+              <select value={notifPref} onChange={e => setNotifPref(e.target.value)} style={s.input}>
+                <option value="important">Important updates only</option>
+                <option value="replies">Replies and mentions</option>
+                <option value="all">Everything useful</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>Profile visibility</label>
+              <select value={visibility} onChange={e => setVisibility(e.target.value)} style={s.input}>
+                <option value="public">Public to members</option>
+                <option value="followers">Only people I follow</option>
+              </select>
+            </div>
           </div>
           <button onClick={saveProfile} disabled={saving} style={{ ...s.btn, ...s.primaryBtn }}>
             {saving ? 'Saving...' : 'Save Profile'}

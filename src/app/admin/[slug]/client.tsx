@@ -91,9 +91,9 @@ function AnalyticsPage() {
     <>
       <PageHeader slug="analytics" meta={PAGE_META.analytics} />
       <KpiCards items={[
-        { label: 'Total members', value: data.users.toLocaleString(), sub: `${data.professionals} professionals` },
+        { label: 'Total members', value: data.users.toLocaleString(), sub: `${data.professionals} experts` },
         { label: 'Posts + Answers', value: (data.posts + data.answers).toLocaleString(), sub: `${data.posts} posts, ${data.answers} answers` },
-        { label: 'Engagement rate', value: `${engagement}/user`, sub: `${proRate}% professional rate` },
+        { label: 'Engagement rate', value: `${engagement}/user`, sub: `${proRate}% expert rate` },
         { label: 'Content libraries', value: data.topics + data.spaces, sub: `${data.topics} topics, ${data.spaces} spaces` },
       ]} />
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
@@ -197,11 +197,11 @@ function VerificationPage() {
       if (error) { toast(error.message); return }
       const { error: pErr } = await supabase.from('profiles').update({ is_verified_expert: true }).eq('id', userId)
       if (pErr) { toast(pErr.message); return }
-      toast('Professional approved')
+      toast('Expert approved')
     } else {
       const { error } = await supabase.from('professionals').update({ status: 'rejected' }).eq('user_id', userId)
       if (error) { toast(error.message); return }
-      toast('Professional rejected')
+      toast('Expert rejected')
     }
     fetchPros()
   }
@@ -215,7 +215,7 @@ function VerificationPage() {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--line)' }}>
-              <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Professional</th>
+              <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Expert</th>
               <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Title</th>
               <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Heshima</th>
               <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Status</th>
@@ -224,7 +224,7 @@ function VerificationPage() {
           </thead>
           <tbody>
             {pros.length === 0 ? (
-              <tr><td colSpan={5} style={{ padding: 30, textAlign: 'center', color: 'var(--muted)' }}>No professionals yet</td></tr>
+              <tr><td colSpan={5} style={{ padding: 30, textAlign: 'center', color: 'var(--muted)' }}>No experts yet</td></tr>
             ) : pros.map((p: any) => (
               <tr key={p.id} style={{ borderBottom: '1px solid var(--line)', opacity: p.status === 'rejected' ? 0.5 : 1 }}>
                 <td style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>

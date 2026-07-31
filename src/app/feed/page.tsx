@@ -660,6 +660,10 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
         clearTimeout(debounceTimer)
         debounceTimer = setTimeout(() => fetchPosts(), 2000)
       })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'is_expert=eq.true' }, () => {
+        clearTimeout(debounceTimer)
+        debounceTimer = setTimeout(() => fetchPosts(), 3000)
+      })
       .subscribe()
 
     return () => { clearTimeout(debounceTimer); supabase.removeChannel(channel) }

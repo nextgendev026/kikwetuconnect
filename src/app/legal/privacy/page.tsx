@@ -29,7 +29,7 @@ const sections = [
   },
   {
     title: '2. How We Use Your Information',
-    content: 'Your information is used to personalize your experience, connect you with relevant conversations and professionals, display location-based content, and maintain the security and integrity of our platform. We do not sell your personal information to third parties. We may use aggregated, anonymized data for platform improvement and research.'
+    content: 'Your information is used to personalize your experience, connect you with relevant conversations and experts, display location-based content, and maintain the security and integrity of our platform. We do not sell your personal information to third parties. We may use aggregated, anonymized data for platform improvement and research.'
   },
   {
     title: '3. Data Storage and Security',

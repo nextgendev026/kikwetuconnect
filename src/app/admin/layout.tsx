@@ -186,7 +186,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <select className="h-[43px] rounded-[10px] px-3 text-[11px]" style={{ border: '1px solid var(--line)', background: 'var(--raised)', color: 'var(--ink)' }}>
                 <option>Entire platform</option>
                 <option>Nairobi</option>
-                <option>Professionals</option>
+                <option>Experts</option>
                 <option>Marketplace</option>
                 <option>Nyumba Kumi</option>
               </select>

@@ -85,7 +85,7 @@ export default function ExplorePage() {
       <form onSubmit={handleSearch} style={style.card} className="mb-6">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'var(--muted)' }} />
-          <input type="text" placeholder="Search posts, people, spaces, professionals..." value={search} onChange={e => setSearch(e.target.value)} style={style.input} />
+          <input type="text" placeholder="Search posts, people, spaces, experts..." value={search} onChange={e => setSearch(e.target.value)} style={style.input} />
         </div>
         <div className="flex flex-wrap gap-2 mt-4">
           <span className="text-xs" style={{ color: 'var(--muted)' }}>Popular:</span>
@@ -116,16 +116,16 @@ export default function ExplorePage() {
         </div>
       </section>
 
-      {/* Featured Professionals */}
+      {/* Featured Experts */}
       <section className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold" style={{ color: 'var(--ink)' }}>Featured Professionals</h2>
-          <Link href="/professionals" className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--gold)' }}>View all <ChevronRight className="w-3 h-3" /></Link>
+          <h2 className="font-bold" style={{ color: 'var(--ink)' }}>Featured Experts</h2>
+          <Link href="/experts" className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--gold)' }}>View all <ChevronRight className="w-3 h-3" /></Link>
         </div>
         {professionals.length === 0 ? (
           <div style={style.card} className="text-center py-8">
             <Users className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--muted)', opacity: 0.3 }} />
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>No professionals listed yet</p>
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>No experts listed yet</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -31,7 +31,7 @@ const guidelines = [
   {
     title: 'Share Local Knowledge',
     icon: '🌍',
-    content: 'KikwetuConnect thrives on local expertise. Share what you know about your county, your trade, or your community. Whether it\'s farming tips from Uasin Gishu, business advice from Nairobi, or fishing knowledge from Kisumu — your local insights are valuable. Verified professionals who contribute quality answers earn higher Heshima trust ratings.'
+    content: 'KikwetuConnect thrives on local expertise. Share what you know about your county, your trade, or your community. Whether it\'s farming tips from Uasin Gishu, business advice from Nairobi, or fishing knowledge from Kisumu — your local insights are valuable. Verified experts who contribute quality answers earn higher Heshima trust ratings.'
   },
   {
     title: 'No Spam or Self-Promotion',
@@ -56,7 +56,7 @@ const guidelines = [
   {
     title: 'Build Heshima, Earn Trust',
     icon: '⭐',
-    content: 'Helpful, thoughtful answers build your Heshima rating. Higher Heshima unlocks privileges like verified professional status, priority responses, and access to exclusive community features. Heshima reflects real community trust — it must be earned through consistent, quality contributions.'
+    content: 'Helpful, thoughtful answers build your Heshima rating. Higher Heshima unlocks privileges like verified expert status, priority responses, and access to exclusive community features. Heshima reflects real community trust — it must be earned through consistent, quality contributions.'
   },
 ]
 

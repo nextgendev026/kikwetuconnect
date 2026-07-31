@@ -9,7 +9,7 @@ const SERVICES = [
   { id: 'ask-learn', icon: '\u2753', label: 'Ask and learn', desc: 'Questions, answers, quizzes' },
   { id: 'share-knowledge', icon: '\u270D\uFE0F', label: 'Share knowledge', desc: 'Posts, articles, polls' },
   { id: 'find-guidance', icon: '\uD83E\uDDED', label: 'Find guidance', desc: 'Private expert sessions' },
-  { id: 'offer-services', icon: '\u2726', label: 'Offer services', desc: 'Apply as a professional' },
+  { id: 'offer-services', icon: '\u2726', label: 'Offer services', desc: 'Apply as an expert' },
   { id: 'buy-sell', icon: '\uD83E\uDDEA', label: 'Buy or sell locally', desc: 'Mtaa Market' },
   { id: 'safety', icon: '\uD83D\uDEE1\uFE0F', label: 'Neighbourhood safety', desc: 'Nyumba Kumi updates' },
 ]
@@ -77,6 +77,7 @@ function SignupForm() {
     if (!/^\S+@\S+\.\S+$/.test(email)) { toast('Enter a valid email'); return false }
     if (password.length < 8) { toast('Password must be at least 8 characters'); return false }
     if (password !== confirm) { toast('Passwords do not match'); return false }
+    if (!/^(?:\+254|0)\d{9}$/.test(phone.replace(/[\s-]/g, ''))) { toast('Enter a valid phone number (07xx or +254)'); return false }
     if (!language) { toast('Choose your language'); return false }
     return true
   }
@@ -126,10 +127,14 @@ function SignupForm() {
         username,
         full_name: `${first} ${last}`,
         county_hub: county,
+        area: area || null,
+        phone,
         bio: bio || null,
         preferred_language: language,
         role: dbRole,
         user_type: userType,
+        notif_pref: notifPref,
+        visibility,
         interests: topics,
       })
       if (profileError) { toast(profileError.message); setLoading(false); return }
@@ -339,7 +344,7 @@ function SignupForm() {
                         <option value="general">General member</option>
                         <option value="student">Student</option>
                         <option value="parent">Parent or guardian</option>
-                        <option value="professional">Professional or mentor</option>
+                        <option value="professional">Expert or mentor</option>
                         <option value="moderator">Community moderator</option>
                       </select>
                     </div>

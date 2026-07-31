@@ -41,7 +41,7 @@ const sections = [
   },
   {
     title: '5. Heshima Points',
-    content: 'Heshima points are KikwetuConnect\'s trust and reputation system. Points are earned by contributing quality content, providing helpful answers, and engaging positively with the community. Points may be adjusted or revoked for violations of community guidelines. Heshima is not a currency and has no monetary value. Higher Heshima ratings unlock platform privileges including verified professional status, priority responses, and access to exclusive community features.'
+    content: 'Heshima points are KikwetuConnect\'s trust and reputation system. Points are earned by contributing quality content, providing helpful answers, and engaging positively with the community. Points may be adjusted or revoked for violations of community guidelines. Heshima is not a currency and has no monetary value. Higher Heshima ratings unlock platform privileges including verified expert status, priority responses, and access to exclusive community features.'
   },
   {
     title: '6. Content Ownership',

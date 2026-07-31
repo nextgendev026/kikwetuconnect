@@ -19,7 +19,7 @@ const sections = [
   ]},
   { label: 'Guidance', items: [
     { href: '/students', label: 'Students Area', icon: GraduationCap, iconClass: 'icon-students' },
-    { href: '/professionals', label: 'Professionals', icon: Briefcase, iconClass: 'icon-professionals' },
+    { href: '/experts', label: 'Experts', icon: Briefcase, iconClass: 'icon-professionals' },
     { href: '/messages', label: 'Messages', icon: MessageSquare, iconClass: 'icon-messages' },
     { href: '/sessions', label: 'My sessions', icon: Calendar, iconClass: 'icon-sessions' },
   ]},

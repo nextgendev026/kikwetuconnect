@@ -24,7 +24,7 @@ const menuItems = [
   { href: '/market', label: 'Market', icon: Store, desc: 'Buy & sell locally' },
   { href: '/nyumba', label: 'Nyumba Kumi', icon: Shield, desc: 'Neighbourhood safety' },
   { href: '/students', label: 'Students', icon: GraduationCap, desc: 'Learning resources' },
-  { href: '/professionals', label: 'Professionals', icon: Briefcase, desc: 'Find experts' },
+  { href: '/experts', label: 'Experts', icon: Briefcase, desc: 'Find experts' },
   { href: '/messages', label: 'Messages', icon: MessageSquare, desc: 'Chat with people' },
   { href: '/settings', label: 'Settings', icon: Settings, desc: 'Account settings' },
 ]

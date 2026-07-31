@@ -49,7 +49,7 @@ export default function LandingPage() {
         <nav className="hidden md:flex gap-[26px] items-center lp-nav">
           <a href="#why">Why Kikwetu</a>
           <a href="#spaces">Spaces</a>
-          <a href="#professionals">Professionals</a>
+          <a href="#experts">Experts</a>
         </nav>
         <div className="flex gap-[8px]">
           <Link href="/login" className="lp-btn-outline">Log in</Link>
@@ -129,7 +129,7 @@ export default function LandingPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 1, border: '1px solid oklch(82% .025 85)' }}>
           {[
             { num: '01 / BARAZA', title: 'Share what matters.', desc: 'Post a thought, question, poll, photo, video, or audio note. Translate it without losing the local meaning.', gold: true, icon: '💬' },
-            { num: '02 / HESHIMA', title: 'Trust has a signal.', desc: 'Helpful answers build Heshima. Verified professionals show their work, language, county, and availability.', gold: false, icon: '⭐' },
+            { num: '02 / HESHIMA', title: 'Trust has a signal.', desc: 'Helpful answers build Heshima. Verified experts show their work, language, county, and availability.', gold: false, icon: '⭐' },
             { num: '03 / KWAO', title: 'Useful starts nearby.', desc: 'Find county spaces, local sellers, neighbourhood updates, quizzes, and guidance that fits your real life.', gold: false, icon: '📍' },
           ].map((f,i) => (
             <div key={i} style={{ padding: 25, minHeight: 220, background: f.gold ? 'linear-gradient(135deg, oklch(72% .15 84), oklch(72% .15 84 / .9))' : 'linear-gradient(135deg, oklch(93% .02 85), oklch(16% .03 151))', color: f.gold ? 'oklch(16% .03 151)' : undefined }}>
@@ -162,7 +162,7 @@ export default function LandingPage() {
             {[
               { num: '47', label: 'counties represented', icon: '🇰🇪' },
               { num: '2.4k', label: 'questions answered', icon: '❓' },
-              { num: '840', label: 'verified professionals', icon: '✅' },
+              { num: '840', label: 'verified experts', icon: '✅' },
               { num: '10%', label: 'clear platform fee', icon: '💰' },
             ].map((s,i) => (
               <div key={i} style={{ padding: 20, background: 'linear-gradient(135deg, oklch(93% .02 85), oklch(16% .03 151))', border: '1px solid oklch(82% .025 85)', borderRadius: 16 }}>
@@ -177,7 +177,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="professionals" style={{ padding: '96px clamp(18px,8vw,126px)', background: 'oklch(16% .03 151)', position: 'relative', overflow: 'hidden' }}>
+      <section id="experts" style={{ padding: '96px clamp(18px,8vw,126px)', background: 'oklch(16% .03 151)', position: 'relative', overflow: 'hidden' }}>
         <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
           <div style={{ position: 'absolute', width: 500, height: 500, borderRadius: '50%', background: 'oklch(72% .15 84 / .05)', top: '-50%', left: '50%', transform: 'translateX(-50%)', filter: 'blur(150px)' }}></div>
           <div style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: 'oklch(52% .14 151 / .05)', bottom: '-50%', left: '20%', filter: 'blur(100px)' }}></div>
