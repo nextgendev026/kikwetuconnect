@@ -6,6 +6,20 @@ interface MediaEditorProps {
   type: 'image' | 'video' | 'audio'
   onComplete: (editedFile: File, cropData?: any) => void
   onCancel: () => void
+  aspect?: 'square' | 'cover'
+}
+
+function constrainCrop(w: number, h: number, aspect: 'square' | 'cover', maxSide: number) {
+  if (aspect === 'cover') {
+    const ratio = 21 / 9
+    let nw = w
+    let nh = w / ratio
+    if (nh > h) { nh = h; nw = h * ratio }
+    const size = Math.max(50, Math.min(Math.min(nw, nh), maxSide))
+    return { w: size, h: size / ratio }
+  }
+  const size = Math.max(50, Math.min(Math.min(w, h), maxSide))
+  return { w: size, h: size }
 }
 
 const FILTERS: Record<string, string> = {
@@ -24,7 +38,9 @@ export default function MediaEditor({ file, type, onComplete, onCancel }: MediaE
   return <VideoTrimmer file={file} type={type} onComplete={onComplete} onCancel={onCancel} />
 }
 
-function ImageCropper({ file, onComplete, onCancel }: MediaEditorProps) {
+export { ImageCropper, VideoTrimmer, AudioTrimmer }
+
+function ImageCropper({ file, onComplete, onCancel, aspect = 'square' }: MediaEditorProps) {
   const imgRef = useRef<HTMLImageElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -41,13 +57,15 @@ function ImageCropper({ file, onComplete, onCancel }: MediaEditorProps) {
     setImgSrc(url)
     const img = new Image()
     img.onload = () => {
-      const s = Math.min(img.width, img.height, 500)
-      setCrop({ x: (img.width - s) / 2, y: (img.height - s) / 2, w: s, h: s })
+      const maxLen = Math.min(window.innerWidth, 520) - 40
+      const s = Math.min(img.width, img.height, maxLen)
+      const { w: cw, h: ch } = constrainCrop(s, s, aspect, maxLen)
+      setCrop({ x: (img.width - cw) / 2, y: (img.height - ch) / 2, w: cw, h: ch })
       setNaturalSize({ w: img.width, h: img.height })
     }
     img.src = url
     return () => URL.revokeObjectURL(url)
-  }, [file])
+  }, [file, aspect])
 
   const handleMouseDown = (e: React.MouseEvent, handle: 'tl' | 'tr' | 'bl' | 'br' | 'move') => {
     e.preventDefault()
@@ -59,6 +77,7 @@ function ImageCropper({ file, onComplete, onCancel }: MediaEditorProps) {
     if (!dragging || !naturalSize.w) return
     const dx = (e.clientX - dragStart.x) / zoom
     const dy = (e.clientY - dragStart.y) / zoom
+    const maxSide = Math.min(window.innerWidth - 40, window.innerHeight - 200, 520)
     setCrop(prev => {
       let { x, y, w, h } = prev
       if (dragging === 'move') { x += dx; y += dy }
@@ -66,13 +85,13 @@ function ImageCropper({ file, onComplete, onCancel }: MediaEditorProps) {
       else if (dragging === 'bl') { x += dx; w -= dx; h += dy }
       else if (dragging === 'tr') { y += dy; w += dx; h -= dy }
       else if (dragging === 'tl') { x += dx; y += dy; w -= dx; h -= dy }
-      const size = Math.max(50, Math.min(Math.min(w, h), naturalSize.w))
-      x = Math.max(0, Math.min(x, naturalSize.w - size))
-      y = Math.max(0, Math.min(y, naturalSize.h - size))
-      return { x, y, w: size, h: size }
+      const { w: nw, h: nh } = constrainCrop(w, h, aspect, maxSide)
+      x = Math.max(0, Math.min(x, naturalSize.w - nw))
+      y = Math.max(0, Math.min(y, naturalSize.h - nh))
+      return { x, y, w: nw, h: nh }
     })
     setDragStart({ x: e.clientX, y: e.clientY })
-  }, [dragging, zoom, dragStart, naturalSize])
+  }, [dragging, zoom, dragStart, naturalSize, aspect])
 
   useEffect(() => {
     if (!dragging) return
@@ -86,32 +105,37 @@ function ImageCropper({ file, onComplete, onCancel }: MediaEditorProps) {
     const canvas = canvasRef.current
     const img = imgRef.current
     if (!canvas || !img) return
-    const size = Math.min(crop.w, crop.h)
-    canvas.width = 800
-    canvas.height = 800
+    const outW = aspect === 'cover' ? 1280 : 800
+    const outH = aspect === 'cover' ? 548 : 800
+    canvas.width = outW
+    canvas.height = outH
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.filter = FILTERS[filter] || 'none'
-    ctx.drawImage(img, crop.x, crop.y, size, size, 0, 0, 800, 800)
+    const size = Math.min(crop.w, crop.h)
+    const drawW = aspect === 'cover' ? crop.w : size
+    const drawH = aspect === 'cover' ? crop.h : size
+    ctx.drawImage(img, crop.x, crop.y, drawW, drawH, 0, 0, outW, outH)
     canvas.toBlob(blob => {
       if (!blob) return
       const croppedFile = new File([blob], file.name.replace(/\.[^.]+$/, '_cropped.jpg'), { type: 'image/jpeg', lastModified: Date.now() })
-      onComplete(croppedFile, { x: crop.x, y: crop.y, w: size, h: size, filter })
+      onComplete(croppedFile, { x: crop.x, y: crop.y, w: drawW, h: drawH, filter, aspect })
     }, 'image/jpeg', 0.92)
   }
 
   const displayW = naturalSize.w || 400
   const displayH = naturalSize.h || 400
-  const scale = Math.min(400 / displayW, 400 / displayH, 1)
+  const maxEditor = Math.min(window.innerWidth - 40, window.innerHeight - 200, 520)
+  const scale = Math.min(maxEditor / displayW, maxEditor / displayH, 1)
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center modal-center-scroll" style={{ background: 'rgba(0,0,0,0.85)' }}>
       <div className="rounded-2xl p-4 max-w-[90vw] max-h-[90vh] overflow-y-auto" style={{ background: 'var(--surface)' }}>
         <div className="flex justify-between items-center mb-3">
-          <strong className="text-sm" style={{ color: 'var(--ink)' }}>Edit image</strong>
+          <strong className="text-sm" style={{ color: 'var(--ink)' }}>{aspect === 'cover' ? 'Cover image' : 'Edit image'}</strong>
           <button onClick={onCancel} className="border-0 bg-none cursor-pointer text-lg" style={{ color: 'var(--muted)' }}>×</button>
         </div>
-        <div ref={containerRef} className="relative mx-auto overflow-hidden rounded-xl" style={{ width: Math.min(displayW * scale, 400), height: Math.min(displayH * scale, 400), background: '#222' }}>
+        <div ref={containerRef} className="relative mx-auto overflow-hidden rounded-xl" style={{ width: Math.min(displayW * scale, maxEditor), height: Math.min(displayH * scale, maxEditor), background: '#222' }}>
           <img ref={imgRef} src={imgSrc} alt="" className="max-w-none" style={{ width: displayW * scale, height: displayH * scale, transform: `scale(${zoom})`, transformOrigin: 'top left', filter: FILTERS[filter] || 'none' }} />
           <div className="absolute inset-0" style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)' }}>
             <div style={{

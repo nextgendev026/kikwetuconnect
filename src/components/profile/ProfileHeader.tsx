@@ -1,8 +1,9 @@
 'use client'
 import { useState, useRef, useCallback, DragEvent } from 'react'
 import Link from 'next/link'
-import { Edit3, Settings, MapPin, Globe, MessageCircle, Heart, Users, BookOpen, Award, Sparkles, Camera, X, Check, Shield, Calendar, Upload } from 'lucide-react'
+import { Edit3, Settings, MapPin, Globe, MessageCircle, Heart, Users, BookOpen, Award, Calendar, Camera, Check, Upload } from 'lucide-react'
 import { toast } from '@/app/providers'
+import ImageCropper from '@/components/MediaEditor'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/database.types'
 
@@ -50,9 +51,7 @@ export default function ProfileHeader({
 }: ProfileHeaderProps) {
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [coverUploading, setCoverUploading] = useState(false)
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
-  const [coverPreview, setCoverPreview] = useState<string | null>(null)
-  const [showCropModal, setShowCropModal] = useState(false)
+  const [showEditor, setShowEditor] = useState(false)
   const [cropType, setCropType] = useState<'avatar' | 'cover'>('avatar')
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [coverDragOver, setCoverDragOver] = useState(false)
@@ -70,15 +69,13 @@ export default function ProfileHeader({
     e.preventDefault(); e.stopPropagation()
     setCoverDragOver(false); setAvatarDragOver(false)
     const file = e.dataTransfer.files?.[0]
-    if (!file) return
-    if (!file.type.startsWith('image/')) { toast('Please select an image'); return }
-    if (file.size > 5 * 1024 * 1024) { toast('Image must be under 5MB'); return }
+    if (!file || !file.type.startsWith('image/') || file.size > 5 * 1024 * 1024) {
+      toast('Please drop an image under 5MB')
+      return
+    }
     setPendingFile(file)
     setCropType(type)
-    const preview = URL.createObjectURL(file)
-    if (type === 'avatar') setAvatarPreview(preview)
-    else setCoverPreview(preview)
-    setShowCropModal(true)
+    setShowEditor(true)
   }, [])
 
   const initials = (profile.full_name || profile.username || '?').slice(0, 2).toUpperCase()
@@ -90,18 +87,13 @@ export default function ProfileHeader({
     if (!file) return
     if (!file.type.startsWith('image/')) { toast('Please select an image'); return }
     if (file.size > 5 * 1024 * 1024) { toast('Image must be under 5MB'); return }
-
     setPendingFile(file)
     setCropType(type)
-
-    const preview = URL.createObjectURL(file)
-    if (type === 'avatar') setAvatarPreview(preview)
-    else setCoverPreview(preview)
-    setShowCropModal(true)
+    setShowEditor(true)
     e.target.value = ''
   }
 
-  const handleConfirmUpload = async () => {
+  const handleCropComplete = async (editedFile: File) => {
     if (!pendingFile) return
     const uploading = cropType === 'avatar' ? setAvatarUploading : setCoverUploading
     uploading(true)
@@ -110,12 +102,11 @@ export default function ProfileHeader({
       const ext = (pendingFile.name.split('.').pop() || 'jpg').replace(/[^a-zA-Z0-9]/g, '')
       const path = `${type}s/${profile.id}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
-      const { error: upErr } = await supabase.storage.from('public-media').upload(path, pendingFile, { upsert: true })
+      const { error: upErr } = await supabase.storage.from('public-media').upload(path, editedFile, { upsert: true })
       if (upErr) throw upErr
 
       const { data: { publicUrl } } = supabase.storage.from('public-media').getPublicUrl(path)
-      const ts = Date.now()
-      const versionedUrl = publicUrl.includes('?') ? `${publicUrl}&t=${ts}` : `${publicUrl}?t=${ts}`
+      const versionedUrl = publicUrl.includes('?') ? `${publicUrl}&t=${Date.now()}` : `${publicUrl}?t=${Date.now()}`
 
       const updateField = type === 'avatar' ? 'avatar_url' : 'cover_url'
       const { error: updateError } = await (supabase.from('profiles') as any)
@@ -123,14 +114,8 @@ export default function ProfileHeader({
         .eq('id', profile.id)
       if (updateError) throw updateError
 
-      if (type === 'avatar') {
-        onAvatarChange?.(versionedUrl)
-      } else {
-        onCoverChange?.(versionedUrl)
-      }
-      setShowCropModal(false)
-      setAvatarPreview(null)
-      setCoverPreview(null)
+      if (type === 'avatar') { onAvatarChange?.(versionedUrl) } else { onCoverChange?.(versionedUrl) }
+      setShowEditor(false)
       setPendingFile(null)
       toast(`${type === 'avatar' ? 'Profile photo' : 'Cover image'} updated!`)
     } catch (e) {
@@ -141,10 +126,8 @@ export default function ProfileHeader({
     }
   }
 
-  const handleCancelPreview = () => {
-    setShowCropModal(false)
-    setAvatarPreview(null)
-    setCoverPreview(null)
+  const handleCancelEditor = () => {
+    setShowEditor(false)
     setPendingFile(null)
   }
 
@@ -226,12 +209,12 @@ export default function ProfileHeader({
                 boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
                 position: 'relative',
               }}>
-                {(avatarPreview || profile.avatar_url) ? (
-                  <img src={avatarPreview || profile.avatar_url!} alt={`${profile.full_name || profile.username}'s avatar`}
-                    className="w-full h-full object-cover"
-                    onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-ph'); if (fb) fb.classList.remove('hidden') }} />
-                ) : null}
-                <span className={`af-ph ${avatarPreview || profile.avatar_url ? 'hidden' : ''}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: 'var(--gold)' }}>{initials}</span>
+                 {(profile.avatar_url) ? (
+                   <img src={profile.avatar_url} alt={`${profile.full_name || profile.username}'s avatar`}
+                     className="w-full h-full object-cover"
+                     onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-ph'); if (fb) fb.classList.remove('hidden') }} />
+                 ) : null}
+                 <span className={`af-ph ${profile.avatar_url ? 'hidden' : ''}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: 'var(--gold)' }}>{initials}</span>
               </div>
               {isOwn && (
                 <label style={{
@@ -398,58 +381,16 @@ export default function ProfileHeader({
         </div>
       </div>
 
-      {/* Crop/Confirm Modal */}
-      {showCropModal && pendingFile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-center-scroll"
-          style={{ background: 'color-mix(in oklab, var(--night) 80%, transparent)' }}
-          onClick={e => { if (e.target === e.currentTarget) handleCancelPreview() }}
-          role="dialog" aria-modal="true" aria-labelledby="upload-preview-title">
-          <div className="animate-rise" style={{
-            background: 'var(--surface)', border: '1px solid var(--line)',
-            borderRadius: 18, padding: 24, width: 'min(420px, 100%)',
-          }}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 id="upload-preview-title" style={{ fontWeight: 700, fontSize: 16, color: 'var(--ink)', margin: 0 }}>
-                {cropType === 'avatar' ? 'Profile Photo' : 'Cover Image'}
-              </h2>
-              <button onClick={handleCancelPreview}
-                style={{ background: 'var(--raised)', border: 0, borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--muted)' }}>
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div style={{
-              borderRadius: cropType === 'avatar' ? 16 : 8,
-              overflow: 'hidden', marginBottom: 16,
-              background: 'var(--raised)', maxHeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <img src={cropType === 'avatar' ? avatarPreview! : coverPreview!} alt="Preview"
-                style={{
-                  width: '100%',
-                  height: cropType === 'avatar' ? 200 : 160,
-                  objectFit: cropType === 'avatar' ? 'cover' : 'cover',
-                }} />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button onClick={handleCancelPreview}
-                style={{
-                  padding: '8px 16px', borderRadius: 11, fontWeight: 600, fontSize: 12,
-                  background: 'var(--raised)', color: 'var(--muted)',
-                  border: '1px solid var(--line)', cursor: 'pointer',
-                }}>
-                Cancel
-              </button>
-              <button onClick={handleConfirmUpload}
-                style={{
-                  padding: '8px 16px', borderRadius: 11, fontWeight: 700, fontSize: 12,
-                  background: 'var(--gold)', color: 'var(--night)',
-                  border: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-                }}>
-                <Check className="w-3.5 h-3.5" /> Confirm
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Manual crop editor — real crop region with drag handles + zoom */}
+      {showEditor && pendingFile && (
+        <ImageCropper
+          file={pendingFile}
+          type="image"
+          aspect={cropType === 'cover' ? 'cover' : 'square'}
+          onComplete={handleCropComplete}
+          onCancel={handleCancelEditor}
+        />
       )}
-    </>
-  )
+      </>
+    )
 }
