@@ -8,7 +8,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import CreateModal from '@/components/CreateModal'
 import NotificationTray from '@/components/NotificationTray'
 import { ToolbarProvider } from '@/lib/toolbar'
-import { Send, MessageSquare } from 'lucide-react'
+import { Send, MessageSquare, Bell, Sun, Moon } from 'lucide-react'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { profile, loading } = useUser()
@@ -177,7 +177,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <ToolbarProvider>
         <div className="app">
           {/* Sidebar */}
-          <Sidebar initials={initials} profile={profile} theme={theme} toggleTheme={toggleTheme} onlineCount={onlineCount} onlineUsers={onlineUsers} />
+          <Sidebar initials={initials} profile={profile} onlineCount={onlineCount} onlineUsers={onlineUsers} />
 
           {/* Main */}
           <main className="main">
@@ -191,9 +191,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <input aria-label="Search Baraza, spaces, people..." placeholder="Search Baraza, spaces, people..." />
               </div>
               <div className="top-actions">
+                <button onClick={toggleTheme} className="icon" aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+                  {theme === 'dark' ? <Sun className="w-[17px] h-[17px]" /> : <Moon className="w-[17px] h-[17px]" />}
+                </button>
                 <div style={{ position: 'relative' }}>
                   <button onClick={() => setShowNotifTray(p => !p)} className="icon" aria-label={unreadNotifCount > 0 ? `${unreadNotifCount} unread notifications` : 'Notifications'} title="Notifications" style={{ position: 'relative', background: 'none', border: 0, cursor: 'pointer' }}>
-                    ♡
+                    <Bell className="w-[17px] h-[17px]" />
                     {unreadNotifCount > 0 && (
                       <span style={{
                         position: 'absolute', top: -2, right: -2,
@@ -207,7 +210,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   {showNotifTray && <NotificationTray onClose={() => setShowNotifTray(false)} />}
                 </div>
                 <button className="icon" style={{ position: 'relative' }} onClick={() => { if (chatOpen) { setChatOpen(false) } else { openSupportChat() } }} aria-label={chatOpen ? 'Close chat' : 'Open chat'} title="Messages">
-                  ◍
+                  <MessageSquare className="w-[17px] h-[17px]" />
                   {unreadMsgCount > 0 && !chatOpen && (
                     <span style={{
                       position: 'absolute', top: -2, right: -2,

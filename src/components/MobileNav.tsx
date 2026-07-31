@@ -2,10 +2,10 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { useUser, useSupabase } from '@/app/providers'
+import { useUser, useSupabase, useTheme } from '@/app/providers'
 import { isAdmin } from '@/lib/roles'
 import { useToolbar } from '@/lib/toolbar'
-import { Home, Search, User, Plus, Grid3X3, Trophy, Store, Shield, X, Menu as MenuIcon, GraduationCap, Briefcase, MessageSquare, ArrowLeft, Compass, Calendar, Wallet, Settings, Zap } from 'lucide-react'
+import { Home, Search, User, Plus, Grid3X3, Trophy, Store, Shield, X, Menu as MenuIcon, GraduationCap, Briefcase, MessageSquare, ArrowLeft, Compass, Calendar, Wallet, Settings, Zap, Sun, Moon } from 'lucide-react'
 
 const mainItems = [
   { href: '/feed', label: 'Home', icon: Home },
@@ -15,24 +15,35 @@ const mainItems = [
   { href: '#menu', label: 'Menu', icon: MenuIcon, isMenu: true },
 ]
 
-const menuItems = [
-  { href: '/baraza', label: 'Baraza', icon: Compass, desc: 'Community discussions' },
-  { href: '/spaces', label: 'Spaces', icon: Grid3X3, desc: 'Topic communities & orgs' },
-  { href: '/sessions', label: 'Sessions', icon: Calendar, desc: 'Booked sessions' },
-  { href: '/wallet', label: 'Wallet', icon: Wallet, desc: 'Tips & earnings' },
-  { href: '/quizzes', label: 'Quizzes', icon: Trophy, desc: 'Test your knowledge' },
-  { href: '/market', label: 'Market', icon: Store, desc: 'Buy & sell locally' },
-  { href: '/nyumba', label: 'Nyumba Kumi', icon: Shield, desc: 'Neighbourhood safety' },
-  { href: '/students', label: 'Students', icon: GraduationCap, desc: 'Learning resources' },
-  { href: '/experts', label: 'Experts', icon: Briefcase, desc: 'Find experts' },
-  { href: '/messages', label: 'Messages', icon: MessageSquare, desc: 'Chat with people' },
-  { href: '/settings', label: 'Settings', icon: Settings, desc: 'Account settings' },
+const menuSections = [
+  { label: 'Main', items: [
+    { href: '/baraza', label: 'Baraza', icon: Compass, desc: 'Community discussions' },
+    { href: '/spaces', label: 'Spaces', icon: Grid3X3, desc: 'Topic communities & orgs' },
+    { href: '/explore', label: 'Explore', icon: Search, desc: 'Discover people & topics' },
+  ]},
+  { label: 'Guidance', items: [
+    { href: '/students', label: 'Students', icon: GraduationCap, desc: 'Learning resources' },
+    { href: '/experts', label: 'Experts', icon: Briefcase, desc: 'Find experts' },
+    { href: '/messages', label: 'Messages', icon: MessageSquare, desc: 'Chat with people' },
+    { href: '/sessions', label: 'Sessions', icon: Calendar, desc: 'Booked sessions' },
+  ]},
+  { label: 'Community', items: [
+    { href: '/market', label: 'Market', icon: Store, desc: 'Buy & sell locally' },
+    { href: '/nyumba', label: 'Nyumba Kumi', icon: Shield, desc: 'Neighbourhood safety' },
+    { href: '/quizzes', label: 'Quizzes', icon: Trophy, desc: 'Test your knowledge' },
+  ]},
+  { label: 'You', items: [
+    { href: '/wallet', label: 'Wallet', icon: Wallet, desc: 'Tips & earnings' },
+    { href: '/profile', label: 'Profile', icon: User, desc: 'Your public profile' },
+    { href: '/settings', label: 'Settings', icon: Settings, desc: 'Account settings' },
+  ]},
 ]
 
 export default function MobileNav() {
   const path = usePathname()
   const { user, profile } = useUser()
   const supabase = useSupabase()
+  const { theme, toggleTheme } = useTheme()
   const { config } = useToolbar()
   const [menuOpen, setMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -211,42 +222,60 @@ export default function MobileNav() {
                 <h2 className="font-bold text-base" style={{ color: 'var(--ink)' }}>Quick access</h2>
                 <p className="text-xs" style={{ color: 'var(--muted)' }}>Navigate around KikwetuConnect</p>
               </div>
-              <button onClick={() => setMenuOpen(false)}
-                className="w-8 h-8 rounded-full grid place-items-center"
-                style={{ background: 'var(--raised)', color: 'var(--muted)', border: 0, cursor: 'pointer' }}>
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  className="w-8 h-8 rounded-full grid place-items-center"
+                  style={{ background: 'var(--raised)', color: 'var(--muted)', border: 0, cursor: 'pointer' }}>
+                  {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                </button>
+                <button onClick={() => setMenuOpen(false)}
+                  className="w-8 h-8 rounded-full grid place-items-center"
+                  style={{ background: 'var(--raised)', color: 'var(--muted)', border: 0, cursor: 'pointer' }}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              {menuItems.map(item => {
-                const Icon = item.icon
-                const active = isActive(item.href)
-                return (
-                  <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}
-                    className="flex flex-col items-start gap-1.5 p-3.5 rounded-xl transition-all"
-                    style={active ? { background: 'var(--gold)', color: 'var(--night)' } : { background: 'var(--raised)', color: 'var(--ink)' }}>
-                    <div style={{ position: 'relative' }}>
-                      <Icon className="w-5 h-5" />
-                      {item.href === '/messages' && unreadMsg > 0 && (
-                        <span style={{
-                          position: 'absolute', top: -4, right: -6,
-                          background: 'var(--red)', color: '#fff',
-                          fontSize: 8, fontWeight: 700, minWidth: 16, height: 16,
-                          borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          padding: '0 3px', lineHeight: 1,
-                        }}>{unreadMsg > 99 ? '99+' : unreadMsg}</span>
-                      )}
-                    </div>
-                    <span className="font-bold text-xs">{item.label}</span>
-                    <span className="text-[9px]" style={{ color: active ? 'var(--night)' : 'var(--muted)' }}>{item.desc}</span>
-              </Link>
-            )
-          })}
-          {isAdmin(profile?.role) && (
-                <Link key="/admin/dashboard" href="/admin/dashboard" onClick={() => setMenuOpen(false)}
-                  className="col-span-2 flex items-center gap-2 p-3.5 rounded-xl transition-all mt-1"
+            <div className="flex flex-col">
+              {menuSections.map(section => (
+                <div key={section.label} className="mb-1">
+                  <div className="text-[9px] uppercase tracking-[.13em] px-1 my-2 font-semibold" style={{ color: 'var(--faint)' }}>{section.label}</div>
+                  <div className="flex flex-col">
+                    {section.items.map(item => {
+                      const Icon = item.icon
+                      const active = isActive(item.href)
+                      return (
+                        <Link key={item.href} href={item.href} onClick={() => setMenuOpen(false)}
+                          className="flex items-center gap-3 p-2.5 rounded-xl transition-all"
+                          style={active ? { background: 'var(--gold)', color: 'var(--night)' } : { color: 'var(--ink)' }}>
+                          <div style={{ position: 'relative', flex: 'none', width: 30, height: 30, borderRadius: 9, display: 'grid', placeItems: 'center', background: active ? 'color-mix(in oklab, var(--night) 12%, transparent)' : 'var(--raised)' }}>
+                            <Icon className="w-4 h-4" />
+                            {item.href === '/messages' && unreadMsg > 0 && (
+                              <span style={{
+                                position: 'absolute', top: -4, right: -6,
+                                background: 'var(--red)', color: '#fff',
+                                fontSize: 8, fontWeight: 700, minWidth: 16, height: 16,
+                                borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                padding: '0 3px', lineHeight: 1,
+                              }}>{unreadMsg > 99 ? '99+' : unreadMsg}</span>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="font-bold text-xs block">{item.label}</span>
+                            <span className="text-[9px]" style={{ color: active ? 'var(--night)' : 'var(--muted)' }}>{item.desc}</span>
+                          </div>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+              {isAdmin(profile?.role) && (
+                <Link href="/admin/dashboard" onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-3 p-2.5 rounded-xl transition-all mt-1"
                   style={{ background: 'var(--red)', color: '#fff' }}>
-                  <Zap className="w-5 h-5" />
+                  <div className="w-[30px] h-[30px] rounded-[9px] grid place-items-center" style={{ background: 'rgba(255,255,255,.14)' }}>
+                    <Zap className="w-4 h-4" />
+                  </div>
                   <div>
                     <span className="font-bold text-xs block">Admin console</span>
                     <span className="text-[9px]" style={{ color: 'rgba(255,255,255,.7)' }}>Platform management</span>

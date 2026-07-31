@@ -7,7 +7,7 @@ import { isAdmin, ROLES } from '@/lib/roles'
 import {
   Home, Compass, Search, Grid3X3, GraduationCap, Briefcase,
   MessageSquare, Calendar, Store, Shield, Trophy,
-  Wallet, User, Settings, Zap, LogOut, Sparkles, MessageCircle, Heart
+  Wallet, User, Settings, Zap, LogOut, MessageCircle, Heart
 } from 'lucide-react'
 
 const sections = [
@@ -37,23 +37,23 @@ const sections = [
 ]
 
 const navLinkStyle = (isActive: boolean): React.CSSProperties => ({
-  height: 42,
+  height: 40,
   borderRadius: 11,
   background: isActive ? 'var(--gold)' : 'none',
-  color: isActive ? 'var(--night)' : 'var(--faint)',
+  color: isActive ? 'var(--night)' : 'oklch(72% .025 151)',
   textAlign: 'left',
   padding: '0 12px',
   fontSize: 12,
   display: 'flex',
   alignItems: 'center',
-  gap: 10,
+  gap: 9,
   fontWeight: isActive ? 700 : 400,
   textDecoration: 'none',
   transition: 'transform .2s var(--ease), background .2s var(--ease)',
 })
 
-export default function Sidebar({ initials, profile, theme, toggleTheme, onlineCount = 0, onlineUsers = [] }: {
-  initials: string; profile: any; theme: string; toggleTheme: () => void
+export default function Sidebar({ initials, profile, onlineCount = 0, onlineUsers = [] }: {
+  initials: string; profile: any
   onlineCount?: number; onlineUsers?: any[]
 }) {
   const path = usePathname()
@@ -94,17 +94,6 @@ export default function Sidebar({ initials, profile, theme, toggleTheme, onlineC
         </div>
       </Link>
 
-      {/* Global tools */}
-      <div className="global-tools">
-        <div className="global-tools-label flex items-center gap-1.5">
-          <Sparkles className="w-3 h-3" /> Global navigation
-        </div>
-        <div className="theme-toggle">
-          <button className={theme === 'light' ? 'active' : ''} onClick={() => theme !== 'light' && toggleTheme()}>☼ Light</button>
-          <button className={theme === 'dark' ? 'active' : ''} onClick={() => theme !== 'dark' && toggleTheme()}>◐ Dark</button>
-        </div>
-      </div>
-
       {/* Navigation */}
       <nav className="nav">
         {sections.map(s => (
@@ -115,7 +104,7 @@ export default function Sidebar({ initials, profile, theme, toggleTheme, onlineC
               const isActive = path === i.href || (i.href !== '/feed' && path.startsWith(i.href))
               return (
                 <Link key={i.href} href={i.href} style={navLinkStyle(isActive)}>
-                  <Icon className={`icon ${i.iconClass || ''} w-4 h-4`} />
+                  <Icon className={`icon ${i.iconClass || ''} w-3.5 h-3.5`} />
                   <span style={{ flex: 1 }}>{i.label}</span>
                 </Link>
               )
@@ -193,7 +182,7 @@ export default function Sidebar({ initials, profile, theme, toggleTheme, onlineC
           <small><span className="online" style={{ verticalAlign: -1, marginRight: 4 }} />Online · {profile?.county_hub || 'Kenya'}</small>
         </div>
         <Link href="/logout" className="icon" title="Log out" style={{ color: 'var(--muted)', textDecoration: 'none' }}>
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-3.5 h-3.5" />
         </Link>
       </div>
     </aside>

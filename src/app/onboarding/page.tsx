@@ -1,17 +1,19 @@
 'use client'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSupabase, useUser, toast } from '@/app/providers'
 
 const COUNTIES = ['Nairobi','Mombasa','Kisumu','Eldoret','Kitale','Nakuru','Thika','Kericho','Isiolo','Garissa','Lamu','Wajir','Mandera','Kilifi','Kwale','Taita-Taveta','Makueni','Kajiado','Narok','Bomet','Nyamira','Kisii','Homa Bay','Siaya','Bungoma','Busia','Kakamega','Vihiga','Nandi','Baringo','West Pokot','Samburu','Laikipia','Embu','Meru','Tharaka-Nithi','Nyeri',"Murang'a",'Kirinyaga','Machakos','Kiambu','Turkana','Trans Nzoia','Uasin Gishu']
 const INTERESTS = ['Agriculture','Technology','Biashara','Education','Legal Rights','Culture','Health','Environment','Sports','Politics']
 const ROLES = ['student','professional','parent','general']
 
-export default function OnboardingPage() {
+function OnboardingInner() {
   const router = useRouter()
   const supabase = useSupabase()
   const { profile, refreshProfile } = useUser()
-  const [step, setStep] = useState(1)
+  const searchParams = useSearchParams()
+  const startStep = Math.min(5, Math.max(1, parseInt(searchParams.get('step') || '1', 10) || 1))
+  const [step, setStep] = useState(startStep)
   const [fullName, setFullName] = useState('')
   const [username, setUsername] = useState('')
   const [county, setCounty] = useState('')
@@ -148,5 +150,13 @@ export default function OnboardingPage() {
         </button>
       </div>
     </div>
+  )
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen grid place-items-center" style={{ background: 'oklch(16% .035 151)' }}><div className="w-8 h-8 rounded-full animate-spin" style={{ border: '3px solid oklch(72% .15 84)', borderTopColor: 'transparent' }} /></div>}>
+      <OnboardingInner />
+    </Suspense>
   )
 }

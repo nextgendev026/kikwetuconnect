@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { MapPin, Sparkles, User } from 'lucide-react'
 import { useUser, useSupabase } from '@/app/providers'
 
 export default function WelcomePage() {
@@ -57,19 +58,37 @@ export default function WelcomePage() {
           Your email is verified and your place in the circle is ready. Head to your profile to make it yours — then jump into the conversation.
         </p>
 
-        <div style={{ display: 'grid', gap: 9, marginBottom: 14 }}>
-          <Link href="/profile" className="welcome-btn-primary" style={{ height: 48, borderRadius: 13, background: 'oklch(72% .15 84)', color: 'oklch(16% .035 151)', fontWeight: 800, fontSize: 13, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'transform .2s cubic-bezier(.16,1,.3,1), box-shadow .2s' }}>
-            Go to my profile ↗
+        <div style={{ textAlign: 'left', fontSize: 10, letterSpacing: '.16em', textTransform: 'uppercase', fontWeight: 800, color: 'oklch(72% .15 84)', margin: '0 0 10px' }}>Make it yours</div>
+        <div style={{ display: 'grid', gap: 8, marginBottom: 16 }}>
+          <Link href="/onboarding?step=2" className="welcome-opt" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderRadius: 14, background: 'oklch(21% .03 151)', border: '1px solid oklch(32% .025 151)', textDecoration: 'none', transition: 'border-color .2s, transform .2s' }}>
+            <span style={{ width: 36, height: 36, borderRadius: 11, background: 'oklch(24% .035 151)', display: 'grid', placeItems: 'center', color: 'oklch(72% .15 84)', flex: 'none' }}><MapPin className="w-4 h-4" /></span>
+            <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+              <b style={{ display: 'block', fontSize: 12, color: 'oklch(92% .012 91)' }}>Set my county</b>
+              <small style={{ display: 'block', fontSize: 10, color: 'oklch(65% .028 151)', marginTop: 2 }}>Tune your feed to local conversations</small>
+            </span>
+            <span style={{ color: 'oklch(65% .028 151)', fontSize: 14 }}>→</span>
           </Link>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
-            <Link href="/onboarding" className="welcome-btn-secondary" style={{ height: 46, borderRadius: 13, background: 'oklch(21% .03 151)', border: '1px solid oklch(32% .025 151)', color: 'oklch(88% .02 91)', fontWeight: 700, fontSize: 12, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'border-color .2s, transform .2s' }}>
-              Complete my profile
-            </Link>
-            <Link href="/feed" className="welcome-btn-secondary" style={{ height: 46, borderRadius: 13, background: 'oklch(21% .03 151)', border: '1px solid oklch(32% .025 151)', color: 'oklch(88% .02 91)', fontWeight: 700, fontSize: 12, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, transition: 'border-color .2s, transform .2s' }}>
-              Explore Baraza
-            </Link>
-          </div>
+          <Link href="/onboarding?step=3" className="welcome-opt" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderRadius: 14, background: 'oklch(21% .03 151)', border: '1px solid oklch(32% .025 151)', textDecoration: 'none', transition: 'border-color .2s, transform .2s' }}>
+            <span style={{ width: 36, height: 36, borderRadius: 11, background: 'oklch(24% .035 151)', display: 'grid', placeItems: 'center', color: 'oklch(72% .15 84)', flex: 'none' }}><Sparkles className="w-4 h-4" /></span>
+            <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+              <b style={{ display: 'block', fontSize: 12, color: 'oklch(92% .012 91)' }}>Pick my interests</b>
+              <small style={{ display: 'block', fontSize: 10, color: 'oklch(65% .028 151)', marginTop: 2 }}>See topics you care about in your feed</small>
+            </span>
+            <span style={{ color: 'oklch(65% .028 151)', fontSize: 14 }}>→</span>
+          </Link>
+          <Link href="/profile" className="welcome-opt" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 15px', borderRadius: 14, background: 'oklch(21% .03 151)', border: '1px solid oklch(32% .025 151)', textDecoration: 'none', transition: 'border-color .2s, transform .2s' }}>
+            <span style={{ width: 36, height: 36, borderRadius: 11, background: 'oklch(24% .035 151)', display: 'grid', placeItems: 'center', color: 'oklch(72% .15 84)', flex: 'none' }}><User className="w-4 h-4" /></span>
+            <span style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+              <b style={{ display: 'block', fontSize: 12, color: 'oklch(92% .012 91)' }}>Finish my profile</b>
+              <small style={{ display: 'block', fontSize: 10, color: 'oklch(65% .028 151)', marginTop: 2 }}>Add your name, photo, and role</small>
+            </span>
+            <span style={{ color: 'oklch(65% .028 151)', fontSize: 14 }}>→</span>
+          </Link>
         </div>
+
+        <Link href="/feed" className="welcome-btn-primary" style={{ height: 48, borderRadius: 13, background: 'oklch(72% .15 84)', color: 'oklch(16% .035 151)', fontWeight: 800, fontSize: 13, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'transform .2s cubic-bezier(.16,1,.3,1), box-shadow .2s', marginBottom: 14 }}>
+          Explore Baraza ↗
+        </Link>
 
         <div style={{ fontSize: 11, color: 'oklch(55% .028 151)' }}>
           @{profile.username} · {profile.county_hub || 'Kenya'} · {profile.heshima_rating || 0} Heshima
@@ -80,6 +99,7 @@ export default function WelcomePage() {
         @keyframes rise { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: translateY(0) } }
         .welcome-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 30px -6px oklch(65% .15 84 / .5) }
         .welcome-btn-secondary:hover { border-color: oklch(72% .15 84); transform: translateY(-1px) }
+        .welcome-opt:hover { border-color: oklch(72% .15 84); transform: translateY(-1px); background: oklch(23% .032 151) }
         @media(max-width:480px) {
           .welcome { padding: 16px }
         }

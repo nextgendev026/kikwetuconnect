@@ -3,28 +3,32 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useUser, useSupabase, useTheme, toast } from '@/app/providers'
 import { useEffect, useState } from 'react'
 import { isAdmin } from '@/lib/roles'
+import {
+  LayoutDashboard, BarChart3, Activity, ShieldCheck, BadgeCheck, Users,
+  Grid3X3, Store, Siren, Wallet, Megaphone, Settings, ScrollText, Sun, Moon, X, Bell, Plus, Search, Menu
+} from 'lucide-react'
 
 const NAV = {
   Monitor: [
-    { id: 'dashboard', label: 'Overview', icon: '\u25A6' },
-    { id: 'analytics', label: 'Analytics', icon: '\u25D2' },
-    { id: 'health', label: 'Platform health', icon: '\u2726' },
+    { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'health', label: 'Platform health', icon: Activity },
   ],
   Control: [
-    { id: 'moderation', label: 'Moderation', icon: '\u2691' },
-    { id: 'verification', label: 'Verification', icon: '\u2713' },
-    { id: 'users', label: 'Users', icon: '\u25C9' },
-    { id: 'spaces', label: 'Spaces', icon: '\u25A6' },
-    { id: 'marketplace', label: 'Marketplace', icon: '\u25A4' },
-    { id: 'safety', label: 'Nyumba Kumi', icon: '\u2662' },
+    { id: 'moderation', label: 'Moderation', icon: ShieldCheck },
+    { id: 'verification', label: 'Verification', icon: BadgeCheck },
+    { id: 'users', label: 'Users', icon: Users },
+    { id: 'spaces', label: 'Spaces', icon: Grid3X3 },
+    { id: 'marketplace', label: 'Marketplace', icon: Store },
+    { id: 'safety', label: 'Nyumba Kumi', icon: Siren },
   ],
   Money: [
-    { id: 'payments', label: 'Payments & payouts', icon: '\u25C8' },
-    { id: 'ads', label: 'Ads', icon: '\u25B2' },
+    { id: 'payments', label: 'Payments & payouts', icon: Wallet },
+    { id: 'ads', label: 'Ads', icon: Megaphone },
   ],
   System: [
-    { id: 'settings', label: 'Platform settings', icon: '\u2699' },
-    { id: 'audit', label: 'Audit log', icon: '\u2637' },
+    { id: 'settings', label: 'Platform settings', icon: Settings },
+    { id: 'audit', label: 'Audit log', icon: ScrollText },
   ],
 }
 
@@ -69,14 +73,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           transition-[left] duration-300 ease-in-out
           w-[260px] flex-shrink-0 overflow-y-auto
           flex flex-col gap-5 p-[22px_15px]
-        `} style={{ background: 'var(--night)', color: '#fff' }}>
+        `} style={{ background: 'var(--night)', color: 'oklch(92% .015 91)' }}>
           <div className="flex items-center gap-2.5 px-2">
             <div className="w-[35px] h-[35px] rounded-[11px] grid place-items-center font-extrabold text-lg flex-shrink-0" style={{ background: 'var(--gold)', color: 'var(--night)', transform: 'rotate(-8deg)' }}>K</div>
             <div className="flex-1 min-w-0">
               <b className="font-extrabold text-[15px] tracking-[-.05em] block truncate">KikwetuConnect</b>
-              <small className="block text-[9px] uppercase tracking-[.13em] mt-0.5" style={{ color: 'var(--muted)' }}>Admin console</small>
+              <small className="block text-[9px] uppercase tracking-[.13em] mt-0.5" style={{ color: 'oklch(64% .025 151)' }}>Admin console</small>
             </div>
-            <button onClick={() => setMobileOpen(false)} className="md:hidden bg-none text-white text-[22px] border-0 cursor-pointer">×</button>
+            <button onClick={() => setMobileOpen(false)} className="md:hidden grid place-items-center w-8 h-8 rounded-full border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
           <div className="p-3 rounded-[14px]" style={{ border: '1px solid var(--line)', background: 'var(--raised)' }}>
@@ -89,38 +95,42 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {Object.entries(NAV).map(([section, items]) => (
               <div key={section}>
                 <div className="text-[10px] uppercase tracking-[.13em] mx-2.5 my-[7px_3px]" style={{ color: 'var(--faint)' }}>{section}</div>
-                {items.map(item => (
-                  <button key={item.id} onClick={() => { router.push(`/admin/${item.id}`); setMobileOpen(false) }}
-                    className="w-full flex items-center gap-1.5 h-[42px] rounded-[11px] px-3 text-[12px] text-left border-0 cursor-pointer transition-all"
-                    style={{
-                      background: current === item.id ? 'var(--gold)' : 'none',
-                      color: current === item.id ? 'var(--night)' : 'oklch(73% .025 151)',
-                      fontWeight: current === item.id ? 700 : 400,
-                    }}>
-                    {item.icon} <span className="ml-1">{item.label}</span>
-                    {item.id === 'moderation' && pendingModCount > 0 && (
-                      <span className="ml-auto flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[9px] font-bold px-1" style={{ background: 'var(--red)', color: '#fff' }}>{pendingModCount}</span>
-                    )}
-                  </button>
-                ))}
+                {items.map(item => {
+                  const Icon = item.icon
+                  const active = current === item.id
+                  return (
+                    <button key={item.id} onClick={() => { router.push(`/admin/${item.id}`); setMobileOpen(false) }}
+                      className="w-full flex items-center gap-2.5 h-[40px] rounded-[11px] px-3 text-[12px] text-left border-0 cursor-pointer transition-all"
+                      style={{
+                        background: active ? 'var(--gold)' : 'none',
+                        color: active ? 'var(--night)' : 'oklch(75% .025 151)',
+                        fontWeight: active ? 700 : 400,
+                      }}>
+                      <Icon className={`w-3.5 h-3.5 flex-none ${active ? '' : 'opacity-80'}`} />
+                      <span className="truncate">{item.label}</span>
+                      {item.id === 'moderation' && pendingModCount > 0 && (
+                        <span className="ml-auto flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[9px] font-bold px-1" style={{ background: 'var(--red)', color: '#fff' }}>{pendingModCount}</span>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             ))}
           </nav>
 
           <div style={{ borderTop: '1px solid var(--line)' }} className="pt-3">
-            <div className="grid grid-cols-2 gap-1 p-1 rounded-[10px] mb-2.5" style={{ background: 'var(--raised)' }}>
-              <button onClick={() => { if (theme !== 'light') toggleTheme() }}
-                className="rounded-[8px] py-2 px-1 text-[10px] border-0 cursor-pointer"
-                style={{ background: theme === 'light' ? 'var(--gold)' : 'none', color: theme === 'light' ? 'var(--night)' : 'oklch(73% .02 151)', fontWeight: theme === 'light' ? 700 : 400 }}>☼ Light</button>
-              <button onClick={() => { if (theme !== 'dark') toggleTheme() }}
-                className="rounded-[8px] py-2 px-1 text-[10px] border-0 cursor-pointer"
-                style={{ background: theme === 'dark' ? 'var(--gold)' : 'none', color: theme === 'dark' ? 'var(--night)' : 'oklch(73% .02 151)', fontWeight: theme === 'dark' ? 700 : 400 }}>◐ Dark</button>
+            <div className="flex items-center justify-between px-1.5 mb-2">
+              <button onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                className="w-9 h-9 rounded-[10px] grid place-items-center border-0 cursor-pointer transition-all"
+                style={{ background: 'var(--raised)', color: theme === 'dark' ? 'var(--gold)' : 'var(--muted)' }}>
+                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+              <a href="/feed" className="block text-center py-2 px-3 rounded-[10px] text-[10px] no-underline font-semibold transition-all" style={{ color: 'var(--muted)', border: '1px solid var(--line)' }}>← Back to app</a>
             </div>
-            <a href="/feed" className="block text-center py-2 rounded-[8px] text-[10px] mb-2 no-underline" style={{ color: 'var(--muted)', border: '1px solid var(--line)' }}>← Back to app</a>
             <div className="flex items-center gap-2.5 px-1.5 py-1.5">
-              <div className="w-[34px] h-[34px] rounded-full grid place-items-center flex-shrink-0 text-[10px] font-extrabold" style={{ background: 'var(--night)', color: 'var(--gold)' }}>{initials}</div>
+              <div className="w-[34px] h-[34px] rounded-full grid place-items-center flex-shrink-0 text-[10px] font-extrabold" style={{ background: 'var(--raised)', color: 'var(--gold)' }}>{initials}</div>
               <div className="flex-1 min-w-0">
-                <strong className="text-[11px] block truncate text-white">{profile?.full_name || 'Admin'}</strong>
+                <strong className="text-[11px] block truncate" style={{ color: 'oklch(92% .015 91)' }}>{profile?.full_name || 'Admin'}</strong>
                 <small className="block text-[9px] mt-0.5" style={{ color: 'var(--muted)' }}>Super admin · Online</small>
               </div>
             </div>
@@ -129,26 +139,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Main */}
         <main className="flex-1 min-w-0">
-          <header className="sticky top-0 z-10 flex items-center h-[68px] md:h-[74px] px-4 md:px-8 gap-3" style={{ borderBottom: '1px solid var(--line)', background: 'var(--bg)' }}>
-            <button onClick={() => setMobileOpen(true)} className="md:hidden bg-none border-0 cursor-pointer text-lg" style={{ color: 'var(--muted)' }}>☰</button>
+          <header className="sticky top-0 z-10 flex items-center h-[68px] md:h-[74px] px-4 md:px-8 gap-3" style={{ borderBottom: '1px solid var(--line)', background: 'color-mix(in oklab, var(--bg) 92%, transparent)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
+            <button onClick={() => setMobileOpen(true)} className="md:hidden grid place-items-center w-9 h-9 rounded-[10px] border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+              <Menu className="w-4 h-4" />
+            </button>
             <div className="text-[12px] truncate" style={{ color: 'var(--muted)' }}>
               Admin console <span style={{ color: 'var(--faint)' }}>/</span> <b style={{ color: 'var(--ink)' }}>{current.charAt(0).toUpperCase() + current.slice(1)}</b>
             </div>
             <div className="flex gap-1.5 ml-auto">
-              <div className="hidden sm:flex gap-1 p-[3px] rounded-[9px]" style={{ background: 'var(--raised)' }}>
-                <button onClick={() => { if (theme !== 'light') toggleTheme() }}
-                  className="rounded-[7px] px-[10px] py-[6px] text-[10px] border-0 cursor-pointer"
-                  style={{ background: theme === 'light' ? 'var(--gold)' : 'none', color: theme === 'light' ? 'var(--night)' : 'var(--muted)', fontWeight: theme === 'light' ? 700 : 400 }}>☼</button>
-                <button onClick={() => { if (theme !== 'dark') toggleTheme() }}
-                  className="rounded-[7px] px-[10px] py-[6px] text-[10px] border-0 cursor-pointer"
-                  style={{ background: theme === 'dark' ? 'var(--gold)' : 'none', color: theme === 'dark' ? 'var(--night)' : 'var(--muted)', fontWeight: theme === 'dark' ? 700 : 400 }}>◐</button>
-              </div>
-              <button className="w-[38px] h-[38px] md:w-[40px] md:h-[40px] rounded-[11px] grid place-items-center text-base border-0 cursor-pointer" style={{ background: 'none', color: 'var(--muted)' }}
-                onClick={() => toast('Global search ready')}>⌕</button>
-              <button className="w-[38px] h-[38px] md:w-[40px] md:h-[40px] rounded-[11px] grid place-items-center text-base border-0 cursor-pointer" style={{ background: 'none', color: 'var(--muted)' }}
-                onClick={() => toast('3 operational alerts')}>♢</button>
-              <button className="w-[38px] h-[38px] md:w-[40px] md:h-[40px] rounded-[11px] grid place-items-center text-base border-0 cursor-pointer" style={{ background: 'none', color: 'var(--muted)' }}
-                onClick={() => setDrawerOpen(true)}>＋</button>
+              <button onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                className="w-[38px] h-[38px] md:w-[40px] md:h-[40px] rounded-[11px] grid place-items-center border-0 cursor-pointer transition-all" style={{ background: 'none', color: 'var(--muted)' }}>
+                {theme === 'dark' ? <Sun className="w-[17px] h-[17px]" /> : <Moon className="w-[17px] h-[17px]" />}
+              </button>
+              <button className="w-[38px] h-[38px] md:w-[40px] md:h-[40px] rounded-[11px] grid place-items-center border-0 cursor-pointer" style={{ background: 'none', color: 'var(--muted)' }}
+                onClick={() => toast('Global search ready')} aria-label="Search"><Search className="w-[17px] h-[17px]" /></button>
+              <button className="w-[38px] h-[38px] md:w-[40px] md:h-[40px] rounded-[11px] grid place-items-center border-0 cursor-pointer" style={{ background: 'none', color: 'var(--muted)' }}
+                onClick={() => toast('3 operational alerts')} aria-label="Alerts"><Bell className="w-[17px] h-[17px]" /></button>
+              <button className="w-[38px] h-[38px] md:w-[40px] md:h-[40px] rounded-[11px] grid place-items-center border-0 cursor-pointer" style={{ background: 'none', color: 'var(--muted)' }}
+                onClick={() => setDrawerOpen(true)} aria-label="Quick action"><Plus className="w-[17px] h-[17px]" /></button>
               <button className="w-[38px] h-[38px] md:w-[40px] md:h-[40px] rounded-[11px] grid place-items-center border-0 cursor-pointer">
                 <div className="w-[26px] h-[26px] md:w-[29px] md:h-[29px] rounded-full grid place-items-center text-[9px] font-extrabold" style={{ background: 'var(--earth)', color: 'var(--gold)' }}>{initials}</div>
               </button>

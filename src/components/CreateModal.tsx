@@ -67,7 +67,7 @@ export default function CreateModal() {
   const [alertSeverity, setAlertSeverity] = useState('medium')
   const [alertUrgent, setAlertUrgent] = useState(false)
   const [alertLocation, setAlertLocation] = useState('')
-  const [editingMedia, setEditingMedia] = useState<{ file: File; type: 'image' | 'video' } | null>(null)
+  const [editingMedia, setEditingMedia] = useState<{ file: File; type: 'image' | 'video' | 'audio' } | null>(null)
 
   // Bounty
   const [bountyTokens, setBountyTokens] = useState(0)
@@ -113,8 +113,8 @@ export default function CreateModal() {
         const processed = mediaType === 'image' && file.type.startsWith('image/')
           ? await imageCompress(file, { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true })
           : file
-        if (mediaType === 'image' || mediaType === 'video') {
-          setEditingMedia({ file: processed, type: mediaType as 'image' | 'video' })
+        if (mediaType === 'image' || mediaType === 'video' || mediaType === 'audio') {
+          setEditingMedia({ file: processed, type: mediaType as 'image' | 'video' | 'audio' })
         } else {
           const preview = URL.createObjectURL(processed)
           setMediaFiles(prev => [...prev, { file: processed, preview, type: mediaType }])
