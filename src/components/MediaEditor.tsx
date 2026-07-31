@@ -92,8 +92,8 @@ function ImageCropper({ file, onComplete, onCancel }: MediaEditorProps) {
   const scale = Math.min(400 / displayW, 400 / displayH, 1)
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)' }}>
-      <div className="rounded-2xl p-4 max-w-[90vw] max-h-[90vh]" style={{ background: 'var(--surface)' }}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center modal-center-scroll" style={{ background: 'rgba(0,0,0,0.85)' }}>
+      <div className="rounded-2xl p-4 max-w-[90vw] max-h-[90vh] overflow-y-auto" style={{ background: 'var(--surface)' }}>
         <div className="flex justify-between items-center mb-3">
           <strong className="text-sm" style={{ color: 'var(--ink)' }}>Crop image</strong>
           <button onClick={onCancel} className="border-0 bg-none cursor-pointer text-lg" style={{ color: 'var(--muted)' }}>×</button>
@@ -163,8 +163,8 @@ function VideoTrimmer({ file, onComplete, onCancel }: MediaEditorProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.85)' }}>
-      <div className="rounded-2xl p-4 max-w-[90vw] max-h-[90vh]" style={{ background: 'var(--surface)' }}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center modal-center-scroll" style={{ background: 'rgba(0,0,0,0.85)' }}>
+      <div className="rounded-2xl p-4 max-w-[90vw] max-h-[90vh] overflow-y-auto" style={{ background: 'var(--surface)' }}>
         <div className="flex justify-between items-center mb-3">
           <strong className="text-sm" style={{ color: 'var(--ink)' }}>Trim video</strong>
           <button onClick={onCancel} className="border-0 bg-none cursor-pointer text-lg" style={{ color: 'var(--muted)' }}>×</button>

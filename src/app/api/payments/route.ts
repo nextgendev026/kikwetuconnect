@@ -11,6 +11,59 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { action } = body
 
+    // --- Wallet top-up (Lipa Na MPESA) ---
+    if (action === 'topup') {
+      const { amount, phone } = body
+      const parsedAmount = Number(amount)
+      if (!amount || isNaN(parsedAmount) || parsedAmount < 10 || parsedAmount > 150000) {
+        return NextResponse.json({ error: 'Amount must be between KSh 10 and KSh 150,000' }, { status: 400 })
+      }
+      const normalized = normalizePhone(String(phone || ''))
+      if (!/^254\d{9}$/.test(normalized)) {
+        return NextResponse.json({ error: 'Enter a valid phone number (07xx or +254)' }, { status: 400 })
+      }
+
+      const { data: topup, error: topupErr } = await supabase
+        .from('wallet_topups')
+        .insert({ user_id: user.id, amount: parsedAmount, phone: normalized })
+        .select()
+        .single()
+      if (topupErr || !topup) {
+        return NextResponse.json({ error: topupErr?.message || 'Could not start top-up' }, { status: 500 })
+      }
+
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://kikwetuconnect.vercel.app'
+      const accountRef = `WALLET-${topup.id.slice(0, 8)}`
+
+      const result = await stkPush({
+        amount: parsedAmount,
+        phone: normalized,
+        accountReference: accountRef,
+        transactionDesc: 'Wallet top-up',
+        callbackUrl: `${appUrl}/api/payments/webhook`,
+      })
+
+      if (result.ResponseCode !== '0') {
+        await supabase
+          .from('wallet_topups')
+          .update({ status: 'failed', error: result.ResponseDescription || 'Payment initiation failed' })
+          .eq('id', topup.id)
+        return NextResponse.json({ error: result.ResponseDescription || 'Payment initiation failed' }, { status: 400 })
+      }
+
+      await supabase
+        .from('wallet_topups')
+        .update({ checkout_request_id: result.CheckoutRequestID, account_reference: accountRef })
+        .eq('id', topup.id)
+
+      return NextResponse.json({
+        success: true,
+        checkout_request_id: result.CheckoutRequestID,
+        topup_id: topup.id,
+        message: 'STK push sent. Check your phone to complete the top-up.',
+      })
+    }
+
     // --- STK Push (Lipa Na MPESA) ---
     if (action === 'stk-push') {
       const { order_id, phone } = body

@@ -17,50 +17,84 @@ export async function POST(request: NextRequest) {
         .eq('payment_reference', CheckoutRequestID)
         .maybeSingle()
 
-      if (!order) {
-        console.error(`No order found for CheckoutRequestID: ${CheckoutRequestID}`)
-        return NextResponse.json({ ResultCode: 0, ResultDesc: 'Accepted' })
-      }
+      if (order) {
+        if (ResultCode === 0) {
+          let mpesaReceipt = ''
+          let phoneNumber = ''
+          let transactionDate = ''
 
-      if (ResultCode === 0) {
-        let mpesaReceipt = ''
-        let phoneNumber = ''
-        let transactionDate = ''
-
-        if (CallbackMetadata?.Item) {
-          for (const item of CallbackMetadata.Item) {
-            if (item.Name === 'MpesaReceiptNumber') mpesaReceipt = item.Value
-            if (item.Name === 'PhoneNumber') phoneNumber = item.Value
-            if (item.Name === 'TransactionDate') transactionDate = item.Value
+          if (CallbackMetadata?.Item) {
+            for (const item of CallbackMetadata.Item) {
+              if (item.Name === 'MpesaReceiptNumber') mpesaReceipt = item.Value
+              if (item.Name === 'PhoneNumber') phoneNumber = item.Value
+              if (item.Name === 'TransactionDate') transactionDate = item.Value
+            }
           }
+
+          await supabase.rpc('confirm_order_payment', {
+            p_order_id: order.id,
+            p_payment_provider: 'mpesa',
+            p_payment_reference: mpesaReceipt || CheckoutRequestID,
+          })
+
+          // Record transaction
+          const { error: txErr } = await supabase.from('tips').insert({
+            sender_id: order.buyer_id,
+            professional_id: order.buyer_id,
+            session_id: null,
+            amount: order.total_price,
+            fee: 0,
+            net_amount: order.total_price,
+            currency: 'KES',
+            mpesa_reference: mpesaReceipt || CheckoutRequestID,
+            status: 'completed',
+          })
+          if (txErr) console.error('Failed to record transaction:', txErr)
+
+          console.log(`Payment confirmed: Order ${order.id}, Receipt ${mpesaReceipt}`)
+        } else {
+          console.warn(`Payment failed for order ${order.id}: ${ResultDesc}`)
         }
 
-        await supabase.rpc('confirm_order_payment', {
-          p_order_id: order.id,
-          p_payment_provider: 'mpesa',
-          p_payment_reference: mpesaReceipt || CheckoutRequestID,
-        })
-
-        // Record transaction
-        const { error: txErr } = await supabase.from('tips').insert({
-          sender_id: order.buyer_id,
-          professional_id: order.buyer_id,
-          session_id: null,
-          amount: order.total_price,
-          fee: 0,
-          net_amount: order.total_price,
-          currency: 'KES',
-          mpesa_reference: mpesaReceipt || CheckoutRequestID,
-          status: 'completed',
-        })
-        if (txErr) console.error('Failed to record transaction:', txErr)
-
-        console.log(`Payment confirmed: Order ${order.id}, Receipt ${mpesaReceipt}`)
-      } else {
-        console.warn(`Payment failed for order ${order.id}: ${ResultDesc}`)
+        return NextResponse.json({ ResultCode: 0, ResultDesc: 'Success' })
       }
 
-      return NextResponse.json({ ResultCode: 0, ResultDesc: 'Success' })
+      // Wallet top-up callback
+      const { data: topup } = await supabase
+        .from('wallet_topups')
+        .select('id, status, amount')
+        .eq('checkout_request_id', CheckoutRequestID)
+        .maybeSingle()
+
+      if (topup) {
+        if (ResultCode === 0) {
+          let mpesaReceipt = ''
+          let amount = null
+          if (CallbackMetadata?.Item) {
+            for (const item of CallbackMetadata.Item) {
+              if (item.Name === 'MpesaReceiptNumber') mpesaReceipt = item.Value
+              if (item.Name === 'Amount') amount = Number(item.Value)
+            }
+          }
+          await supabase.rpc('complete_wallet_topup', {
+            p_checkout_request_id: CheckoutRequestID,
+            p_mpesa_reference: mpesaReceipt || CheckoutRequestID,
+            p_amount: amount,
+          })
+          console.log(`Wallet top-up confirmed: ${topup.id}, Receipt ${mpesaReceipt}`)
+        } else {
+          await supabase.rpc('fail_wallet_topup', {
+            p_checkout_request_id: CheckoutRequestID,
+            p_error: ResultDesc,
+          })
+          console.warn(`Wallet top-up failed for ${topup.id}: ${ResultDesc}`)
+        }
+
+        return NextResponse.json({ ResultCode: 0, ResultDesc: 'Success' })
+      }
+
+      console.error(`No order or top-up found for CheckoutRequestID: ${CheckoutRequestID}`)
+      return NextResponse.json({ ResultCode: 0, ResultDesc: 'Accepted' })
     }
 
     // --- C2B Confirmation (paybill payment received) ---
@@ -95,6 +129,24 @@ export async function POST(request: NextRequest) {
           mpesa_reference: TransID,
           status: 'completed',
         })
+      }
+
+      // Wallet top-up via C2B (BillRefNumber matches the account reference)
+      if (BillRefNumber && BillRefNumber.startsWith('WALLET-')) {
+        const { data: topup } = await supabase
+          .from('wallet_topups')
+          .select('id, status, checkout_request_id')
+          .eq('account_reference', BillRefNumber)
+          .maybeSingle()
+
+        if (topup) {
+          await supabase.rpc('complete_wallet_topup', {
+            p_checkout_request_id: topup.checkout_request_id,
+            p_mpesa_reference: TransID,
+            p_amount: Number(TransAmount) || null,
+          })
+          console.log(`Wallet top-up confirmed via C2B: ${topup.id}, Receipt ${TransID}`)
+        }
       }
 
       // C2B expects empty 200 with "Success"

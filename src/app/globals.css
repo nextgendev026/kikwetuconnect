@@ -484,6 +484,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .clickable-box, [class*="cursor-pointer"] { min-height: 44px; }
 }
 
+/* Viewport-safe centered modals: when content is taller than the viewport,
+   the overlay scrolls and the card stays reachable instead of clipping its top.
+   Add `modal-center-scroll` to any `fixed inset-0 flex items-center justify-center` wrapper. */
+.modal-center-scroll { overflow-y: auto; overscroll-behavior: contain; }
+.modal-center-scroll > * { margin: auto; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   html { scroll-behavior: auto; }

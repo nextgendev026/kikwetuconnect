@@ -244,12 +244,14 @@ export default function CreateModal() {
       position: 'fixed', inset: 0, zIndex: 50,
       background: 'color-mix(in oklab, var(--night) 70%, transparent)',
       alignItems: 'center', justifyContent: 'center', padding: 18,
+      overflowY: 'auto',
     }} onClick={e => { if (e.target === e.currentTarget) setOpen(false) }}>
       <div className="animate-rise" style={{
         width: 'min(560px, 100%)', background: 'var(--surface)',
         border: '1px solid var(--line)', borderRadius: 22, padding: 24,
         boxShadow: '0 25px 60px color-mix(in oklab, var(--night) 30%, transparent)',
         maxHeight: '90vh', overflowY: 'auto',
+        margin: 'auto',
       }} onClick={e => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-5">
           <div>

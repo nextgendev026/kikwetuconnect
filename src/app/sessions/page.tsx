@@ -409,7 +409,7 @@ export default function SessionsPage() {
 
       {/* Rate Modal */}
       {rateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 modal-center-scroll">
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[18px] p-6 w-full max-w-md animate-sheet">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-cream">Rate Session</h3>
@@ -441,7 +441,7 @@ export default function SessionsPage() {
 
       {/* Tip Modal */}
       {tipModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 modal-center-scroll">
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-[18px] p-6 w-full max-w-md animate-sheet">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-cream">Send Tip</h3>

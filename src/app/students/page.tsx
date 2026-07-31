@@ -256,7 +256,7 @@ export default function StudentsPage() {
 
       {/* Create Help Request Modal */}
       {showRequestForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }} onClick={() => setShowRequestForm(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-center-scroll" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }} onClick={() => setShowRequestForm(false)}>
           <div style={{ ...s.card, width: 'min(480px, 100%)' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-base" style={{ color: 'var(--ink)' }}>Ask for Help</h3>

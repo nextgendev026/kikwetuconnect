@@ -400,7 +400,7 @@ export default function ProfileHeader({
 
       {/* Crop/Confirm Modal */}
       {showCropModal && pendingFile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-center-scroll"
           style={{ background: 'color-mix(in oklab, var(--night) 80%, transparent)' }}
           onClick={e => { if (e.target === e.currentTarget) handleCancelPreview() }}
           role="dialog" aria-modal="true" aria-labelledby="upload-preview-title">

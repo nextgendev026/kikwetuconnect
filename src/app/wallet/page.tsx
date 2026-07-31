@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, Clock, Percent, TrendingUp, History, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowUpRight, ArrowDownLeft, Plus, Wallet, Clock, Percent, TrendingUp, History, ChevronDown, ChevronUp, X, Smartphone, CheckCircle2, XCircle, Loader } from 'lucide-react'
 
 interface TokenEntry {
   id: string
@@ -26,6 +26,7 @@ const activityIcons: Record<string, JSX.Element> = {
   spent: <ArrowUpRight className="w-4 h-4 text-red" />,
   bounty: <Plus className="w-4 h-4 text-gold" />,
   award: <TrendingUp className="w-4 h-4 text-earth" />,
+  topup: <Wallet className="w-4 h-4 text-green" />,
 }
 
 const activityLabels: Record<string, string> = {
@@ -33,6 +34,7 @@ const activityLabels: Record<string, string> = {
   spent: 'Tip sent',
   bounty: 'Bounty added',
   award: 'Award earned',
+  topup: 'M-Pesa top-up',
 }
 
 export default function WalletPage() {
@@ -49,6 +51,14 @@ export default function WalletPage() {
   const [payoutAmount, setPayoutAmount] = useState('')
   const [payoutMethod, setPayoutMethod] = useState('M-Pesa')
 
+  const [showTopup, setShowTopup] = useState(false)
+  const [topupAmount, setTopupAmount] = useState('1000')
+  const [topupPhone, setTopupPhone] = useState('')
+  const [topupLoading, setTopupLoading] = useState(false)
+  const [topupState, setTopupState] = useState<'idle' | 'processing' | 'done' | 'failed'>('idle')
+  const [topupMessage, setTopupMessage] = useState('')
+  const [activeCheckoutId, setActiveCheckoutId] = useState<string | null>(null)
+
   const grossTips = activities.filter(a => a.type === 'earned').reduce((s: number, a: TokenEntry) => s + a.amount, 0)
   const platformFee = Math.round(grossTips * 0.1)
   const netAmount = grossTips - platformFee
@@ -57,6 +67,21 @@ export default function WalletPage() {
     if (!profile) return
     fetchWalletData()
   }, [profile])
+
+  // Realtime: auto-refresh the wallet when a top-up (or any token movement) lands
+  useEffect(() => {
+    if (!profile) return
+    const channel = supabase
+      .channel('wallet-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tokens', filter: `user_id=eq.${profile.id}` }, () => {
+        fetchWalletData()
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'wallet_topups', filter: `user_id=eq.${profile.id}` }, () => {
+        fetchWalletData()
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [supabase, profile])
 
   const fetchWalletData = async () => {
     setLoading(true)
@@ -86,6 +111,7 @@ export default function WalletPage() {
 
       if (profile?.phone) {
         setMpesaNumber(profile.phone)
+        setTopupPhone(profile.phone)
       }
     } catch (err) {
       console.error('Error fetching wallet data:', err)
@@ -95,7 +121,81 @@ export default function WalletPage() {
   }
 
   const handleAddFunds = () => {
-    toast('📱 M-Pesa top-up: Send to Paybill 247247. Funds reflect instantly.')
+    setTopupState('idle')
+    setTopupMessage('')
+    setTopupAmount('1000')
+    setTopupPhone(profile?.phone || '')
+    setShowTopup(true)
+  }
+
+  const startTopup = async () => {
+    const amount = Number(topupAmount)
+    if (!topupAmount || isNaN(amount) || amount < 10 || amount > 150000) {
+      toast('Enter an amount between KSh 10 and KSh 150,000')
+      return
+    }
+    if (!/^(?:\+254|0)\d{9}$/.test(topupPhone.replace(/[\s-]/g, ''))) {
+      toast('Enter a valid phone number (07xx or +254)')
+      return
+    }
+    setTopupLoading(true)
+    setTopupState('processing')
+    setTopupMessage('Requesting an M-Pesa prompt on your phone...')
+    try {
+      const res = await fetch('/api/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'topup', amount, phone: topupPhone.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Could not start top-up')
+      setActiveCheckoutId(data.checkout_request_id)
+      setTopupMessage('Check your phone, enter your M-Pesa PIN to complete the top-up.')
+    } catch (err: any) {
+      setTopupState('failed')
+      setTopupMessage(err.message || 'Top-up could not be started')
+    } finally {
+      setTopupLoading(false)
+    }
+  }
+
+  // Poll the top-up status until the webhook marks it complete/failed
+  useEffect(() => {
+    if (!activeCheckoutId || !profile) return
+    let cancelled = false
+    const check = async () => {
+      const { data } = await supabase
+        .from('wallet_topups')
+        .select('status, error, mpesa_reference')
+        .eq('checkout_request_id', activeCheckoutId)
+        .maybeSingle()
+      if (cancelled) return
+      if (data?.status === 'completed') {
+        setTopupState('done')
+        setTopupMessage(`Top-up of KSh ${topupAmount} added to your wallet.`)
+        setActiveCheckoutId(null)
+        fetchWalletData()
+      } else if (data?.status === 'failed') {
+        setTopupState('failed')
+        setTopupMessage(data.error || 'The top-up failed. Try again.')
+        setActiveCheckoutId(null)
+      }
+    }
+    check()
+    const timer = setInterval(check, 3000)
+    const timeout = setTimeout(() => {
+      if (!cancelled && topupState !== 'done' && topupState !== 'failed') {
+        setTopupState('processing')
+        setTopupMessage('Still waiting for M-Pesa... You can close this and check your balance shortly.')
+      }
+    }, 90000)
+    return () => { cancelled = true; clearInterval(timer); clearTimeout(timeout) }
+  }, [activeCheckoutId, profile])
+
+  const closeTopup = () => {
+    setShowTopup(false)
+    setActiveCheckoutId(null)
+    fetchWalletData()
   }
 
   const handlePayout = async () => {
@@ -327,6 +427,87 @@ export default function WalletPage() {
       <p className="text-[10px] text-center text-[oklch(30%_.025_151)] mb-8">
         Payouts processed within 1-3 business days. Minimum payout: KSh 100.
       </p>
+
+      {/* M-Pesa Top-up Modal */}
+      {showTopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-center-scroll" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }}
+          onClick={e => { if (e.target === e.currentTarget && topupState !== 'processing') closeTopup() }}>
+          <div className="animate-rise" style={{
+            background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 20,
+            width: 'min(440px, 100%)', padding: 24, boxShadow: '0 25px 60px color-mix(in oklab, var(--night) 30%, transparent)',
+            maxHeight: '90vh', overflowY: 'auto', margin: 'auto',
+          }}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold text-base" style={{ color: 'var(--ink)' }}>M-Pesa Top-up</h3>
+              <button onClick={closeTopup} style={{ background: 'var(--raised)', color: 'var(--muted)', border: 0, cursor: 'pointer', width: 32, height: 32, borderRadius: '50%', display: 'grid', placeItems: 'center' }}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {topupState === 'done' ? (
+              <div className="text-center py-8">
+                <CheckCircle2 className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--green)' }} />
+                <p className="font-bold text-sm" style={{ color: 'var(--ink)' }}>Top-up successful</p>
+                <p className="text-xs mt-1 mb-5" style={{ color: 'var(--muted)' }}>{topupMessage}</p>
+                <button onClick={closeTopup} style={{ background: 'var(--gold)', color: 'var(--night)', border: 0, borderRadius: 11, padding: '11px 24px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Done</button>
+              </div>
+            ) : topupState === 'failed' ? (
+              <div className="text-center py-8">
+                <XCircle className="w-12 h-12 mx-auto mb-3" style={{ color: 'var(--red)' }} />
+                <p className="font-bold text-sm" style={{ color: 'var(--ink)' }}>Top-up failed</p>
+                <p className="text-xs mt-1 mb-5" style={{ color: 'var(--muted)' }}>{topupMessage}</p>
+                <button onClick={() => { setTopupState('idle'); setTopupMessage(''); setActiveCheckoutId(null) }} style={{ background: 'var(--gold)', color: 'var(--night)', border: 0, borderRadius: 11, padding: '11px 24px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Try again</button>
+              </div>
+            ) : topupState === 'processing' ? (
+              <div className="text-center py-8">
+                <div className="mx-auto mb-3 w-12 h-12 rounded-full grid place-items-center" style={{ background: 'color-mix(in oklab, var(--green) 15%, var(--surface))' }}>
+                  <Loader className="w-6 h-6 animate-spin" style={{ color: 'var(--green)' }} />
+                </div>
+                <p className="font-bold text-sm" style={{ color: 'var(--ink)' }}>Waiting for payment...</p>
+                <p className="text-xs mt-1 mb-5" style={{ color: 'var(--muted)' }}>{topupMessage}</p>
+                <div className="flex items-center justify-center gap-2 text-[10px]" style={{ color: 'var(--muted)' }}>
+                  <Smartphone className="w-4 h-4" /> Enter your M-Pesa PIN on <strong>{topupPhone.replace(/(\d{4})(\d{3})(\d{4})/, '**** *** $3')}</strong>
+                </div>
+                <button onClick={() => { setShowTopup(false); setActiveCheckoutId(null) }} className="mt-5 text-[11px]" style={{ background: 'none', border: 0, color: 'var(--muted)', textDecoration: 'underline', cursor: 'pointer' }}>
+                  Close — I'll check my balance later
+                </button>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-[10px] font-semibold mb-1" style={{ color: 'var(--muted)' }}>Amount (KSh)</label>
+                  <div className="grid grid-cols-4 gap-2 mb-3">
+                    {[100, 500, 1000, 5000].map(p => (
+                      <button key={p} onClick={() => setTopupAmount(String(p))}
+                        style={{
+                          padding: '10px 0', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                          border: `1px solid ${topupAmount === String(p) ? 'var(--gold)' : 'var(--line)'}`,
+                          background: topupAmount === String(p) ? 'color-mix(in oklab, var(--gold) 10%, var(--surface))' : 'var(--raised)',
+                          color: topupAmount === String(p) ? 'var(--gold)' : 'var(--muted)',
+                        }}>
+                        {p.toLocaleString()}
+                      </button>
+                    ))}
+                  </div>
+                  <input type="number" value={topupAmount} onChange={e => setTopupAmount(e.target.value)} min={10} max={150000}
+                    style={{ width: '100%', background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 11, padding: '11px 14px', fontSize: 14, fontWeight: 700, color: 'var(--ink)', outline: 'none' }} />
+                </div>
+                <div className="mt-4">
+                  <label className="block text-[10px] font-semibold mb-1" style={{ color: 'var(--muted)' }}>M-Pesa phone number</label>
+                  <input value={topupPhone} onChange={e => setTopupPhone(e.target.value)} placeholder="07XX XXX XXX"
+                    style={{ width: '100%', background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 11, padding: '11px 14px', fontSize: 13, color: 'var(--ink)', outline: 'none' }} />
+                </div>
+                <button onClick={startTopup} disabled={topupLoading}
+                  style={{ width: '100%', marginTop: 18, background: 'var(--gold)', color: 'var(--night)', border: 0, borderRadius: 11, padding: '13px', fontWeight: 800, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: topupLoading ? 0.6 : 1 }}>
+                  {topupLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Smartphone className="w-4 h-4" />}
+                  {topupLoading ? 'Sending prompt...' : `Top up KSh ${Number(topupAmount) ? Number(topupAmount).toLocaleString() : ''}`}
+                </button>
+                <p className="text-[9px] text-center mt-3" style={{ color: 'var(--muted)' }}>An STK prompt is sent to your phone. Funds are credited instantly once you approve. A 10% platform fee applies to tips you earn, not to top-ups.</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   )
 }

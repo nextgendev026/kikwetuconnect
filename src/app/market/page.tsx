@@ -462,7 +462,7 @@ export default function MarketPage() {
 
       {/* Create Listing Modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }} onClick={() => setShowCreate(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-center-scroll" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }} onClick={() => setShowCreate(false)}>
           <div style={{ ...s.card, width: 'min(480px, 100%)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-base" style={{ color: 'var(--ink)' }}>List an Item</h3>
@@ -519,7 +519,7 @@ export default function MarketPage() {
 
       {/* Buy Modal */}
       {buyItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }} onClick={() => setBuyItem(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-center-scroll" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }} onClick={() => setBuyItem(null)}>
           <div style={{ ...s.card, width: 'min(440px, 100%)' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-sm" style={{ color: 'var(--ink)' }}>Buy: {buyItem.title}</h3>
@@ -551,7 +551,7 @@ export default function MarketPage() {
 
       {/* Listing Detail Modal */}
       {detailItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }} onClick={() => setDetailItem(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-center-scroll" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }} onClick={() => setDetailItem(null)}>
           <div style={{ ...s.card, width: 'min(520px, 100%)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-base" style={{ color: 'var(--ink)' }}>{detailItem.title}</h3>
@@ -605,7 +605,7 @@ export default function MarketPage() {
 
       {/* Review Modal */}
       {reviewOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }} onClick={() => setReviewOrder(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-center-scroll" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }} onClick={() => setReviewOrder(null)}>
           <div style={{ ...s.card, width: 'min(400px, 100%)' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-sm" style={{ color: 'var(--ink)' }}>Rate your purchase</h3>

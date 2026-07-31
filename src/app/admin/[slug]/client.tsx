@@ -331,8 +331,8 @@ function UsersPage() {
       </div>
 
       {suspendModal && (
-        <div onClick={(e) => { if (e.target === e.currentTarget) setSuspendModal(null) }} style={{ position: 'fixed', inset: 0, background: 'var(--night) / .6', zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(400px, 94%)' }}>
+        <div onClick={(e) => { if (e.target === e.currentTarget) setSuspendModal(null) }} style={{ position: 'fixed', inset: 0, background: 'color-mix(in oklab, var(--night) 70%, transparent)', zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', overflowY: 'auto' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(400px, 94%)', margin: 'auto' }}>
             <h2 style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink)', margin: '0 0 8px' }}>Suspend @{suspendModal.username}</h2>
             <p style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 12 }}>This will immediately restrict their account.</p>
             <textarea placeholder="Reason for suspension..." value={reason} onChange={e => setReason(e.target.value)} style={{ ...s.input('100%'), minHeight: 80, resize: 'vertical', padding: '10px 12px' }} />

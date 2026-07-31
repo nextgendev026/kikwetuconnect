@@ -258,7 +258,7 @@ export default function ExpertsPage() {
 
       {/* Apply Form Modal */}
       {showApplyForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }} onClick={() => setShowApplyForm(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-center-scroll" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }} onClick={() => setShowApplyForm(false)}>
           <div style={{ ...s.card, width: 'min(500px, 100%)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-base" style={{ color: 'var(--ink)' }}>Apply as Expert</h3>
