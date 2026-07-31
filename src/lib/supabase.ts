@@ -1,9 +1,8 @@
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import { createServerClient as createSSRServerClient } from '@supabase/ssr'
+import { createBrowserClient as createSSRBrowserClient, createServerClient as createSSRServerClient } from '@supabase/ssr'
 import type { Database } from './database.types'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim()
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim()
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || ''
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || ''
 
 const REALTIME_CONFIG = {
   realtime: {
@@ -11,8 +10,11 @@ const REALTIME_CONFIG = {
   },
 }
 
+// Browser client MUST persist the session in cookies (not localStorage) so that
+// middleware.ts can see it on server-side navigation. Otherwise login appears to
+// "refresh" the page and bounce back because the middleware never finds a session.
 export const createBrowserClient = () =>
-  createSupabaseClient(
+  createSSRBrowserClient(
     supabaseUrl,
     supabaseAnonKey,
     REALTIME_CONFIG
@@ -38,9 +40,3 @@ export const createServerClient = async () => {
     }
   )
 }
-
-export const supabase = createSupabaseClient(
-  supabaseUrl,
-  supabaseAnonKey,
-  REALTIME_CONFIG
-)
