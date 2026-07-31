@@ -373,6 +373,25 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   img, video { content-visibility: auto; }
   .post, .card, .panel, .side-section { content-visibility: auto; contain-intrinsic-size: 200px; }
   body, .main, .right-panel { background-attachment: scroll; }
+
+  /* Mobile: show the notification/social area inline below the feed
+     (mirrors the profile image edit / pop-out viewpoint behaviour) */
+  .right-panel {
+    display: block;
+    position: static;
+    max-height: none;
+    width: 100%;
+    padding: 18px 16px;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    background: var(--bg);
+    background-image: var(--bg-pattern);
+    background-attachment: scroll;
+  }
+
+  /* side-section pop-outs: keep within viewport height and scroll natively */
+  .side-section > div { max-height: 70vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .side-section summary { padding: 12px; }
 }
 
 /* Bottom safe area for modern phones */
