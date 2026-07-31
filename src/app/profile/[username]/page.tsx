@@ -34,7 +34,12 @@ export default function UserProfilePage() {
     let cancelled = false
     if (!username) return
     ;(async () => {
-      const { data, error } = await supabase.from('profiles').select('*').eq('username', username).maybeSingle()
+      // Resolve by username, falling back to id lookup so links using a UUID still work
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .or(`username.eq.${username},id.eq.${username}`)
+        .maybeSingle()
       if (cancelled) return
       if (error) { toast(error.message); setLoading(false); return }
       if (!data) { setNotFound(true); setLoading(false); return }
@@ -43,24 +48,6 @@ export default function UserProfilePage() {
     })()
     return () => { cancelled = true }
   }, [username, supabase])
-
-  useEffect(() => {
-    if (!profile || !user) return
-    supabase.from('follows').select('id').eq('follower_id', user.id).eq('following_id', profile.id).maybeSingle()
-      .then(({ data }: { data: any }) => setIsFollowing(!!data))
-  }, [profile, user, supabase])
-
-  useEffect(() => {
-    if (!profile || !user) return
-    if (profile.id === user.id) { setConfig(null); return }
-    setConfig({
-      actions: [
-        { icon: Heart, label: isFollowing ? 'Following' : 'Follow', onClick: handleFollow, variant: isFollowing ? 'default' : 'gold', active: isFollowing },
-        { icon: MessageCircle, label: 'Message', onClick: handleMessage },
-      ],
-    })
-    return () => setConfig(null)
-  }, [profile, user, isFollowing, setConfig])
 
   const handleFollow = async () => {
     if (!profile) return
@@ -90,6 +77,24 @@ export default function UserProfilePage() {
     const { conversation_id } = await res.json()
     router.push(`/messages?conversation_id=${conversation_id}`)
   }
+
+  useEffect(() => {
+    if (!profile || !user) return
+    if (profile.id === user.id) { setConfig(null); return }
+    setConfig({
+      actions: [
+        { icon: Heart, label: isFollowing ? 'Following' : 'Follow', onClick: handleFollow, variant: isFollowing ? 'default' : 'gold', active: isFollowing },
+        { icon: MessageCircle, label: 'Message', onClick: handleMessage },
+      ],
+    })
+    return () => setConfig(null)
+  }, [profile, user, isFollowing, setConfig])
+
+  useEffect(() => {
+    if (!profile || !user) return
+    supabase.from('follows').select('id').eq('follower_id', user.id).eq('following_id', profile.id).maybeSingle()
+      .then(({ data }: { data: any }) => setIsFollowing(!!data))
+  }, [profile, user, supabase])
 
   useEffect(() => {
     if (!profile) return

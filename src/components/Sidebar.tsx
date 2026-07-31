@@ -139,7 +139,7 @@ export default function Sidebar({ initials, profile, onlineCount = 0, onlineUser
                 <span style={{ position: 'absolute', bottom: 0, right: 0, width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', border: '2px solid var(--surface)' }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <Link href={`/profile/${u.id}`} style={{ fontWeight: 700, fontSize: 11, color: 'var(--ink)', textDecoration: 'none', display: 'block', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                 <Link href={`/profile/${u.username || u.id}`} style={{ fontWeight: 700, fontSize: 11, color: 'var(--ink)', textDecoration: 'none', display: 'block', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {u.full_name || u.username}
                 </Link>
                 <small style={{ fontSize: 9, color: 'var(--muted)' }}>{u.county_hub || 'Kenya'}{u.is_verified_expert ? ' ✓' : ''}</small>

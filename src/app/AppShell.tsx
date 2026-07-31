@@ -212,7 +212,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 const initials = name.slice(0, 2).toUpperCase()
                 return (
                   <div key={p.id} className="list-row" style={{ position: 'relative', cursor: 'pointer' }}
-                    onClick={() => window.location.href = `/profile/${p.id}`}>
+                     onClick={() => window.location.href = `/profile/${p.username || p.id}`}>
                     <span className="avatar" style={{ width: 32, height: 32, fontSize: 9, overflow: 'hidden', position: 'relative' }}>
                       {p.avatar_url ? (
                         <img src={p.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy"

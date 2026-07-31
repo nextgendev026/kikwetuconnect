@@ -339,7 +339,7 @@ function UsersPage() {
                 </td>
                 <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                   <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                    <button onClick={() => window.open(`/profile/${u.id}`, '_blank')} style={s.btn('var(--raised)', 'var(--ink)')}>View</button>
+                     <button onClick={() => window.open(`/profile/${u.username || u.id}`, '_blank')} style={s.btn('var(--raised)', 'var(--ink)')}>View</button>
                     <button onClick={() => setSuspendModal(u)} style={s.btn('var(--raised)', 'var(--red)')}>Suspend</button>
                     <button onClick={() => handleReinstate(u.id)} style={s.btn('var(--raised)', 'var(--green)')}>Reinstate</button>
                   </div>
