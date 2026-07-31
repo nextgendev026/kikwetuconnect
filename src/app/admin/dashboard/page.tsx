@@ -13,26 +13,42 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([
-      supabase.from('profiles').select('*', { count: 'exact', head: true }),
-      supabase.from('posts').select('*', { count: 'exact', head: true }),
-      supabase.from('topics').select('*', { count: 'exact', head: true }),
-      supabase.from('marketplace_listings').select('*', { count: 'exact', head: true }),
-      supabase.from('moderation_queue').select('*', { count: 'exact', head: true }),
-      supabase.from('quizzes').select('*', { count: 'exact', head: true }),
-      supabase.from('quiz_results').select('*', { count: 'exact', head: true }),
-      supabase.from('moderation_queue').select('id, target_type, reason, created_at, status').order('created_at', { ascending: false }).limit(5),
-    ]).then(([users, posts, topics, listings, mods, quizes, results, modData]) => {
-      if (cancelled) return
-      setStats({
-        users: users.count || 0, posts: posts.count || 0, answers: 0, pros: 0, sessions: 0,
-        reports: mods.count || 0, quizzes: quizes.count || 0, listings: listings.count || 0, topics: topics.count || 0,
-      })
-      setPropsedQuizzes(results.count || 0)
-      setModItems(modData.data || [])
-      setLoading(false)
-    }).catch(() => { if (!cancelled) setLoading(false) })
-    return () => { cancelled = true }
+    const refreshCounts = () => {
+      Promise.all([
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('posts').select('*', { count: 'exact', head: true }),
+        supabase.from('topics').select('*', { count: 'exact', head: true }),
+        supabase.from('marketplace_listings').select('*', { count: 'exact', head: true }),
+        supabase.from('moderation_queue').select('*', { count: 'exact', head: true }),
+        supabase.from('quizzes').select('*', { count: 'exact', head: true }),
+        supabase.from('quiz_results').select('*', { count: 'exact', head: true }),
+        supabase.from('moderation_queue').select('id, target_type, reason, created_at, status').order('created_at', { ascending: false }).limit(5),
+      ]).then(([users, posts, topics, listings, mods, quizes, results, modData]) => {
+        if (cancelled) return
+        setStats({
+          users: users.count || 0, posts: posts.count || 0, answers: 0, pros: 0, sessions: 0,
+          reports: mods.count || 0, quizzes: quizes.count || 0, listings: listings.count || 0, topics: topics.count || 0,
+        })
+        setPropsedQuizzes(results.count || 0)
+        setModItems(modData.data || [])
+        setLoading(false)
+      }).catch(() => { if (!cancelled) setLoading(false) })
+    }
+    refreshCounts()
+
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    if (typeof supabase?.channel === 'function') {
+      channel = supabase.channel('admin-dash-realtime')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => refreshCounts())
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'profiles' }, () => refreshCounts())
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'moderation_queue' }, () => refreshCounts())
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'marketplace_listings' }, () => refreshCounts())
+        .subscribe()
+    }
+    return () => {
+      cancelled = true
+      if (channel) supabase.removeChannel(channel)
+    }
   }, [supabase])
 
   if (loading) return <div className="flex justify-center py-[60px]"><div className="w-[32px] h-[32px] rounded-full animate-spin" style={{ border: '3px solid var(--gold)', borderTopColor: 'transparent' }} /></div>

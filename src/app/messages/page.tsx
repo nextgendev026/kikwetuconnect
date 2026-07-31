@@ -23,10 +23,40 @@ function MessagesInner() {
 
   const { messages, loading: msgsLoading, sendMessage, sendMediaMessage, startTyping, typingUsers, addReaction, removeReaction } = useMessages(convId)
 
+  const openConversationWith = useCallback(async (userId: string) => {
+    if (!supabase || !user) return
+    try {
+      const { data: theirConvs } = await supabase.from('conversation_participants').select('conversation_id').eq('user_id', userId)
+      const theirIds = theirConvs?.map(c => c.conversation_id) || []
+      let convId = null
+      if (theirIds.length > 0) {
+        const { data: existing } = await supabase.from('conversation_participants')
+          .select('conversation_id').eq('user_id', user.id).in('conversation_id', theirIds).maybeSingle()
+        if (existing) convId = existing.conversation_id
+      }
+      if (!convId) {
+        const { data: conv } = await supabase.from('conversations')
+          .insert({ type: 'dm', created_by: user.id }).select('id').single()
+        if (conv) {
+          await supabase.from('conversation_participants').insert([
+            { conversation_id: conv.id, user_id: user.id },
+            { conversation_id: conv.id, user_id: userId },
+          ])
+          convId = conv.id
+        }
+      }
+      if (convId) { setConvId(convId); setSidebarOpen(false) }
+    } catch { toast('Failed to open conversation') }
+  }, [supabase, user])
+
   useEffect(() => {
     const cid = searchParams.get('conversation_id')
     if (cid) { setConvId(cid); setSidebarOpen(false) }
-  }, [searchParams])
+    else {
+      const uid = searchParams.get('user')
+      if (uid) { openConversationWith(uid); setSidebarOpen(false) }
+    }
+  }, [searchParams, openConversationWith])
 
   useEffect(() => { if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
@@ -99,12 +129,9 @@ function MessagesInner() {
 
   const isOwn = (senderId: string) => senderId === user?.id
 
-  const statusIcon = (msg: Message) => {
-    if (msg.status === 'sending') return '\u23F3'
-    if (msg.status === 'sent') return '\u2713'
-    if (msg.status === 'delivered') return '\u2713\u2713'
-    if (msg.status === 'read') return '\u2713\u2713'
-    return ''
+  const isLastInGroup = (idx: number) => {
+    const next = messages[idx + 1]
+    return !next || next.sender_id !== messages[idx].sender_id
   }
 
   if (!user) return <div className="flex items-center justify-center min-h-screen" style={{ background: 'var(--bg)' }}><p style={{ color: 'var(--muted)' }}>Sign in to see messages</p></div>
@@ -198,7 +225,18 @@ function MessagesInner() {
                           <span className="text-[10px] px-3 py-1 rounded-full" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>{formatDateSeparator(msg.created_at)}</span>
                         </div>
                       )}
-                      <div className={`flex mb-1.5 group ${isOwn(msg.sender_id) ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`flex mb-1.5 group ${isOwn(msg.sender_id) ? 'justify-end' : 'justify-start'} items-end`}>
+                        {!isOwn(msg.sender_id) && (
+                          <div className={`flex-shrink-0 mr-1.5 w-[22px] ${isLastInGroup(idx) ? '' : 'invisible'}`}>
+                            {msg.sender?.avatar_url ? (
+                              <img src={msg.sender.avatar_url} alt="" className="w-[22px] h-[22px] rounded-full object-cover" />
+                            ) : (
+                              <div className="w-[22px] h-[22px] rounded-full grid place-items-center text-[9px] font-bold" style={{ background: 'var(--gold)', color: 'var(--night)' }}>
+                                {msg.sender?.full_name?.[0] || '?'}
+                              </div>
+                            )}
+                          </div>
+                        )}
                         <div className={`relative max-w-[75%] ${isOwn(msg.sender_id) ? 'order-1' : 'order-1'}`}>
                           {/* Reply preview */}
                           {msg.reply_to && (
@@ -249,7 +287,18 @@ function MessagesInner() {
                           {/* Metadata row */}
                           <div className={`flex items-center gap-1 mt-0.5 ${isOwn(msg.sender_id) ? 'justify-end' : 'justify-start'}`}>
                             <span className="text-[9px]" style={{ color: 'var(--faint)' }}>{formatTime(msg.created_at)}</span>
-                            {isOwn(msg.sender_id) && <span className="text-[9px]" style={{ color: msg.status === 'read' ? 'var(--blue)' : 'var(--faint)' }}>{statusIcon(msg)}</span>}
+                            {isOwn(msg.sender_id) && msg.status !== 'sending' && (
+                              <span className="relative inline-block w-[18px] h-[12px]" style={{ color: msg.status === 'read' ? '#53bdeb' : 'var(--faint)' }}>
+                                <svg width="18" height="12" viewBox="0 0 18 12" fill="none" className="absolute left-0 top-0">
+                                  <path d="M1 6.5L5 10.5L14.5 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                                {(msg.status === 'delivered' || msg.status === 'read') && (
+                                  <svg width="18" height="12" viewBox="0 0 18 12" fill="none" className="absolute left-[3px] top-0">
+                                    <path d="M1 6.5L5 10.5L14.5 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                  </svg>
+                                )}
+                              </span>
+                            )}
                           </div>
                           {/* Actions on hover */}
                           <div className={`absolute top-0 ${isOwn(msg.sender_id) ? 'left-0 -translate-x-full pr-1' : 'right-0 translate-x-full pl-1'} opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5`}>

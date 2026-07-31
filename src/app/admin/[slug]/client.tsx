@@ -1,7 +1,7 @@
 'use client'
 import { useSupabase, toast } from '@/app/providers'
 import { useUser } from '@/app/providers'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { ROLES } from '@/lib/roles'
 
 const PAGE_META: Record<string, { title: string; desc: string }> = {
@@ -59,6 +59,7 @@ function KpiCards({ items }: { items: { label: string; value: string | number; s
 function AnalyticsPage() {
   const supabase = useSupabase()
   const [data, setData] = useState<any>(null)
+  const [exporting, setExporting] = useState(false)
   useEffect(() => {
     if (typeof supabase?.from !== 'function') return
     Promise.all([
@@ -84,12 +85,31 @@ function AnalyticsPage() {
       })
     })
   }, [supabase])
+
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const { data: snapshot, error } = await supabase.rpc('admin_export_snapshot')
+      if (error) { toast(error.message); return }
+      const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `kikwetu-export-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast('Export downloaded')
+    } catch (e: any) { toast(e?.message || 'Export failed') }
+    finally { setExporting(false) }
+  }
+
   if (!data) return s.spinner()
   const engagement = data.users ? ((data.posts + data.answers) / data.users).toFixed(1) : '0'
   const proRate = data.users ? ((data.professionals / data.users) * 100).toFixed(1) : '0'
   return (
     <>
-      <PageHeader slug="analytics" meta={PAGE_META.analytics} />
+      <PageHeader slug="analytics" meta={PAGE_META.analytics}
+        extra={<button onClick={handleExport} disabled={exporting} style={s.btn('var(--gold)', 'var(--night)')}>{exporting ? 'Exporting...' : '⬇ Export data'}</button>} />
       <KpiCards items={[
         { label: 'Total members', value: data.users.toLocaleString(), sub: `${data.professionals} experts` },
         { label: 'Posts + Answers', value: (data.posts + data.answers).toLocaleString(), sub: `${data.posts} posts, ${data.answers} answers` },
@@ -350,23 +370,49 @@ function UsersPage() {
 // =============== SPACES ===============
 function SpacesPage() {
   const supabase = useSupabase()
+  const { user } = useUser()
   const [spaces, setSpaces] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<any>(null)
-  const [editForm, setEditForm] = useState({ name: '', description: '', icon: '', category: '' })
+  const [editForm, setEditForm] = useState({ name: '', description: '', icon: '', category: '', cover_url: '' })
+  const [uploadingCover, setUploadingCover] = useState(false)
+  const coverInputRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
     if (typeof supabase?.from !== 'function') return
-    supabase.from('spaces').select('id, name, slug, description, icon, category, member_count, post_count, is_private, created_at').order('member_count', { ascending: false }).limit(30).then(({ data }: { data: any }) => {
+    supabase.from('spaces').select('id, name, slug, description, icon, category, cover_url, member_count, post_count, is_private, created_at').order('member_count', { ascending: false }).limit(30).then(({ data }: { data: any }) => {
       if (data) setSpaces(data); setLoading(false)
     })
   }, [supabase])
-  const openEdit = (sp: any) => { setEditing(sp); setEditForm({ name: sp.name, description: sp.description || '', icon: sp.icon || '📁', category: sp.category || 'General' }) }
+  const openEdit = (sp: any) => { setEditing(sp); setEditForm({ name: sp.name, description: sp.description || '', icon: sp.icon || '📁', category: sp.category || 'General', cover_url: sp.cover_url || '' }) }
   const saveEdit = async () => {
     if (!editing || !editForm.name.trim()) { toast('Name required'); return }
-    const { error } = await supabase.from('spaces').update({ name: editForm.name, description: editForm.description, icon: editForm.icon, category: editForm.category }).eq('id', editing.id)
+    const { error } = await supabase.from('spaces').update({ name: editForm.name, description: editForm.description, icon: editForm.icon, category: editForm.category, cover_url: editForm.cover_url || null }).eq('id', editing.id)
     if (error) { toast(error.message); return }
-    setSpaces(prev => prev.map(s => s.id === editing.id ? { ...s, name: editForm.name, description: editForm.description, icon: editForm.icon, category: editForm.category } : s))
+    setSpaces(prev => prev.map(s => s.id === editing.id ? { ...s, name: editForm.name, description: editForm.description, icon: editForm.icon, category: editForm.category, cover_url: editForm.cover_url || null } : s))
     toast('Space updated'); setEditing(null)
+  }
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !editing || !supabase || !user) return
+    if (file.size > 5 * 1024 * 1024) { toast('Max 5MB'); return }
+    setUploadingCover(true)
+    try {
+      const ext = (file.name.split('.').pop() || 'jpg').replace(/[^a-zA-Z0-9]/g, '')
+      const path = `spaces/${editing.id}-${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('public-media').upload(path, file, { upsert: true })
+      if (upErr) throw upErr
+      const { data: { publicUrl } } = supabase.storage.from('public-media').getPublicUrl(path)
+      setEditForm(p => ({ ...p, cover_url: publicUrl }))
+      toast('Thumbnail uploaded — save to apply')
+    } catch (e: any) { toast(e?.message || 'Upload failed') }
+    finally { setUploadingCover(false); e.target.value = '' }
+  }
+  const handleSpaceDelete = async (id: string) => {
+    if (!confirm('Delete this space and its memberships permanently?')) return
+    const { error } = await supabase.rpc('admin_delete_content', { p_item_type: 'space', p_item_id: id })
+    if (error) { toast(error.message); return }
+    toast('Space deleted')
+    setSpaces(prev => prev.filter(s => s.id !== id))
   }
   if (loading) return s.spinner()
   return (
@@ -376,17 +422,23 @@ function SpacesPage() {
         {spaces.length === 0 ? (
           <div style={{ ...s.card(), gridColumn: '1/-1', textAlign: 'center' }}><p style={{ color: 'var(--muted)', fontSize: 12 }}>No spaces created yet</p></div>
         ) : spaces.map((sp: any) => (
-          <div key={sp.id} style={s.card({ position: 'relative' })}>
-            <button onClick={() => openEdit(sp)} style={{ position: 'absolute', top: 10, right: 10, background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 7, width: 28, height: 28, cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--muted)', fontSize: 13, lineHeight: 1 }}>✎</button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <span style={{ fontSize: 20 }}>{sp.icon || '📁'}</span>
-              <div><b style={{ fontSize: 13, color: 'var(--ink)' }}>{sp.name}</b><small style={{ display: 'block', color: 'var(--muted)', fontSize: 9 }}>/{sp.slug}</small></div>
+          <div key={sp.id} style={s.card({ position: 'relative', padding: 0, overflow: 'hidden' })}>
+            <div style={{ height: 72, background: sp.cover_url ? `url(${sp.cover_url}) center/cover` : 'linear-gradient(135deg, var(--green), var(--gold))' }} />
+            <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 4 }}>
+              <button onClick={() => openEdit(sp)} style={{ background: 'rgba(0,0,0,0.55)', border: 0, borderRadius: 7, width: 28, height: 28, cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#fff', fontSize: 13, lineHeight: 1 }}>✎</button>
+              <button onClick={() => handleSpaceDelete(sp.id)} style={{ background: 'rgba(0,0,0,0.55)', border: 0, borderRadius: 7, width: 28, height: 28, cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#ff8a8a', fontSize: 13, lineHeight: 1 }}>🗑</button>
             </div>
-            <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 10px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{sp.description}</p>
-            <div style={{ display: 'flex', gap: 12, fontSize: 10, color: 'var(--muted)' }}>
-              <span>{sp.member_count} members</span>
-              <span>{sp.post_count} posts</span>
-              {sp.is_private && <span style={{ color: 'var(--gold)' }}>🔒 Private</span>}
+            <div style={{ padding: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 20 }}>{sp.icon || '📁'}</span>
+                <div><b style={{ fontSize: 13, color: 'var(--ink)' }}>{sp.name}</b><small style={{ display: 'block', color: 'var(--muted)', fontSize: 9 }}>/{sp.slug}</small></div>
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 10px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{sp.description}</p>
+              <div style={{ display: 'flex', gap: 12, fontSize: 10, color: 'var(--muted)' }}>
+                <span>{sp.member_count} members</span>
+                <span>{sp.post_count} posts</span>
+                {sp.is_private && <span style={{ color: 'var(--gold)' }}>🔒 Private</span>}
+              </div>
             </div>
           </div>
         ))}
@@ -394,9 +446,19 @@ function SpacesPage() {
 
       {editing && (
         <div onClick={(e) => { if (e.target === e.currentTarget) setEditing(null) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(440px, 94%)' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(460px, 94%)' }}>
             <h2 style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink)', margin: '0 0 16px' }}>Edit Space</h2>
             <div style={{ display: 'grid', gap: 12 }}>
+              {editForm.cover_url && (
+                <img src={editForm.cover_url} alt="" style={{ width: '100%', height: 90, objectFit: 'cover', borderRadius: 10 }} />
+              )}
+              <div><label style={s.label}>Thumbnail / cover</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+                  <button onClick={() => coverInputRef.current?.click()} disabled={uploadingCover} style={s.btn('var(--raised)', 'var(--ink)')}>{uploadingCover ? 'Uploading...' : 'Upload image'}</button>
+                  {editForm.cover_url && <button onClick={() => setEditForm(p => ({ ...p, cover_url: '' }))} style={s.btn('var(--raised)', 'var(--red)')}>Remove</button>}
+                </div>
+              </div>
               <div><label style={s.label}>Name</label><input style={s.input()} value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} /></div>
               <div><label style={s.label}>Description</label><textarea style={{ ...s.input(), minHeight: 60, resize: 'vertical' }} value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} /></div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -431,6 +493,13 @@ function MarketplacePage() {
     if (error) { toast(error.message); return }
     toast(`Listing ${status}`)
     setListings(prev => prev.map(l => l.id === id ? { ...l, status } : l))
+  }
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this listing permanently?')) return
+    const { error } = await supabase.rpc('admin_delete_content', { p_item_type: 'listing', p_item_id: id })
+    if (error) { toast(error.message); return }
+    toast('Listing deleted')
+    setListings(prev => prev.filter(l => l.id !== id))
   }
   if (loading) return s.spinner()
   const active = listings.filter(l => l.status === 'active').length
@@ -469,6 +538,7 @@ function MarketplacePage() {
                     ) : (
                       <button onClick={() => handleStatus(l.id, 'active')} style={s.btn('var(--raised)', 'var(--green)')}>Activate</button>
                     )}
+                    <button onClick={() => handleDelete(l.id)} style={s.btn('var(--raised)', 'var(--red)')}>Delete</button>
                   </div>
                 </td>
               </tr>
@@ -496,6 +566,13 @@ function SafetyPage() {
     if (error) { toast(error.message); return }
     toast(`Alert ${status}`)
     setAlerts(prev => prev.map(a => a.id === id ? { ...a, status } : a))
+  }
+  const handleAlertDelete = async (id: string) => {
+    if (!confirm('Delete this alert permanently?')) return
+    const { error } = await supabase.rpc('admin_delete_content', { p_item_type: 'alert', p_item_id: id })
+    if (error) { toast(error.message); return }
+    toast('Alert deleted')
+    setAlerts(prev => prev.filter(a => a.id !== id))
   }
   if (loading) return s.spinner()
   const activeAlerts = alerts.filter(a => a.status === 'active').length
@@ -535,9 +612,13 @@ function SafetyPage() {
                     <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
                       <button onClick={() => handleAlertStatus(a.id, 'resolved')} style={s.btn('var(--green)', '#fff')}>Resolve</button>
                       <button onClick={() => handleAlertStatus(a.id, 'dismissed')} style={s.btn('var(--raised)', 'var(--muted)')}>Dismiss</button>
+                      <button onClick={() => handleAlertDelete(a.id)} style={s.btn('var(--raised)', 'var(--red)')}>Delete</button>
                     </div>
                   ) : (
-                    <button onClick={() => handleAlertStatus(a.id, 'active')} style={s.btn('var(--raised)', 'var(--green)')}>Reopen</button>
+                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                      <button onClick={() => handleAlertStatus(a.id, 'active')} style={s.btn('var(--raised)', 'var(--green)')}>Reopen</button>
+                      <button onClick={() => handleAlertDelete(a.id)} style={s.btn('var(--raised)', 'var(--red)')}>Delete</button>
+                    </div>
                   )}
                 </td>
               </tr>

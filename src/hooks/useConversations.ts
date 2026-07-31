@@ -179,35 +179,35 @@ export function useMessages(conversationId: string | null) {
   const fetchMessages = useCallback(async () => {
     if (!conversationId || !user) return
     setLoading(true)
-    const [msgResult, reactResult, mediaResult] = await Promise.all([
-      supabase
-        .from('messages')
-        .select(`*, sender:profiles!messages_sender_id_fkey (username, full_name, avatar_url)`)
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true })
-        .limit(100),
-      supabase
-        .from('message_reactions')
-        .select('*')
-        .in('message_id', messages.map(m => m.id)),
-      supabase
-        .from('media_items')
-        .select('*')
-        .in('message_id', messages.map(m => m.id))
-    ])
+    const msgResult = await supabase
+      .from('messages')
+      .select(`*, sender:profiles!messages_sender_id_fkey (username, full_name, avatar_url)`)
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true })
+      .limit(100)
+
+    const msgRows = msgResult.data as any[] || []
+    const msgIds = msgRows.map(m => m.id)
+
+    const [reactResult, mediaResult] = msgIds.length > 0
+      ? await Promise.all([
+          supabase.from('message_reactions').select('*').in('message_id', msgIds),
+          supabase.from('media_items').select('*').in('message_id', msgIds),
+        ])
+      : [null, null]
 
     if (msgResult.data) {
       const reactionsMap: Record<string, MessageReaction[]> = {}
-      reactResult.data?.forEach((r: any) => {
+      reactResult?.data?.forEach((r: any) => {
         if (!reactionsMap[r.message_id]) reactionsMap[r.message_id] = []
         reactionsMap[r.message_id].push(r)
       })
       const mediaMap: Record<string, MediaItem[]> = {}
-      mediaResult.data?.forEach((m: any) => {
+      mediaResult?.data?.forEach((m: any) => {
         if (!mediaMap[m.message_id]) mediaMap[m.message_id] = []
         mediaMap[m.message_id].push(m)
       })
-      const mapped = (msgResult.data as any[]).map(m => ({
+      const mapped = msgRows.map(m => ({
         ...m,
         sender: m.sender,
         reactions: reactionsMap[m.id] || [],

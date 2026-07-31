@@ -68,6 +68,21 @@ export default function AdminModeration() {
     fetchItems()
   }
 
+  const deleteContent = async (item: any) => {
+    if (!['post', 'answer', 'listing', 'alert', 'space'].includes(item.target_type)) {
+      toast(`Cannot delete entity type: ${item.target_type}`)
+      return
+    }
+    if (!confirm(`Delete this ${item.target_type} permanently?`)) return
+    const { error } = await supabase.rpc('admin_delete_content', {
+      p_item_type: item.target_type,
+      p_item_id: item.target_id,
+    })
+    if (error) { toast(error.message); return }
+    toast(`${item.target_type} deleted`)
+    act(item.id, 'action_taken')
+  }
+
   const filtered = items.filter(item =>
     !search || item.target_type?.toLowerCase().includes(search.toLowerCase()) || item.reason?.toLowerCase().includes(search.toLowerCase())
   )
@@ -155,6 +170,7 @@ export default function AdminModeration() {
                         <button onClick={() => act(item.id, 'dismissed')} style={{ height: 28, padding: '0 8px', borderRadius: 6, border: '1px solid var(--line)', background: 'var(--raised)', fontSize: 9, cursor: 'pointer', color: 'var(--green)' }}>Dismiss</button>
                         <button onClick={() => act(item.id, 'action_taken')} style={{ height: 28, padding: '0 8px', borderRadius: 6, border: 0, background: 'var(--red)', color: '#fff', fontSize: 9, cursor: 'pointer' }}>Action</button>
                         <button onClick={() => act(item.id, 'reviewed')} style={{ height: 28, padding: '0 8px', borderRadius: 6, border: '1px solid var(--line)', background: 'var(--raised)', fontSize: 9, cursor: 'pointer', color: 'var(--ink)' }}>Review</button>
+                        <button onClick={() => deleteContent(item)} style={{ height: 28, padding: '0 8px', borderRadius: 6, border: '1px solid var(--line)', background: 'var(--raised)', fontSize: 9, cursor: 'pointer', color: 'var(--red)' }}>Delete content</button>
                       </div>
                     ) : (
                       <span style={{ fontSize: 9, color: 'var(--muted)' }}>—</span>

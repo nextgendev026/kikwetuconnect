@@ -86,45 +86,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => { supabase.removeChannel(channel) }
   }, [supabase, profile?.id])
 
-  const openSupportChat = useCallback(async () => {
-    if (!profile || !supabase) return
-    setChatOpen(true)
-    if (chatConvId) {
-      const res = await fetch(`/api/messages?conversation_id=${chatConvId}`)
-      if (res.ok) setChatMessages(await res.json())
-      return
-    }
-    const { data: convs } = await supabase
-      .from('conversation_participants')
-      .select('conversation_id')
-      .eq('user_id', profile.id)
-    if (convs && convs.length > 0) {
-      const cIds = convs.map((c: any) => c.conversation_id)
-      const { data: supportConvs } = await supabase
-        .from('conversations')
-        .select('id')
-        .in('id', cIds)
-        .eq('type', 'support')
-        .limit(1)
-      if (supportConvs && supportConvs.length > 0) {
-        setChatConvId(supportConvs[0].id)
-        const res = await fetch(`/api/messages?conversation_id=${supportConvs[0].id}`)
-        if (res.ok) setChatMessages(await res.json())
-        return
-      }
-    }
-    const res = await fetch('/api/conversations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'support', title: 'KikwetuConnect Support', member_ids: [] }),
-    })
-    if (res.ok) {
-      const { conversation_id } = await res.json()
-      setChatConvId(conversation_id)
-      setChatMessages([])
-    }
-  }, [profile, supabase, chatConvId])
-
   useEffect(() => {
     if (!chatConvId || !supabase) return
     if (chatChannelRef.current) supabase.removeChannel(chatChannelRef.current)
@@ -209,7 +170,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   </button>
                   {showNotifTray && <NotificationTray onClose={() => setShowNotifTray(false)} />}
                 </div>
-                <button className="icon" style={{ position: 'relative' }} onClick={() => { if (chatOpen) { setChatOpen(false) } else { openSupportChat() } }} aria-label={chatOpen ? 'Close chat' : 'Open chat'} title="Messages">
+                <button className="icon" style={{ position: 'relative' }} onClick={() => { setChatOpen(o => { if (!o) setChatConvId(null); return !o }) }} aria-label={chatOpen ? 'Close chat' : 'Open messages'} title="Messages">
                   <MessageSquare className="w-[17px] h-[17px]" />
                   {unreadMsgCount > 0 && !chatOpen && (
                     <span style={{
@@ -306,40 +267,86 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       </ToolbarProvider>
 
-      {/* Chat widget — support conversation */}
-      <div className={`chat${chatOpen ? ' open' : ''}`} role="dialog" aria-label="Support chat" aria-live="polite">
-        <div className="chat-head">
-          <span className="avatar g" style={{ width: 32, height: 32, fontSize: 10 }}>KC</span>
-          <div className="chat-head-main">
-            <b>KikwetuConnect</b>
-            <small>Support &amp; updates</small>
-          </div>
-          <button className="chat-close" onClick={() => { setChatOpen(false); setChatConvId(null) }}>×</button>
-        </div>
-        <div className="chat-list" style={{ overflowY: 'auto', flex: 1 }}>
-          {chatMessages.length === 0 ? (
-            <div className="chat-msg">
-              <div className="bubble">Welcome to KikwetuConnect! How can we help?</div>
-            </div>
-          ) : chatMessages.map((msg: any) => {
-            const isMe = msg.sender_id === profile?.id
-            return (
-              <div key={msg.id} className={`chat-msg ${isMe ? 'me' : ''}`}>
-                <div className="bubble" style={{
-                  background: isMe ? 'var(--gold)' : 'var(--raised)',
-                  color: isMe ? 'var(--night)' : 'var(--ink)',
-                }}>{msg.content}</div>
+      {/* Chat widget — support conversation + online followers */}
+      <div className={`chat${chatOpen ? ' open' : ''}`} role="dialog" aria-label="Messages" aria-live="polite">
+        {chatConvId ? (
+          <>
+            <div className="chat-head">
+              <button className="chat-close" style={{ marginRight: 4 }} onClick={() => setChatConvId(null)}>←</button>
+              <span className="avatar g" style={{ width: 32, height: 32, fontSize: 10 }}>KC</span>
+              <div className="chat-head-main">
+                <b>KikwetuConnect</b>
+                <small>Support &amp; updates</small>
               </div>
-            )
-          })}
-          <div ref={chatEndRef} />
-        </div>
-        <div className="chat-input">
-          <input value={chatInput} onChange={e => setChatInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleChatSend() } }}
-            placeholder="Write a message..." disabled={!chatConvId} />
-          <button onClick={handleChatSend} disabled={!chatConvId || !chatInput.trim() || chatSending}>↗</button>
-        </div>
+              <button className="chat-close" onClick={() => { setChatOpen(false); setChatConvId(null) }}>×</button>
+            </div>
+            <div className="chat-list" style={{ overflowY: 'auto', flex: 1 }}>
+              {chatMessages.length === 0 ? (
+                <div className="chat-msg">
+                  <div className="bubble">Welcome to KikwetuConnect! How can we help?</div>
+                </div>
+              ) : chatMessages.map((msg: any) => {
+                const isMe = msg.sender_id === profile?.id
+                return (
+                  <div key={msg.id} className={`chat-msg ${isMe ? 'me' : ''}`}>
+                    <div className="bubble" style={{
+                      background: isMe ? 'var(--gold)' : 'var(--raised)',
+                      color: isMe ? 'var(--night)' : 'var(--ink)',
+                    }}>{msg.content}</div>
+                  </div>
+                )
+              })}
+              <div ref={chatEndRef} />
+            </div>
+            <div className="chat-input">
+              <input value={chatInput} onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleChatSend() } }}
+                placeholder="Write a message..." disabled={!chatConvId} />
+              <button onClick={handleChatSend} disabled={!chatConvId || !chatInput.trim() || chatSending}>↗</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="chat-head">
+              <span className="avatar g" style={{ width: 32, height: 32, fontSize: 10 }}>
+                <MessageSquare className="w-4 h-4" style={{ color: 'var(--night)' }} />
+              </span>
+              <div className="chat-head-main">
+                <b>Messages</b>
+                <small>{onlineCount} online now</small>
+              </div>
+              <button className="chat-close" onClick={() => setChatOpen(false)}>×</button>
+            </div>
+            <div className="chat-list" style={{ overflowY: 'auto', flex: 1 }}>
+              {onlineUsers.length === 0 ? (
+                <div className="chat-msg">
+                  <div className="bubble" style={{ color: 'var(--muted)' }}>No members online right now. Open a full chat to continue later.</div>
+                </div>
+              ) : onlineUsers.slice(0, 12).map((p: any) => {
+                const name = p.full_name || p.username || 'User'
+                return (
+                  <div key={p.id} className="list-row" style={{ cursor: 'pointer' }}
+                    onClick={() => window.location.href = `/messages?user=${p.id}`}>
+                    <span className="avatar" style={{ width: 32, height: 32, fontSize: 9, overflow: 'hidden', position: 'relative' }}>
+                      {p.avatar_url ? (
+                        <img src={p.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy"
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.textContent = name.slice(0, 2).toUpperCase() }} />
+                      ) : name.slice(0, 2).toUpperCase()}
+                      <span style={{ position: 'absolute', bottom: 0, right: 0, width: 9, height: 9, borderRadius: '50%', background: 'var(--green)', border: '2px solid var(--surface)' }} />
+                    </span>
+                    <div className="side-copy"><b style={{ fontSize: 11 }}>{name}</b><small style={{ fontSize: 9 }}>{p.county_hub || 'Online'}</small></div>
+                    <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--gold)', flex: 'none' }}>Message →</span>
+                  </div>
+                )
+              })}
+              <div className="list-row" style={{ cursor: 'pointer' }} onClick={() => router.push('/messages')}>
+                <span className="avatar" style={{ width: 32, height: 32, fontSize: 9, background: 'var(--raised)', color: 'var(--muted)' }}>⋯</span>
+                <div className="side-copy"><b style={{ fontSize: 11 }}>All conversations</b><small style={{ fontSize: 9 }}>Full inbox</small></div>
+                <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--gold)', flex: 'none' }}>Open →</span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Create modal */}

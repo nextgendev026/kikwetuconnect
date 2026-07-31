@@ -1,41 +1,12 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { ArrowUp, MessageCircle, Smile, Globe, Star, Flag, MoreHorizontal, Edit3, Trash2, EyeOff, Eye } from 'lucide-react'
+import { ArrowUp, MessageCircle, Smile, Globe, Star, Flag, MoreHorizontal, Edit3, Trash2, EyeOff, Eye, Plus, Play, Zap } from 'lucide-react'
 import FeedAd from '@/components/FeedAd'
 import ShareMenu from '@/components/ShareMenu'
-
-const COUNTIES = [
-  'Nairobi', 'Mombasa', 'Kisumu', 'Eldoret', 'Kitale', 'Nakuru', 'Thika', 'Kericho',
-  'Isiolo', 'Garissa', 'Lamu', 'Wajir', 'Mandera', 'Kilifi', 'Kwale', 'Taita-Taveta',
-  'Makueni', 'Kajiado', 'Narok', 'Bomet', 'Nyamira', 'Kisii', 'Homa Bay', 'Siaya',
-  'Bungoma', 'Busia', 'Kakamega', 'Vihiga', 'Nandi', 'Baringo', 'West Pokot', 'Samburu',
-  'Laikipia', 'Embu', 'Meru', 'Tharaka-Nithi', 'Nyeri', 'Murang\'a', 'Kirinyaga', 'Machakos',
-  'Kiambu', 'Turkana', 'Trans Nzoia', 'Uasin Gishu',
-]
-
-const TABS = [
-  { id: 'for_you', label: 'For you' },
-  { id: 'following', label: 'Following' },
-  { id: 'near_you', label: 'Near you' },
-  { id: 'questions', label: 'Questions' },
-  { id: 'latest', label: 'Latest' },
-  { id: 'saved', label: 'Saved' },
-] as const
-
-const TYPE_FILTERS = [
-  { id: 'all', label: 'All' },
-  { id: 'baraza', label: 'Baraza' },
-  { id: 'inquiry', label: 'Inquiry' },
-  { id: 'article', label: 'Article' },
-  { id: 'poll', label: 'Poll' },
-] as const
-
-const EMOJI_REACTIONS = ['🔥', '❤️', '😂', '😮', '😢', '🙏', '💡', '🗳️']
-
-type TabId = typeof TABS[number]['id']
-type TypeFilter = typeof TYPE_FILTERS[number]['id']
+import { COUNTIES, TABS, TYPE_FILTERS, EMOJI_REACTIONS } from '@/lib/feed-config'
+import type { TabId, TypeFilter } from '@/lib/feed-config'
 
 interface Profile {
   id: string
@@ -486,6 +457,117 @@ function PostCardComponent({
   )
 }
 
+function NewIdeaStrip({ profile }: { profile: Profile | null }) {
+  const supabase = useSupabase()
+  const [ideas, setIdeas] = useState<Post[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!supabase) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { data } = await supabase
+          .from('posts')
+          .select(`
+            id, user_id, post_type, title, content, media_url, media_type,
+            created_at, upvotes_count, answers_count,
+            profiles:user_id (id, full_name, username, avatar_url, heshima_rating, is_verified_expert, county_hub)
+          `)
+          .not('media_url', 'is', null)
+          .is('space_id', null)
+          .order('created_at', { ascending: false })
+          .limit(24)
+        if (!cancelled) setIdeas((data || []) as unknown as Post[])
+      } catch {} finally { if (!cancelled) setLoading(false) }
+    })()
+
+    const channel = supabase
+      .channel('new-idea-live')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload: any) => {
+        const p = payload.new as any
+        if (!p.media_url || p.space_id) return
+        setIdeas(prev => {
+          if (prev.some(i => i.id === p.id)) return prev
+          return [p, ...prev].slice(0, 24)
+        })
+      })
+      .subscribe()
+
+    return () => { cancelled = true; supabase.removeChannel(channel) }
+  }, [supabase])
+
+  if (loading) return null
+  if (ideas.length === 0) return null
+
+  const openComposer = () => {
+    document.dispatchEvent(new CustomEvent('open-create-modal', { detail: { type: 'post' } }))
+  }
+
+  return (
+    <div className="mb-[14px] animate-fade-in-up">
+      <div className="flex items-center justify-between mb-[10px]">
+        <h2 className="flex items-center gap-[6px] text-[13px] font-extrabold tracking-[-.01em]" style={{ fontFamily: "'Plus Jakarta Sans'" }}>
+          <Zap className="w-[14px] h-[14px] text-gold" />
+          <span className="text-cream">New idea</span>
+          <span className="text-[var(--muted)] font-semibold text-[11px]">Shorts from the community</span>
+        </h2>
+      </div>
+      <div className="flex gap-[10px] overflow-x-auto pb-[6px] scrollbar-none -mx-[12px] px-[12px]">
+        <button
+          onClick={openComposer}
+          className="flex-shrink-0 w-[104px] h-[150px] rounded-[16px] border-2 border-dashed border-[var(--line)] flex flex-col items-center justify-center gap-[8px] text-[var(--muted)] hover:border-gold hover:text-gold transition-colors cursor-pointer"
+          aria-label="Share an idea"
+        >
+          <span className="w-[34px] h-[34px] rounded-full grid place-items-center bg-gold/15">
+            <Plus className="w-[16px] h-[16px] text-gold" />
+          </span>
+          <span className="text-[11px] font-bold">Your idea</span>
+        </button>
+        {ideas.map(idea => {
+          const author = idea.profiles
+          const isVideo = idea.media_type?.startsWith('video/')
+          return (
+            <Link
+              key={idea.id}
+              href={`/posts/${idea.id}`}
+              className="relative flex-shrink-0 w-[104px] h-[150px] rounded-[16px] overflow-hidden block group"
+            >
+              {isVideo ? (
+                <div className="w-full h-full bg-gradient-to-b from-deep to-night2 grid place-items-center">
+                  <span className="w-[30px] h-[30px] rounded-full bg-black/40 flex items-center justify-center">
+                    <Play className="w-[13px] h-[13px] text-white fill-white" />
+                  </span>
+                  <div className="absolute inset-x-0 bottom-0 p-[8px] bg-gradient-to-t from-black/70 to-transparent">
+                    <p className="text-white text-[10px] font-bold leading-tight line-clamp-2">{idea.title || idea.content}</p>
+                  </div>
+                </div>
+              ) : (
+                <img src={idea.media_url!} alt="" className="w-full h-full object-cover" loading="lazy" />
+              )}
+              <div className="absolute inset-x-0 bottom-0 p-[8px] bg-gradient-to-t from-black/70 to-transparent">
+                <p className="text-white text-[10px] font-bold leading-tight line-clamp-2">{idea.title || idea.content}</p>
+              </div>
+              <div className="absolute top-[8px] left-[8px] flex items-center gap-[4px]">
+                {author?.avatar_url ? (
+                  <img src={author.avatar_url} alt="" className="w-[18px] h-[18px] rounded-full object-cover border-2 border-gold" />
+                ) : (
+                  <span className="w-[18px] h-[18px] rounded-full bg-gold text-night grid place-items-center text-[8px] font-extrabold border-2 border-gold">
+                    {getInitials(author?.full_name || author?.username)}
+                  </span>
+                )}
+              </div>
+              {idea.post_type === 'inquiry' && (
+                <span className="absolute top-[8px] right-[8px] text-[9px] font-bold text-white px-[6px] py-[2px] rounded-full" style={{ background: 'rgba(0,0,0,0.55)' }}>Q</span>
+              )}
+            </Link>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function FeedPage() {
   const supabase = useSupabase()
   const { user, profile, loading: userLoading } = useUser()
@@ -757,6 +839,9 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
           </button>
         ))}
       </div>
+
+      {/* New idea shorts strip */}
+      {activeTab === 'for_you' && <NewIdeaStrip profile={profile} />}
 
       {/* Composer */}
       <div

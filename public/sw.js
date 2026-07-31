@@ -1,5 +1,5 @@
-const CACHE = 'kikwetu-v2'
-const DYNAMIC_CACHE = 'kikwetu-dynamic-v2'
+const CACHE = 'kikwetu-v3'
+const DYNAMIC_CACHE = 'kikwetu-dynamic-v3'
 const STATIC_ASSETS = [
   '/',
   '/feed',
@@ -99,7 +99,7 @@ self.addEventListener('fetch', event => {
   }
 
   if (request.destination === 'style' || request.destination === 'script' || request.destination === 'font') {
-    event.respondWith(cacheFirst(request))
+    event.respondWith(staleWhileRevalidate(request))
     return
   }
 

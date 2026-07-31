@@ -6,6 +6,7 @@ import { useSupabase, useUser, toast } from '@/app/providers'
 import { useToolbar } from '@/lib/toolbar'
 import { ArrowLeft, Users, Hash, Sparkles, Plus, Send, Clock, MessageCircle, Heart, Share2, Flag, MoreHorizontal, Globe, BookOpen, LogIn, LogOut } from 'lucide-react'
 import PostActions from '@/components/PostActions'
+import { spaceCategoryMeta, resolveSpaceIcon } from '@/lib/space-meta'
 
 interface Space {
   id: string; name: string; slug: string; description: string; icon: string; category: string
@@ -25,7 +26,8 @@ interface Member {
 const CATEGORY_COLORS: Record<string, string> = {
   Agriculture: '#2d6a4f', Technology: '#302b63', Business: '#b8860b',
   Education: '#6c5ce7', Finance: '#00b894', Health: '#e17055',
-  Culture: '#fd79a8', Legal: '#2c3e50',
+  Culture: '#fd79a8', Legal: '#2c3e50', Biashara: '#b8860b',
+  Politics: '#c94b4b', Community: '#0f3460', General: '#2d6a4f',
 }
 
 const s = {
@@ -204,7 +206,8 @@ export default function SpaceDetailPage() {
 
   if (!space) return null
 
-  const catColor = CATEGORY_COLORS[space.category] || 'var(--green)'
+  const catMeta = spaceCategoryMeta(space.category)
+  const catColor = CATEGORY_COLORS[space.category] || catMeta.color
 
   return (
     <div className="pb-8 animate-fade-in-up">
@@ -219,7 +222,7 @@ export default function SpaceDetailPage() {
         <div style={{ height: 160, background: `linear-gradient(135deg, ${catColor} 0%, color-mix(in oklab, ${catColor} 60%, var(--night)) 100%)`, position: 'relative', display: 'flex', alignItems: 'flex-end', padding: 24 }}>
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 60%)' }} />
           <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 16, width: '100%' }}>
-            <span className="text-4xl" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))' }}>{space.icon || '🌍'}</span>
+            <span className="text-4xl" style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))' }}>{resolveSpaceIcon(space.icon, space.category)}</span>
             <div style={{ flex: 1 }}>
               <h1 style={{ font: '800 24px var(--jakarta)', letterSpacing: '-.04em', color: '#fff', margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>{space.name}</h1>
               <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 4 }}>{space.category} · Created {formatTime(space.created_at)}</p>

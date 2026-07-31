@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useSupabase } from '@/app/providers'
@@ -43,6 +43,9 @@ function SignupForm() {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
+  const [cooldown, setCooldown] = useState(0)
+  const submittingRef = useRef(false)
+  const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const [first, setFirst] = useState('')
   const [last, setLast] = useState('')
@@ -67,6 +70,31 @@ function SignupForm() {
   const [loginError, setLoginError] = useState('')
 
   const toast = (m: string) => { setToastMsg(m); setTimeout(() => setToastMsg(''), 2200) }
+
+  useEffect(() => () => { if (cooldownTimer.current) clearInterval(cooldownTimer.current) }, [])
+
+  const startCooldown = (seconds = 14) => {
+    setCooldown(seconds)
+    if (cooldownTimer.current) clearInterval(cooldownTimer.current)
+    cooldownTimer.current = setInterval(() => {
+      setCooldown(prev => {
+        if (prev <= 1) { if (cooldownTimer.current) clearInterval(cooldownTimer.current); cooldownTimer.current = null; return 0 }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  const friendlySignupError = (message: string) => {
+    const m = message.toLowerCase()
+    if (m.includes('security purposes') || m.includes('14 seconds') || m.includes('rate') || m.includes('too many')) {
+      startCooldown(14)
+      return 'Too many attempts. Please wait a few seconds before trying again.'
+    }
+    if (m.includes('already registered') || m.includes('already been registered')) return 'This email is already registered. Try logging in instead.'
+    if (m.includes('password')) return 'Password must be at least 8 characters.'
+    if (m.includes('invalid email') || m.includes('email address')) return 'Please enter a valid email address.'
+    return message
+  }
 
   const toggleService = (id: string) => setServices(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])
   const toggleTopic = (id: string) => setTopics(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])
@@ -103,20 +131,34 @@ function SignupForm() {
   }
 
   const handleSignup = async () => {
+    if (submittingRef.current || cooldown > 0) return
+    submittingRef.current = true
     setLoading(true)
     try {
+      const device = typeof navigator !== 'undefined' ? `${navigator.platform || ''} ${navigator.userAgent?.match(/Android|iPhone|iPad|Windows|Macintosh|Linux/)?.[0] || ''}`.trim() : ''
+      const referrer = typeof document !== 'undefined' ? document.referrer : ''
       const { error: signUpError, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name: `${first} ${last}`, username },
+          data: {
+            full_name: `${first} ${last}`,
+            username,
+            phone,
+            county_hub: county,
+            area: area || null,
+            preferred_language: language,
+            role,
+            device,
+            signup_referrer: referrer || null,
+          },
           emailRedirectTo: `${location.origin}/auth/callback?next=/welcome`,
         },
       })
-      if (signUpError) { toast(signUpError.message); setLoading(false); return }
+      if (signUpError) { toast(friendlySignupError(signUpError.message)); return }
 
       const userId = data.user?.id
-      if (!userId) { toast('Account creation failed'); setLoading(false); return }
+      if (!userId) { toast('Account creation failed'); return }
 
       const persona = role
       const dbRole = persona === 'moderator' ? 'moderator' : 'general'
@@ -137,7 +179,7 @@ function SignupForm() {
         visibility,
         interests: topics,
       })
-      if (profileError) { toast(profileError.message); setLoading(false); return }
+      if (profileError) { toast(profileError.message); return }
 
       if (services.length > 0) {
         const { error: topicError } = await supabase.from('user_topics').upsert(
@@ -148,8 +190,9 @@ function SignupForm() {
 
       router.push(`/verify-email?email=${encodeURIComponent(email)}`)
     } catch (e: any) {
-      toast(e.message || 'Something went wrong')
+      toast(friendlySignupError(e.message || 'Something went wrong'))
     } finally {
+      submittingRef.current = false
       setLoading(false)
     }
   }
@@ -420,9 +463,9 @@ function SignupForm() {
                     ← Back
                   </button>
                 ) : <div />}
-                <button onClick={handleNext} disabled={loading} style={{ minHeight: 46, borderRadius: 11, padding: '0 15px', background: 'oklch(72% .15 84)', color: 'oklch(16% .035 151)', border: 0, cursor: 'pointer', fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7, opacity: loading ? .5 : 1 }}>
+                <button onClick={handleNext} disabled={loading || cooldown > 0} style={{ minHeight: 46, borderRadius: 11, padding: '0 15px', background: 'oklch(72% .15 84)', color: 'oklch(16% .035 151)', border: 0, cursor: (loading || cooldown > 0) ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 7, opacity: (loading || cooldown > 0) ? .5 : 1 }}>
                   {loading ? <span style={{ width: 16, height: 16, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin .6s linear infinite' }} /> : null}
-                  {step === 3 ? 'Create my account ↗' : 'Continue ↗'}
+                  {cooldown > 0 ? `Wait ${cooldown}s` : (step === 3 ? 'Create my account ↗' : 'Continue ↗')}
                 </button>
               </div>
             </div>

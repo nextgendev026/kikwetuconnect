@@ -3,24 +3,14 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useUser, useSupabase, toast } from '@/app/providers'
 import BottomSheet from '@/components/ui/bottom-sheet'
-import { Users, Hash, Plus, X, Filter, Search, Globe, Sparkles, Sprout, Cpu, Ship, BookOpen, Coins, Leaf, Building2, Microscope, Scale, HeartPulse } from 'lucide-react'
+import { Users, Hash, Plus, X, Filter, Search, Globe, Sparkles } from 'lucide-react'
+import { SPACE_CATEGORIES, spaceCategoryMeta, resolveSpaceIcon } from '@/lib/space-meta'
 
 interface Space {
   id: string; name: string; slug: string; description: string; icon: string; category: string; member_count: number; post_count: number; created_by: string; cover_url?: string
 }
 
-const CATEGORIES = ['All', 'Agriculture', 'Technology', 'Business', 'Education', 'Finance', 'Health', 'Culture', 'Legal']
-
-const CATEGORY_META: Record<string, { gradient: string; icon: any }> = {
-  Agriculture: { gradient: 'linear-gradient(135deg, #2d6a4f, #52b788)', icon: Sprout },
-  Technology: { gradient: 'linear-gradient(135deg, #1a1a2e, #16213e)', icon: Cpu },
-  Business: { gradient: 'linear-gradient(135deg, #b8860b, #daa520)', icon: Ship },
-  Education: { gradient: 'linear-gradient(135deg, #6c5ce7, #a29bfe)', icon: BookOpen },
-  Finance: { gradient: 'linear-gradient(135deg, #00b894, #00cec9)', icon: Coins },
-  Health: { gradient: 'linear-gradient(135deg, #e17055, #fab1a0)', icon: HeartPulse },
-  Culture: { gradient: 'linear-gradient(135deg, #6c5ce7, #fd79a8)', icon: Building2 },
-  Legal: { gradient: 'linear-gradient(135deg, #2c3e50, #3498db)', icon: Scale },
-}
+const CATEGORIES = SPACE_CATEGORIES
 
 const GRADIENTS = [
   'linear-gradient(135deg, #2d6a4f 0%, #40916c 50%, #52b788 100%)',
@@ -77,7 +67,7 @@ export default function SpacesPage() {
   const [createName, setCreateName] = useState('')
   const [createDesc, setCreateDesc] = useState('')
   const [createIcon, setCreateIcon] = useState('🌍')
-  const [createCategory, setCreateCategory] = useState('Technology')
+  const [createCategory, setCreateCategory] = useState('General')
   const [creating, setCreating] = useState(false)
 
   const firstFieldRef = useRef<HTMLInputElement>(null)
@@ -282,14 +272,14 @@ export default function SpacesPage() {
             {spaces.map(space => {
               const isMember = memberSpaces.has(space.id)
               const gradient = gradientForSpace(space)
-              const catMeta = CATEGORY_META[space.category] || CATEGORY_META.Technology
+              const catMeta = spaceCategoryMeta(space.category)
               const CatIcon = catMeta.icon
               return (
                 <div key={space.id} style={style.spaceCard} className="card-hover feature-card">
                   <div style={{ height: 120, background: gradient, position: 'relative', display: 'flex', alignItems: 'flex-end', padding: 16 }}>
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 60%)' }} />
                     <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span className="text-2xl flex-shrink-0" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>{space.icon && space.icon !== '#' ? space.icon : '🌍'}</span>
+                      <span className="text-2xl flex-shrink-0" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>{resolveSpaceIcon(space.icon, space.category)}</span>
                       <div>
                         <Link href={`/spaces/${space.slug}`}
                           className="font-bold text-base block truncate transition-colors"
