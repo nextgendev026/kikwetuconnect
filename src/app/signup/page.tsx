@@ -66,11 +66,6 @@ function SignupForm() {
   const [loginPassword, setLoginPassword] = useState('')
   const [loginError, setLoginError] = useState('')
 
-  const [created, setCreated] = useState(false)
-  const [sCounty, setSCounty] = useState('')
-  const [sLanguage, setSLanguage] = useState('')
-  const [sServices, setSServices] = useState('')
-
   const toast = (m: string) => { setToastMsg(m); setTimeout(() => setToastMsg(''), 2200) }
 
   const toggleService = (id: string) => setServices(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])
@@ -114,7 +109,7 @@ function SignupForm() {
         password,
         options: {
           data: { full_name: `${first} ${last}`, username },
-          emailRedirectTo: `${location.origin}/auth/callback`,
+          emailRedirectTo: `${location.origin}/auth/callback?next=/welcome`,
         },
       })
       if (signUpError) { toast(signUpError.message); setLoading(false); return }
@@ -146,10 +141,7 @@ function SignupForm() {
         if (topicError) console.error(topicError)
       }
 
-      setSCounty(county)
-      setSLanguage(language === 'en' ? 'English' : 'Kiswahili')
-      setSServices(services.slice(0, 2).join(', ') || 'Ask and learn')
-      setCreated(true)
+      router.push(`/verify-email?email=${encodeURIComponent(email)}`)
     } catch (e: any) {
       toast(e.message || 'Something went wrong')
     } finally {
@@ -177,44 +169,6 @@ function SignupForm() {
       ))}
     </div>
   )
-
-  if (created) {
-    return (
-      <div className="shell" style={{ display: 'grid', gridTemplateColumns: 'minmax(300px,.78fr) minmax(520px,1.22fr)', minHeight: '100vh' }}>
-        <aside className="story2" style={{ background: 'oklch(16% .035 151)', color: 'oklch(95% .012 91)', padding: 'clamp(28px,6vw,80px)', display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 15% 18%,oklch(43% .08 151),transparent 33%),radial-gradient(circle at 85% 27%,oklch(38% .08 84),transparent 28%)', opacity: .62 }} />
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: 38, height: 38, borderRadius: 12, background: 'oklch(72% .15 84)', color: 'oklch(16% .035 151)', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 19, transform: 'rotate(-8deg)' }}>K</div>
-              <div><b style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-.05em' }}>KikwetuConnect</b><small style={{ display: 'block', color: 'oklch(72% .025 151)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', marginTop: 2 }}>Tuko pamoja</small></div>
-            </div>
-          </div>
-        </aside>
-        <main className="auth-main" style={{ padding: 'clamp(20px,4vw,70px)', display: 'grid', placeItems: 'center' }}>
-          <div style={{ textAlign: 'center', width: 'min(480px,100%)', animation: 'rise .35s ease' }}>
-            <div style={{ width: 68, height: 68, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'oklch(90% .055 151)', color: 'oklch(52% .14 151)', fontSize: 30, margin: '0 auto 16px' }}>✓</div>
-            <h2 style={{ fontWeight: 800, fontSize: 30, letterSpacing: '-.06em', margin: '0 0 10px', color: 'oklch(16% .035 151)' }}>Welcome to the circle.</h2>
-            <p style={{ fontSize: 13, lineHeight: 1.55, color: 'oklch(52% .035 151)', margin: '0 auto 20px', maxWidth: '42ch' }}>Your Kikwetu profile is ready. We'll shape your first feed around the services and topics you chose.</p>
-            <div style={{ textAlign: 'left', border: '1px solid oklch(85% .035 91)', background: 'oklch(99% .008 91)', borderRadius: 14, padding: 14, marginBottom: 18 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, borderBottom: '1px solid oklch(85% .035 91)', padding: '8px 0', fontSize: 11 }}>
-                <span style={{ color: 'oklch(52% .035 151)' }}>County</span><b>{sCounty}</b>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, borderBottom: '1px solid oklch(85% .035 91)', padding: '8px 0', fontSize: 11 }}>
-                <span style={{ color: 'oklch(52% .035 151)' }}>Language</span><b>{sLanguage}</b>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 0', fontSize: 11 }}>
-                <span style={{ color: 'oklch(52% .035 151)' }}>Starting with</span><b>{sServices}</b>
-              </div>
-            </div>
-            <button onClick={() => router.push('/feed')} style={{ width: '100%', height: 46, borderRadius: 11, background: 'oklch(72% .15 84)', color: 'oklch(16% .035 151)', fontWeight: 700, fontSize: 12, border: 0, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7, transition: 'transform .2s cubic-bezier(.16,1,.3,1)' }}
-              onMouseEnter={e => (e.target as HTMLButtonElement).style.transform = 'translateY(-2px)'}
-              onMouseLeave={e => (e.target as HTMLButtonElement).style.transform = ''}
-            >Enter KikwetuConnect ↗</button>
-          </div>
-        </main>
-      </div>
-    )
-  }
 
   return (
     <div className="shell" style={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: 'minmax(300px,.78fr) minmax(520px,1.22fr)' }}>
@@ -245,11 +199,11 @@ function SignupForm() {
           {/* Top bar */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
             <div style={{ display: 'flex', gap: 4, padding: 4, border: '1px solid oklch(85% .035 91)', borderRadius: 11, background: 'oklch(99% .008 91)' }}>
-              <button onClick={() => { setMode('login'); setStep(1); setCreated(false) }}
+              <button onClick={() => { setMode('login'); setStep(1) }}
                 style={{ background: mode === 'login' ? 'oklch(16% .035 151)' : 'none', color: mode === 'login' ? 'oklch(95% .012 91)' : 'oklch(52% .035 151)', fontSize: 11, borderRadius: 8, padding: '9px 14px', fontWeight: mode === 'login' ? 700 : 400, border: 0, cursor: 'pointer' }}>
                 Log in
               </button>
-              <button onClick={() => { setMode('signup'); setStep(1); setCreated(false) }}
+              <button onClick={() => { setMode('signup'); setStep(1) }}
                 style={{ background: mode === 'signup' ? 'oklch(16% .035 151)' : 'none', color: mode === 'signup' ? 'oklch(95% .012 91)' : 'oklch(52% .035 151)', fontSize: 11, borderRadius: 8, padding: '9px 14px', fontWeight: mode === 'signup' ? 700 : 400, border: 0, cursor: 'pointer' }}>
                 Sign up
               </button>

@@ -51,7 +51,7 @@ export function toast(msg: string, type?: 'info' | 'success' | 'error') {
   }
 }
 
-const publicPaths = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/auth/callback', '/onboarding']
+const publicPaths = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/auth/callback', '/onboarding', '/welcome']
 
 export function ShellRouter({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()

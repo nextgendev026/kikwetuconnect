@@ -45,7 +45,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && !profile) {
-      const publicPaths = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/onboarding']
+      const publicPaths = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/onboarding', '/welcome']
       const isPublic = publicPaths.some(p => path === p || path.startsWith(p))
       if (!isPublic) setTimeout(() => router.push('/'), 0)
     }
@@ -151,7 +151,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   if (!profile) return null
 
   const initials = (profile.full_name || profile.username || 'U').slice(0, 2).toUpperCase()
-  const noLayout = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email'].includes(path) || path.startsWith('/auth')
+  const noLayout = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/welcome'].includes(path) || path.startsWith('/auth')
   if (noLayout) return <>{children}</>
 
   const handleChatSend = async () => {
