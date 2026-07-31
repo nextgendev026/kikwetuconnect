@@ -355,8 +355,8 @@ export default function QuizzesPage() {
 
       {/* Quiz Modal */}
       {quizStarted && selectedQuiz && questions.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-center-scroll" style={{ background: 'color-mix(in oklab, var(--night) 80%, transparent)' }}>
-          <div style={{ ...style.card, width: 'min(640px, 100%)', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center modal-center-scroll" style={{ background: 'rgba(0,0,0,0.85)' }}>
+          <div style={{ ...style.card, width: 'min(640px, 100%)', maxWidth: '90vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: 'var(--card-shadow-elevated)' }}>
             {!quizComplete ? (
               <>
                 <div className="flex items-center justify-between mb-4">
