@@ -20,6 +20,7 @@ const LABELS: Record<string, string> = {
   poll: 'What should the community weigh in on?',
   listing: 'What are you offering?',
   alert: 'What useful update should neighbours know?',
+  story: 'Add a caption to your 24h story',
 }
 
 const PLACEHOLDERS: Record<string, string> = {
@@ -28,6 +29,7 @@ const PLACEHOLDERS: Record<string, string> = {
   poll: 'Ask the community to weigh in...',
   listing: 'Describe what you are selling or offering...',
   alert: 'Describe the safety concern or update...',
+  story: 'Add a caption to your story (optional)...',
 }
 
 const LISTING_CATEGORIES = ['Produce', 'Services', 'Crafts', 'Livestock', 'Tools', 'Other']
@@ -445,11 +447,11 @@ export default function CreateModal() {
           </div>
         )}
 
-        {/* Media upload (for post, question, poll, listing) */}
-        {['post', 'question', 'poll', 'listing'].includes(type) && (
+        {/* Media upload (post, question, poll, listing, and 24h stories) */}
+        {['post', 'question', 'poll', 'listing', 'story'].includes(type) && (
           <>
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-              <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={e => handleMediaSelect(e, 'image')} className="hidden" />
+              <input ref={fileInputRef} type="file" accept="image/*" multiple={type !== 'story'} onChange={e => handleMediaSelect(e, 'image')} className="hidden" />
               <input ref={videoInputRef} type="file" accept="video/*" onChange={e => handleMediaSelect(e, 'video')} className="hidden" />
               <input ref={audioInputRef} type="file" accept="audio/*" onChange={e => handleMediaSelect(e, 'audio')} className="hidden" />
               <button onClick={() => fileInputRef.current?.click()}
@@ -460,10 +462,12 @@ export default function CreateModal() {
                 style={{ padding: '8px 14px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: 'var(--raised)', color: 'var(--muted)', border: '1px solid var(--line)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
                 <Video className="w-3.5 h-3.5" style={{ color: 'var(--blue)' }} /> Video
               </button>
-              <button onClick={() => audioInputRef.current?.click()}
-                style={{ padding: '8px 14px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: 'var(--raised)', color: 'var(--muted)', border: '1px solid var(--line)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                <Mic className="w-3.5 h-3.5" style={{ color: 'var(--red)' }} /> Audio
-              </button>
+              {type !== 'story' && (
+                <button onClick={() => audioInputRef.current?.click()}
+                  style={{ padding: '8px 14px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: 'var(--raised)', color: 'var(--muted)', border: '1px solid var(--line)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Mic className="w-3.5 h-3.5" style={{ color: 'var(--red)' }} /> Audio
+                </button>
+              )}
             </div>
 
             {mediaFiles.length > 0 && (

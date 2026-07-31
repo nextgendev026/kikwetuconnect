@@ -32,6 +32,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const chatEndRef = useRef<HTMLDivElement>(null)
   const [chatSending, setChatSending] = useState(false)
   const [showNotifTray, setShowNotifTray] = useState(false)
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
+
+  // Recognize existing follow relationships so Community follow buttons reflect real state
+  useEffect(() => {
+    if (!profile || !supabase) return
+    supabase.from('follows').select('following_id').eq('follower_id', profile.id)
+      .then(({ data }) => {
+        if (data) setFollowingIds(new Set((data as any[]).map(f => f.following_id)))
+      })
+  }, [profile, supabase])
 
   const fetchUnreadCount = useCallback(async () => {
     if (!profile || !supabase) return
@@ -222,9 +232,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     </span>
                     <div className="side-copy"><b style={{ fontSize: 11 }}>{name}</b><small style={{ fontSize: 9 }}>{p.county_hub || 'Online'}</small></div>
                     <div style={{ marginLeft: 'auto', display: 'flex', gap: 2, flex: 'none' }} onClick={e => e.stopPropagation()}>
-                      <button onClick={async (e) => { e.stopPropagation(); const res = await fetch('/api/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'follow', target_user_id: p.id }) }); if (res.ok) { const d = await res.json(); if (d.following) { (e.currentTarget as HTMLElement).textContent = '♥'; (e.currentTarget as HTMLElement).style.background = 'var(--gold)'; (e.currentTarget as HTMLElement).style.color = 'var(--night)' } else { (e.currentTarget as HTMLElement).textContent = '♡'; (e.currentTarget as HTMLElement).style.background = 'var(--raised)'; (e.currentTarget as HTMLElement).style.color = 'var(--muted)' } } }}
-                        style={{ width: 24, height: 24, borderRadius: 6, border: 0, background: 'var(--raised)', color: 'var(--muted)', cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 12 }}
-                        title="Follow">♡</button>
+                      <button onClick={async (e) => { e.stopPropagation(); const res = await fetch('/api/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'follow', target_user_id: p.id }) }); if (res.ok) { const d = await res.json(); setFollowingIds(prev => { const n = new Set(prev); if (d.following) n.add(p.id); else n.delete(p.id); return n }) } }}
+                        style={{ width: 24, height: 24, borderRadius: 6, border: 0, background: followingIds.has(p.id) ? 'var(--gold)' : 'var(--raised)', color: followingIds.has(p.id) ? 'var(--night)' : 'var(--muted)', cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 12 }}
+                        title={followingIds.has(p.id) ? 'Unfollow' : 'Follow'}>{followingIds.has(p.id) ? '♥' : '♡'}</button>
                       <button onClick={() => window.location.href = `/messages?user=${p.id}`}
                         style={{ width: 24, height: 24, borderRadius: 6, border: 0, background: 'var(--raised)', color: 'var(--muted)', cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 9 }}
                         title="Message">◍</button>

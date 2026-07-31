@@ -1,8 +1,8 @@
 'use client'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { useState } from 'react'
-import { toast } from '@/app/providers'
+import { useState, useEffect } from 'react'
+import { toast, useSupabase } from '@/app/providers'
 import { isAdmin, ROLES } from '@/lib/roles'
 import {
   Home, Compass, Search, Grid3X3, GraduationCap, Briefcase,
@@ -59,6 +59,16 @@ export default function Sidebar({ initials, profile, onlineCount = 0, onlineUser
   const path = usePathname()
   const adminUser = isAdmin(profile?.role)
   const [following, setFollowing] = useState<Set<string>>(new Set())
+  const supabase = useSupabase()
+
+  // Recognize existing follow relationships so the follow buttons reflect real state
+  useEffect(() => {
+    if (!supabase || !profile?.id) return
+    supabase.from('follows').select('following_id').eq('follower_id', profile.id)
+      .then(({ data }) => {
+        if (data) setFollowing(new Set((data as any[]).map(f => f.following_id)))
+      })
+  }, [supabase, profile?.id])
 
   const handleFollow = async (userId: string, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation()
