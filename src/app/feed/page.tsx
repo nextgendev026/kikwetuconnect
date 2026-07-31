@@ -46,6 +46,15 @@ interface Profile {
   county_hub: string | null
 }
 
+interface VoteRow {
+  target_id: string
+  vote_type: 1 | -1
+}
+
+interface SaveRow {
+  target_id: string
+}
+
 interface Post {
   id: string
   user_id: string
@@ -548,11 +557,11 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
               const { data: votes } = await supabase
                 .from('votes').select('target_id, vote_type')
                 .eq('user_id', profile.id).eq('target_type', 'post').in('target_id', postIds)
-              if (votes) votes.forEach((v: any) => { voteMap[v.target_id] = v.vote_type })
+              if (votes) votes.forEach((v: VoteRow) => { voteMap[v.target_id] = v.vote_type })
               const { data: saves } = await supabase
                 .from('saves').select('target_id')
                 .eq('user_id', profile.id).eq('target_type', 'post').in('target_id', postIds)
-              if (saves) saves.forEach((s: any) => { saveMap[s.target_id] = true })
+              if (saves) saves.forEach((s: SaveRow) => { saveMap[s.target_id] = true })
             }
             setPosts(rawPosts.map((p: any) => ({ ...p, user_vote: voteMap[p.id] || null, user_saved: saveMap[p.id] || false })))
             setHasMore(rawPosts.length >= limit)
@@ -615,9 +624,9 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
         const postIds = pagePosts.map(p => p.id)
         if (postIds.length > 0) {
           const { data: votes } = await supabase.from('votes').select('target_id, vote_type').eq('user_id', profile.id).eq('target_type', 'post').in('target_id', postIds)
-          if (votes) votes.forEach((v: any) => { voteMap[v.target_id] = v.vote_type as 1 | -1 })
+          if (votes) votes.forEach((v: VoteRow) => { voteMap[v.target_id] = v.vote_type })
           const { data: saves } = await supabase.from('saves').select('target_id').eq('user_id', profile.id).eq('target_type', 'post').in('target_id', postIds)
-          if (saves) saves.forEach((s: any) => { saveMap[s.target_id] = true })
+          if (saves) saves.forEach((s: SaveRow) => { saveMap[s.target_id] = true })
         }
       }
 

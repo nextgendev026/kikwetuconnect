@@ -122,6 +122,10 @@ function SignupForm() {
       const userId = data.user?.id
       if (!userId) { toast('Account creation failed'); setLoading(false); return }
 
+      const persona = role
+      const dbRole = persona === 'moderator' ? 'moderator' : 'general'
+      const userType = persona === 'student' || persona === 'professional' || persona === 'parent' ? persona : null
+
       const { error: profileError } = await supabase.from('profiles').upsert({
         id: userId,
         username,
@@ -129,7 +133,8 @@ function SignupForm() {
         county_hub: county,
         bio: bio || null,
         preferred_language: language,
-        role: role || 'general',
+        role: dbRole,
+        user_type: userType,
         interests: topics,
       })
       if (profileError) { toast(profileError.message); setLoading(false); return }

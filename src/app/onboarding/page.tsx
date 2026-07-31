@@ -39,7 +39,7 @@ export default function OnboardingPage() {
         username,
         county_hub: county,
         interests,
-        role,
+        user_type: role === 'general' ? null : role,
         preferred_language: language,
       } as any)
       if (error) throw error

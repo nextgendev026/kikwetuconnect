@@ -155,7 +155,7 @@ export default function SettingsPage() {
 
   const handleDeactivate = async () => {
     if (!user) return
-    await supabase.from('profiles').update({ role: 'deactivated' }).eq('id', user.id)
+    await supabase.from('profiles').update({ is_deactivated: true }).eq('id', user.id)
     await supabase.auth.signOut()
     localStorage.clear()
     window.location.href = '/'
