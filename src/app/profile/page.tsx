@@ -24,7 +24,7 @@ interface Post {
 
 interface SavedItem {
   id: string; target_id: string; target_type: string; created_at: string
-  posts?: { id: string; title: string | null; content: string; post_type: string }[] | null
+  posts: { id: string; title: string | null; content: string; post_type: string }[]
 }
 
 const PAGE_SIZE = 10
@@ -106,7 +106,23 @@ export default function ProfilePage() {
       safeQuery(() => supabase.from('tokens').select('amount').eq('user_id', profile.id)),
       safeQuery(() => supabase.from('user_badges').select('badge_id, awarded_at, badges:badge_id(id, name, description, icon)').eq('user_id', profile.id)),
       safeQuery(() => supabase.from('posts').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(5)),
-      safeQuery(() => supabase.from('saves').select('id, target_id, target_type, created_at, posts:target_id!left(id, title, content, post_type)').eq('user_id', profile.id).eq('target_type', 'post').order('created_at', { ascending: false }).limit(5)),
+      safeQuery(async () => {
+        const { data: saves } = await supabase
+          .from('saves')
+          .select('id, target_id, target_type, created_at')
+          .eq('user_id', profile.id)
+          .eq('target_type', 'post')
+          .order('created_at', { ascending: false })
+          .limit(5)
+        if (!saves || saves.length === 0) return { data: [] }
+        const ids = saves.map((s: any) => s.target_id)
+        const { data: posts } = await supabase
+          .from('posts')
+          .select('id, title, content, post_type')
+          .in('id', ids)
+        const postsMap = new Map(posts?.map((p: any) => [p.id, p]) || [])
+        return { data: saves.map((s: any) => ({ ...s, posts: postsMap.get(s.target_id) ? [postsMap.get(s.target_id)] : [] })) }
+      }),
       safeQuery(() => supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profile.id)),
       profile.featured_post_id
         ? safeQuery(() => supabase.from('posts').select('*').eq('id', profile.featured_post_id).maybeSingle())
@@ -437,9 +453,9 @@ export default function ProfilePage() {
                           className="flex items-start gap-3 p-3 rounded-lg hover:bg-night2 transition-colors">
                           <Bookmark className="w-4 h-4 text-gold mt-0.5 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {item.posts?.[0]?.title || item.posts?.[0]?.content?.slice(0, 60) || 'Saved post'}
-                            </p>
+<p className="text-sm font-medium truncate">
+  {item.posts[0]?.title || item.posts[0]?.content?.slice(0, 60) || 'Saved post'}
+</p>
                             <p className="text-xs text-muted mt-1">Saved {formatTime(item.created_at)}</p>
                           </div>
                         </Link>
