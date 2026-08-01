@@ -27,7 +27,7 @@ export default function LandingPage() {
         .lp-btn-gold:hover { box-shadow:0 10px 30px -5px oklch(65% .15 85); transform:translateY(-4px); }
         .lp-btn-ghost { min-height:46px; border-radius:12px; padding:0 17px; display:inline-flex; align-items:center; font-weight:700; font-size:13px; background:oklch(97% .012 85); color:oklch(16% .03 151); border:1px solid oklch(90% .03 91); text-decoration:none; transition:all .2s; }
         .lp-btn-ghost:hover { border-color:oklch(52% .14 151 / .5); }
-        .lp-footer a { color: oklch(48% .035 151); text-decoration: none; transition: color .2s; }
+        .lp-footer a { color: oklch(72% .035 151); text-decoration: none; transition: color .2s; }
         .lp-footer a:hover { color: oklch(95% .012 91); }
         .lp-nav a { color: oklch(48% .035 151); text-decoration: none; font-size: 13px; transition: color .2s; position: relative; }
         .lp-nav a:hover { color: oklch(20% .04 151); }
@@ -44,7 +44,7 @@ export default function LandingPage() {
       <header style={{ height: 74, padding: '0 clamp(18px,5vw,76px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 2 }}>
         <Link href="/" className="flex items-center gap-[10px] no-underline" style={{ color: 'oklch(20% .04 151)' }}>
           <div style={{ width: 36, height: 36, borderRadius: 12, background: 'oklch(72% .15 84)', display: 'grid', placeItems: 'center', fontWeight: 800, color: 'oklch(16% .03 151)', fontSize: 18, transform: 'rotate(-8deg)' }}>K</div>
-          <div><b style={{ fontSize: 16, letterSpacing: '-.04em' }}>KikwetuConnect</b><small className="block text-[8px] tracking-[.14em] uppercase" style={{ color: 'oklch(48% .035 151)', marginTop: 1, opacity: 0.7 }}>Tuko pamoja</small></div>
+          <div><b style={{ fontSize: 16, letterSpacing: '-.04em' }}>KikwetuConnect</b><small className="block text-[8px] tracking-[.14em] uppercase" style={{ color: 'oklch(42% .03 151)', marginTop: 1 }}>Tuko pamoja</small></div>
         </Link>
         <nav className="hidden md:flex gap-[26px] items-center lp-nav">
           <a href="#why">Why Kikwetu</a>
@@ -57,6 +57,7 @@ export default function LandingPage() {
         </div>
       </header>
 
+      <main>
       <section className="lp-hero" style={{ minHeight: 'calc(100vh - 74px)', display: 'grid', gridTemplateColumns: '1.02fr .98fr', gap: 40, padding: 'clamp(46px,9vw,120px) clamp(18px,8vw,126px) 76px', position: 'relative' }}>
         <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
           <div style={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', background: 'oklch(52% .14 151 / .1)', top: '10%', left: '5%', filter: 'blur(120px)' }}></div>
@@ -80,7 +81,7 @@ export default function LandingPage() {
               {['AK','JM','WN','IM'].map((x,i) => {
                 const colors = ['oklch(48% .1 55)', 'oklch(52% .14 151)', 'oklch(35% .09 230)', 'oklch(43% .08 28)']
                 return (
-                  <div key={i} style={{ width: 31, height: 31, borderRadius: '50%', display: 'grid', placeItems: 'center', border: '3px solid oklch(97% .012 85)', marginLeft: i === 0 ? 0 : -8, fontSize: 10, fontWeight: 800, color: 'oklch(72% .15 84)', background: colors[i] }}>{x}</div>
+                  <div key={i} style={{ width: 31, height: 31, borderRadius: '50%', display: 'grid', placeItems: 'center', border: '3px solid oklch(97% .012 85)', marginLeft: i === 0 ? 0 : -8, fontSize: 10, fontWeight: 800, color: '#fff', background: colors[i] }}>{x}</div>
                 )
               })}
             </div>
@@ -96,21 +97,21 @@ export default function LandingPage() {
           <div style={{ position: 'absolute', zIndex: 2, bottom: '4%', left: '22%', width: 'min(270px,70%)', aspectRatio: '9/18', border: '8px solid oklch(16% .03 151)', borderRadius: 31, background: 'oklch(93% .02 85)', overflow: 'hidden', transform: 'rotate(-7deg)', boxShadow: '20px 25px 50px oklch(20% .02 151 / .28)' }}>
             <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 93, height: 22, borderRadius: '0 0 14px 14px', background: 'oklch(16% .03 151)', zIndex: 2 }}></div>
             <div style={{ padding: '30px 13px 12px', color: 'oklch(95% .012 91)' }}>
-              <small style={{ color: 'oklch(72% .15 84)', fontSize: 9 }}>Baraza · For you</small>
-              <h3 style={{ fontSize: 19, letterSpacing: '-.06em', margin: '8px 0 14px', fontFamily: "'Plus Jakarta Sans'" }}>What are you learning today?</h3>
+              <small style={{ color: '#7a5b00', fontSize: 9 }}>Baraza · For you</small>
+              <div style={{ fontSize: 19, letterSpacing: '-.06em', margin: '8px 0 14px', fontFamily: "'Plus Jakarta Sans'", color: 'oklch(16% .03 151)', fontWeight: 700 }}>What are you learning today?</div>
               <div style={{ background: 'oklch(93% .02 85)', border: '1px solid oklch(35% .03 151)', borderRadius: 12, padding: 10, marginBottom: 8 }}>
-                <div style={{ fontSize: 10, color: 'oklch(72% .15 84)' }}>AGNES KIPLAGAT ✓</div>
+                <div style={{ fontSize: 10, color: '#7a5b00' }}>AGNES KIPLAGAT ✓</div>
                 <div style={{ height: 6, background: 'oklch(55% .03 151)', borderRadius: 5, margin: '6px 0', width: '85%' }}></div>
                 <div style={{ height: 6, background: 'oklch(55% .03 151)', borderRadius: 5, margin: '6px 0', width: '56%' }}></div>
                 <div style={{ height: 6, background: 'oklch(72% .15 84)', borderRadius: 5, width: '40%' }}></div>
               </div>
               <div style={{ background: 'oklch(93% .02 85)', border: '1px solid oklch(35% .03 151)', borderRadius: 12, padding: 10 }}>
-                <div style={{ fontSize: 10, color: 'oklch(72% .15 84)' }}>NAIROBI TECH WEEK</div>
+                <div style={{ fontSize: 10, color: '#7a5b00' }}>NAIROBI TECH WEEK</div>
                 <div style={{ height: 6, background: 'oklch(55% .03 151)', borderRadius: 5, margin: '6px 0', width: '85%' }}></div>
                 <div style={{ height: 6, background: 'oklch(55% .03 151)', borderRadius: 5, margin: '6px 0', width: '56%' }}></div>
               </div>
             </div>
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 43, background: 'oklch(16% .03 151)', display: 'flex', alignItems: 'center', justifyContent: 'space-around', color: 'oklch(48% .035 151)', fontSize: 14 }}>
+            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 43, background: 'oklch(16% .03 151)', display: 'flex', alignItems: 'center', justifyContent: 'space-around', color: 'oklch(72% .035 151)', fontSize: 14 }}>
               <b style={{ color: 'oklch(72% .15 84)' }}>⌂</b><span>⌕</span><span>＋</span><span>♡</span><span>◉</span>
             </div>
           </div>
@@ -124,7 +125,7 @@ export default function LandingPage() {
         </div>
         <div className="flex justify-between items-end gap-[20px] mb-[36px] relative">
           <h2 style={{ fontSize: 'clamp(2rem,4vw,3.3rem)', lineHeight: 1, letterSpacing: '-.07em', margin: 0, fontFamily: "'Plus Jakarta Sans'" }}>Made for the way Kenya talks, learns, and builds.</h2>
-          <p className="max-w-[42ch] leading-[1.6] m-0 hidden md:block" style={{ color: 'oklch(48% .035 151)' }}>Not another noisy feed. A practical circle for questions, advice, local opportunity, and the people who make the context clear.</p>
+          <p className="max-w-[42ch] leading-[1.6] m-0 hidden md:block" style={{ color: 'oklch(72% .035 151)' }}>Not another noisy feed. A practical circle for questions, advice, local opportunity, and the people who make the context clear.</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 1, border: '1px solid oklch(82% .025 85)' }}>
           {[
@@ -132,13 +133,13 @@ export default function LandingPage() {
             { num: '02 / HESHIMA', title: 'Trust has a signal.', desc: 'Helpful answers build Heshima. Verified experts show their work, language, county, and availability.', gold: false, icon: '⭐' },
             { num: '03 / KWAO', title: 'Useful starts nearby.', desc: 'Find county spaces, local sellers, neighbourhood updates, quizzes, and guidance that fits your real life.', gold: false, icon: '📍' },
           ].map((f,i) => (
-            <div key={i} style={{ padding: 25, minHeight: 220, background: f.gold ? 'linear-gradient(135deg, oklch(72% .15 84), oklch(72% .15 84 / .9))' : 'linear-gradient(135deg, oklch(93% .02 85), oklch(16% .03 151))', color: f.gold ? 'oklch(16% .03 151)' : undefined }}>
+            <div key={i} style={{ padding: 25, minHeight: 220, background: f.gold ? 'linear-gradient(135deg, oklch(72% .15 84), oklch(72% .15 84 / .9))' : 'linear-gradient(135deg, oklch(24% .03 151), oklch(16% .03 151))', color: f.gold ? 'oklch(16% .03 151)' : undefined }}>
               <div className="flex items-center gap-3 mb-4">
                 <span style={{ fontSize: 30 }}>{f.icon}</span>
-                <div style={{ color: 'oklch(52% .14 151)', fontSize: 12, fontWeight: 800, letterSpacing: 'wider' }}>{f.num}</div>
+                <div style={{ color: f.gold ? 'oklch(20% .04 151)' : 'oklch(72% .15 84)', fontSize: 12, fontWeight: 800, letterSpacing: 'wider' }}>{f.num}</div>
               </div>
               <h3 style={{ fontSize: 19, letterSpacing: '-.04em', margin: '0 0 9px', fontFamily: "'Plus Jakarta Sans'" }}>{f.title}</h3>
-              <p className="max-w-[28ch]" style={{ fontSize: 13, lineHeight: 1.55, margin: 0, color: f.gold ? 'oklch(35% .06 84)' : 'oklch(48% .035 151)' }}>{f.desc}</p>
+              <p className="max-w-[28ch]" style={{ fontSize: 13, lineHeight: 1.55, margin: 0, color: f.gold ? 'oklch(30% .06 84)' : 'oklch(72% .035 151)' }}>{f.desc}</p>
             </div>
           ))}
         </div>
@@ -165,12 +166,12 @@ export default function LandingPage() {
               { num: '840', label: 'verified experts', icon: '✅' },
               { num: '10%', label: 'clear platform fee', icon: '💰' },
             ].map((s,i) => (
-              <div key={i} style={{ padding: 20, background: 'linear-gradient(135deg, oklch(93% .02 85), oklch(16% .03 151))', border: '1px solid oklch(82% .025 85)', borderRadius: 16 }}>
+              <div key={i} style={{ padding: 20, background: 'linear-gradient(135deg, oklch(24% .03 151), oklch(16% .03 151))', border: '1px solid oklch(82% .025 85)', borderRadius: 16 }}>
                 <div className="flex items-center gap-2 mb-2">
                   <span style={{ fontSize: 24 }}>{s.icon}</span>
                   <b style={{ fontSize: 29, letterSpacing: '-.06em', color: 'oklch(72% .15 84)', fontFamily: "'Plus Jakarta Sans'" }}>{s.num}</b>
                 </div>
-                <span className="block mt-[5px]" style={{ color: 'oklch(48% .035 151)', fontSize: 11 }}>{s.label}</span>
+                <span className="block mt-[5px]" style={{ color: 'oklch(72% .035 151)', fontSize: 11 }}>{s.label}</span>
               </div>
             ))}
           </div>
@@ -184,10 +185,11 @@ export default function LandingPage() {
         </div>
         <span style={{ fontSize: 62, color: 'oklch(72% .15 84)', lineHeight: .45, display: 'block', marginBottom: 12 }}>"</span>
         <p className="max-w-[25ch] m-0" style={{ fontSize: 'clamp(1.5rem,3vw,2.5rem)', lineHeight: 1.2, letterSpacing: '-.06em', color: 'oklch(95% .012 91)', fontFamily: "'Plus Jakarta Sans'" }}>A good answer is not just information. It is someone helping you move.</p>
-        <div style={{ marginTop: 32, color: 'oklch(48% .035 151)', fontSize: 12 }}>KikwetuConnect community principle</div>
+        <div style={{ marginTop: 32, color: 'oklch(72% .035 151)', fontSize: 12 }}>KikwetuConnect community principle</div>
       </section>
+      </main>
 
-      <footer className="lp-footer" style={{ padding: '35px clamp(18px,8vw,126px)', background: 'oklch(16% .03 151)', borderTop: '1px solid oklch(27% .025 151)', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 20, color: 'oklch(48% .035 151)', fontSize: 11 }}>
+      <footer className="lp-footer" style={{ padding: '35px clamp(18px,8vw,126px)', background: 'oklch(16% .03 151)', borderTop: '1px solid oklch(27% .025 151)', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 20, color: 'oklch(72% .035 151)', fontSize: 11 }}>
         <div>© 2026 KikwetuConnect · Tuko pamoja</div>
         <nav className="flex flex-wrap gap-x-[17px] gap-y-[4px]">
           <a href="/legal/terms">Terms</a>
