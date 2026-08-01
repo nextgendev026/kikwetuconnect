@@ -1,6 +1,7 @@
 'use client'
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { createBrowserClient } from '@/lib/supabase'
+import { getJwtSessionId } from '@/lib/session'
 import { usePathname } from 'next/navigation'
 
 type SupabaseClient = ReturnType<typeof createBrowserClient>
@@ -81,6 +82,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   // Guards against cross-account "fusing": when switching users quickly,
   // a slow fetchProfile(A) must never overwrite the profile of user B.
   const activeUserIdRef = useRef<string | null>(null)
+  // Single-active-session enforcement: current JWT session id + signed-out guard.
+  const sessionIdRef = useRef<string | null>(null)
+  const signedOutRef = useRef(false)
+  const claimInFlightRef = useRef(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('kikwetu-theme') || 'light'
@@ -113,6 +118,63 @@ export function Providers({ children }: { children: React.ReactNode }) {
     const { data: { user: u } } = await supabase.auth.getUser()
     if (u) { setUser(u); await fetchProfile(u.id) }
   }, [supabase, fetchProfile])
+
+  // Force sign-out because the account was logged in elsewhere (or the session expired).
+  const forceSignOut = useCallback(async (reason: string) => {
+    if (signedOutRef.current) return
+    signedOutRef.current = true
+    try { await supabase.auth.signOut() } catch { /* ignore */ }
+    toast(reason)
+    setTimeout(() => {
+      const url = new URL('/signup', window.location.origin)
+      url.searchParams.set('mode', 'login')
+      url.searchParams.set('reason', 'elsewhere')
+      window.location.href = url.toString()
+    }, 250)
+  }, [supabase])
+
+  // Ask the server whether this session is still the active one.
+  const checkSession = useCallback(async () => {
+    if (claimInFlightRef.current) return
+    try {
+      const r = await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'check' }),
+      })
+      const d = await r.json()
+      if (d && d.ok === false) void forceSignOut('Signed out — you logged in on another device')
+    } catch { /* non-fatal */ }
+  }, [forceSignOut])
+
+  // Mark this session as the account's only active session (called on login).
+  const claimSession = useCallback(async () => {
+    claimInFlightRef.current = true
+    try {
+      await fetch('/api/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'claim' }),
+      })
+    } catch { /* non-fatal */ }
+    claimInFlightRef.current = false
+    void checkSession()
+  }, [checkSession])
+
+  // Revalidate the session on load, on window focus, and periodically.
+  useEffect(() => {
+    if (!user) return
+    void checkSession()
+    const onVisible = () => { if (document.visibilityState === 'visible') void checkSession() }
+    window.addEventListener('focus', onVisible)
+    document.addEventListener('visibilitychange', onVisible)
+    const id = setInterval(() => void checkSession(), 60_000)
+    return () => {
+      window.removeEventListener('focus', onVisible)
+      document.removeEventListener('visibilitychange', onVisible)
+      clearInterval(id)
+    }
+  }, [user, checkSession])
 
   // Notifications
   const fetchNotifications = useCallback(async () => {
@@ -195,12 +257,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
         (payload: any) => {
-          setProfile((payload.new as any) || null)
+          const updated = (payload.new as any) || null
+          setProfile(updated)
+          // Another login bumped active_session_id → this session is stale.
+          const active = updated?.active_session_id ?? null
+          if (active && sessionIdRef.current && active !== sessionIdRef.current) {
+            void forceSignOut('Signed out — you logged in on another device')
+          }
         }
       )
       .subscribe()
     profileChannelRef.current = channel
-  }, [supabase, user])
+  }, [supabase, user, forceSignOut])
 
   const unsubscribeFromProfile = useCallback(() => {
     if (profileChannelRef.current) {
@@ -219,19 +287,25 @@ export function Providers({ children }: { children: React.ReactNode }) {
       activeUserIdRef.current = session?.user?.id ?? null
       setUser(session?.user ?? null)
       if (session?.user) {
+        const sid = getJwtSessionId(session.access_token)
+        sessionIdRef.current = sid
+        // Claim on a fresh login so this device becomes the single active session.
+        if (sid && event === 'SIGNED_IN') void claimSession()
         const p = await fetchProfile(session.user.id)
         if (!cancelled) {
           if (!p) console.warn('No profile found for user', session.user.id)
           setLoading(false)
         }
       } else {
+        sessionIdRef.current = null
+        signedOutRef.current = false
         setProfile(null)
         setLoading(false)
       }
       clearTimeout(timeout)
     })
     return () => { cancelled = true; subscription.unsubscribe() }
-  }, [supabase, fetchProfile])
+  }, [supabase, fetchProfile, claimSession])
 
   useEffect(() => {
     if (user) {

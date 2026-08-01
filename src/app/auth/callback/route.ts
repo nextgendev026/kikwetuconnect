@@ -1,4 +1,5 @@
 import { createApiClient } from '@/lib/server-supabase'
+import { claimActiveSession } from '@/lib/server-session'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -11,7 +12,8 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.redirect(new URL(destination, request.url))
     const supabase = createApiClient(request, response)
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (error) console.error('Auth callback error:', error.message)
+    if (!error) await claimActiveSession(supabase)
+    else console.error('Auth callback error:', error.message)
     return response
   }
 

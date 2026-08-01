@@ -266,6 +266,12 @@ function SignupForm() {
               <h2 style={{ fontWeight: 800, fontSize: 'clamp(2rem,4vw,3rem)', lineHeight: 1, letterSpacing: '-.07em', margin: 0, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Good to see you.</h2>
               <p style={{ color: 'oklch(52% .035 151)', fontSize: 13, lineHeight: 1.55, margin: '10px 0 24px' }}>Pick up where your circle left off.</p>
 
+              {searchParams.get('reason') === 'elsewhere' && (
+                <div style={{ padding: '12px 15px', borderRadius: 11, background: 'oklch(90% .12 84)', color: 'oklch(45% .12 84)', fontSize: 11, fontWeight: 700, marginBottom: 15 }}>
+                  You were signed out because your account was logged in on another device. Log in again here to continue on this one.
+                </div>
+              )}
+
               {loginError && (
                 <div style={{ padding: '12px 15px', borderRadius: 11, background: 'oklch(90% .16 28)', color: 'oklch(56% .16 28)', fontSize: 11, fontWeight: 700, marginBottom: 15 }}>{loginError}</div>
               )}

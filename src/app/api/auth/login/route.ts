@@ -1,4 +1,5 @@
 import { createApiClient } from '@/lib/server-supabase'
+import { claimActiveSession } from '@/lib/server-session'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -26,6 +27,8 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       )
     }
+
+    await claimActiveSession(supabase)
 
     return NextResponse.json({
       user: data.user,
