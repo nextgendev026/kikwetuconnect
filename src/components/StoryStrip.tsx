@@ -152,7 +152,7 @@ export default function StoryStrip({ profile }: StoryStripProps) {
           <button
             onClick={openComposer}
             className="flex-shrink-0 w-[90px] h-[130px] rounded-[16px] border-2 border-dashed border-[var(--line)] flex flex-col items-center justify-center gap-[8px] text-[var(--muted)] hover:border-gold hover:text-gold transition-colors cursor-pointer"
-            aria-label="Share an idea"
+            aria-label="My ideas"
             style={{ background: 'linear-gradient(135deg, color-mix(in oklab, var(--gold) 10%, var(--surface)), var(--surface))' }}
           >
             <span className="w-[30px] h-[30px] rounded-full grid place-items-center bg-gold/15">
@@ -182,7 +182,7 @@ export default function StoryStrip({ profile }: StoryStripProps) {
             <button
               onClick={openIdeaComposer}
               className="flex-shrink-0 w-[104px] h-[150px] rounded-[16px] border-2 border-dashed border-[var(--line)] flex flex-col items-center justify-center gap-[8px] text-[var(--muted)] hover:border-gold hover:text-gold transition-colors cursor-pointer"
-              aria-label="Share an idea"
+              aria-label="Your idea"
             >
               <span className="w-[34px] h-[34px] rounded-full grid place-items-center bg-gold/15">
                 <PlusIcon className="w-[16px] h-[16px] text-gold" />

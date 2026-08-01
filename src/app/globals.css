@@ -171,7 +171,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .page { display: none; max-width: 960px; margin: auto; padding: 33px; }
 .page.active { display: block; animation: rise .3s var(--ease); }
 .page-head { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 24px; }
-.eyebrow { font-size: 10px; letter-spacing: .15em; text-transform: uppercase; font-weight: 800; color: var(--green); }
+.eyebrow { font-size: 10px; letter-spacing: .15em; text-transform: uppercase; font-weight: 800; color: var(--green-text); }
 .page h1, .page-title { font: 800 clamp(1.6rem, 3.5vw, 2.6rem) / 1.1 var(--jakarta); letter-spacing: -.06em; margin: 6px 0 0; }
 .page-head p { font-size: 14.5px; color: var(--muted); line-height: 1.6; max-width: 60ch; margin: 8px 0 0; }
 
@@ -203,7 +203,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .tabs::-webkit-scrollbar { display: none; }
 .tabs button { background: none; color: var(--muted); font-size: 13px; white-space: nowrap; padding: 0 0 14px; position: relative; transition: color .25s var(--ease); font-weight: 500; }
 .tabs button:hover { color: var(--ink); }
-.tabs button.active { color: var(--green); font-weight: 700; }
+.tabs button.active { color: var(--green-text); font-weight: 700; }
 .tabs button.active:after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2.5px; background: var(--gold); border-radius: 2px; }
 
 .composer { display: flex; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); margin-bottom: 24px; box-shadow: var(--card-shadow); }
@@ -234,8 +234,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .post-foot { display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 10px; }
 .post-foot button { background: none; color: var(--muted); font-size: 11px; padding: 8px 6px; border-radius: var(--radius-sm); transition: all .2s var(--ease); }
 .post-foot button:hover { background: var(--raised); color: var(--ink); }
-.post-foot .liked { color: var(--green); }
-.post-foot .saved { color: var(--gold); }
+.post-foot .liked { color: var(--green-text); }
+.post-foot .saved { color: var(--gold-text); }
 
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 16px; box-shadow: var(--card-shadow); }
 .panel h3 { font: 800 14px var(--jakarta); margin: 0 0 14px; letter-spacing: -.03em; }
@@ -247,11 +247,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .list-main b { font-size: 13px; display: block; font-weight: 600; }
 .list-main small { display: block; color: var(--muted); font-size: 11px; line-height: 1.5; margin-top: 4px; }
 
-.badge { display: inline-flex; align-items: center; gap: 5px; border-radius: var(--radius-full); padding: 6px 10px; background: var(--green-soft); color: var(--green); font-size: 10px; font-weight: 700; }
-.badge.gold { background: color-mix(in oklab, var(--gold) 15%, var(--surface)); color: var(--gold); }
-[data-theme=dark] .badge.gold { background: color-mix(in oklab, var(--gold) 20%, var(--surface)); color: var(--gold); }
+.badge { display: inline-flex; align-items: center; gap: 5px; border-radius: var(--radius-full); padding: 6px 10px; background: var(--green-soft); color: var(--green-text); font-size: 10px; font-weight: 700; }
+.badge.gold { background: color-mix(in oklab, var(--gold) 15%, var(--surface)); color: var(--gold-text); }
+[data-theme=dark] .badge.gold { background: color-mix(in oklab, var(--gold) 20%, var(--surface)); color: var(--gold-text); }
 
-.follow { height: 34px; padding: 0 12px; border-radius: var(--radius-sm); border: 1.5px solid var(--gold); background: none; color: var(--gold); font-size: 11px; font-weight: 700; cursor: pointer; transition: all .2s var(--ease); }
+.follow { height: 34px; padding: 0 12px; border-radius: var(--radius-sm); border: 1.5px solid var(--gold-text); background: none; color: var(--gold-text); font-size: 11px; font-weight: 700; cursor: pointer; transition: all .2s var(--ease); }
 .follow:hover { background: color-mix(in oklab, var(--gold) 10%, transparent); }
 
 .topic-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
@@ -279,7 +279,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .side-copy { flex: 1; }
 .side-copy b { display: block; font-size: 12px; font-weight: 600; }
 .side-copy small { font-size: 10px; color: var(--muted); }
-.side-action { background: none; color: var(--gold); font-size: 10px; cursor: pointer; font-weight: 600; }
+.side-action { background: none; color: var(--gold-text); font-size: 10px; cursor: pointer; font-weight: 600; }
 .metric-line { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
 .metric-line:last-child { border-bottom: 0; }
 .metric-line span { color: var(--muted); }
@@ -329,7 +329,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 }
 .navbtn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; color: var(--muted); font-size: 9px; font-weight: 500; padding: 6px 4px; border-radius: var(--radius-sm); transition: all .2s var(--ease); min-height: 48px; justify-content: center; text-decoration: none; }
 .navbtn:hover { color: var(--ink); background: var(--raised); }
-.navbtn.active { color: var(--gold); font-weight: 700; }
+.navbtn.active { color: var(--gold-text); font-weight: 700; }
 .navbtn.compose { color: var(--night); background: var(--gold); box-shadow: 0 2px 8px color-mix(in oklab, var(--gold) 25%, transparent); }
 .navbtn.compose:hover { filter: brightness(1.06); transform: translateY(-1px); }
 
@@ -337,7 +337,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .wallet small { font-size: 11px; color: var(--muted); }
 .wallet strong { display: block; font: 800 28px var(--jakarta); letter-spacing: -.05em; margin: 8px 0; }
 .wallet-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); margin-top: 14px; }
-.wallet-row button { background: none; color: var(--gold); font-size: 12px; font-weight: 700; cursor: pointer; }
+.wallet-row button { background: none; color: var(--gold-text); font-size: 12px; font-weight: 700; cursor: pointer; }
 
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -486,7 +486,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .hero-illustration { animation: float-slow 8s ease-in-out infinite; }
 
 .skeleton { background: var(--raised); border-radius: 8px; animation: pulse 2s ease-in-out infinite; }
-.text-gradient-green { background: linear-gradient(135deg, var(--green), var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.text-gradient-green { background: linear-gradient(135deg, var(--green-text), var(--gold-text)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 .glow-gold { box-shadow: 0 0 20px color-mix(in oklab, var(--gold) 30%, transparent); }
 .glow-green { box-shadow: 0 0 20px color-mix(in oklab, var(--green) 30%, transparent); }
 .btn-gold, .btn-primary { transition: all .25s var(--ease); }
@@ -504,8 +504,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   color: var(--muted); transition: all .2s var(--ease); text-decoration: none;
 }
 .action-button:hover { background: var(--raised); color: var(--ink); }
-.action-button.active-vote { background: color-mix(in oklab, var(--green) 20%, transparent); color: var(--green); }
-.action-button.active-save { background: color-mix(in oklab, var(--gold) 20%, transparent); color: var(--gold); }
+.action-button.active-vote { background: color-mix(in oklab, var(--green) 20%, transparent); color: var(--green-text); }
+.action-button.active-save { background: color-mix(in oklab, var(--gold) 20%, transparent); color: var(--gold-text); }
 .baraza-hub-card:hover { transform: translateY(-4px); box-shadow: var(--card-shadow-hover); border-color: color-mix(in oklab, var(--green) 50%, transparent); }
 .baraza-row-card:hover { background: var(--raised); }
 .baraza-row-card:hover .baraza-row-icon { transform: scale(1.1); }
@@ -539,7 +539,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .rich-text .rich-li { margin-bottom: 4px; }
 .rich-text .rich-quote { border-left: 3px solid var(--gold); padding: 2px 12px; margin: 0 0 10px; color: var(--muted); font-style: italic; }
 .rich-text .rich-code { background: var(--raised); padding: 1px 5px; border-radius: 5px; font-family: ui-monospace, monospace; font-size: 12px; }
-.rich-text .rich-link { color: var(--gold); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.rich-text .rich-link { color: var(--gold-text); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
 .rich-text .rich-hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 .rich-text .rich-strong { font-weight: 700; }
 .rich-text .rich-em { font-style: italic; }
@@ -550,6 +550,22 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
    Add `modal-center-scroll` to any `fixed inset-0 flex items-center justify-center` wrapper. */
 .modal-center-scroll { overflow-y: auto; overscroll-behavior: contain; }
 .modal-center-scroll > * { margin: auto; }
+
+/* Accessible brand text colors (WCAG AA: text on light surfaces needs the dark variant,
+   dark surfaces need the bright variant). Use these for gold/green/blue TEXT; keep
+   --gold/--green/--blue for backgrounds. */
+:root {
+  --gold-text: oklch(46% .10 84);
+  --green-text: oklch(40% .13 151);
+  --blue-text: oklch(38% .12 260);
+}
+[data-theme=dark] {
+  --gold-text: oklch(78% .14 84);
+  --green-text: oklch(74% .12 151);
+  --blue-text: oklch(74% .12 260);
+}
+.text-gold-accessible { color: var(--gold-text); }
+.text-green-accessible { color: var(--green-text); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }

@@ -178,7 +178,7 @@ export default function MobileNav() {
                 style={{
                   background: 'none', border: 0, cursor: 'pointer', display: 'grid',
                   placeItems: 'center', gap: 4, minWidth: 45, fontSize: 9, position: 'relative',
-                  color: active ? 'var(--gold)' : 'var(--muted)',
+                  color: active ? 'var(--gold-text)' : 'var(--muted)',
                 }}>
                 <Icon className="w-5 h-5" />
                 <span>{i.label}</span>
@@ -200,7 +200,7 @@ export default function MobileNav() {
               style={{
                 textDecoration: 'none', display: 'grid',
                 placeItems: 'center', gap: 4, minWidth: 45, fontSize: 9,
-                color: active ? 'var(--gold)' : 'var(--muted)',
+                color: active ? 'var(--gold-text)' : 'var(--muted)',
               }}>
               <Icon className="w-5 h-5" />
               <span>{i.label}</span>

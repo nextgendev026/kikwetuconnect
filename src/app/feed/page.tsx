@@ -233,7 +233,7 @@ function PostCardComponent({
     <div className="bg-night2 border border-[var(--line)] rounded-[16px] p-[18px] mb-[12px] animate-rise card-hover">
       {/* Header */}
       <div className="flex items-start gap-3 mb-[12px]">
-        <Link href={`/profile/${author?.username || ''}`} className="flex-shrink-0 relative">
+        <Link href={`/profile/${author?.username || ''}`} className="flex-shrink-0 relative" aria-label={`View ${author?.full_name || author?.username || 'user'} profile`}>
           {author?.avatar_url ? (
             <img src={author.avatar_url} alt="" className="w-[40px] h-[40px] rounded-full object-cover" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.querySelector('.avatar-fallback')?.classList.remove('hidden') }} />
           ) : null}
@@ -247,12 +247,12 @@ function PostCardComponent({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-[6px] flex-wrap">
             <Link href={`/profile/${author?.username || ''}`} className="text-cream font-bold text-[13px] hover:underline">{author?.full_name || author?.username || 'Unknown'}</Link>
-            {author?.is_verified_expert && <span className="text-[10px] font-bold text-green">Expert</span>}
+            {author?.is_verified_expert && <span className="text-[10px] font-bold text-green-accessible">Expert</span>}
           </div>
           <div className="flex items-center gap-[8px] mt-[2px]">
             <span className="text-[var(--muted)] text-[11px]">@{author?.username || 'unknown'}</span>
             {author && author.heshima_rating > 0 && (
-              <span className="text-[10px] font-semibold text-gold">{author.heshima_rating} Heshima</span>
+              <span className="text-[10px] font-semibold text-gold-accessible">{author.heshima_rating} Heshima</span>
             )}
           </div>
         </div>
@@ -260,7 +260,7 @@ function PostCardComponent({
           <span style={{
             padding: '3px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
             background: post.post_type === 'inquiry' ? 'color-mix(in oklab, var(--blue) 20%, transparent)' : post.post_type === 'article' ? 'color-mix(in oklab, var(--gold) 20%, transparent)' : 'color-mix(in oklab, var(--green) 20%, transparent)',
-            color: post.post_type === 'inquiry' ? 'var(--blue)' : post.post_type === 'article' ? 'var(--gold)' : 'var(--green)',
+            color: post.post_type === 'inquiry' ? 'var(--blue-text)' : post.post_type === 'article' ? 'var(--gold-text)' : 'var(--green-text)',
           }}>
             {post.post_type === 'baraza' ? 'Post' : post.post_type === 'inquiry' ? 'Question' : post.post_type === 'article' ? 'Article' : post.post_type === 'poll' ? 'Poll' : post.post_type}
           </span>
@@ -316,7 +316,7 @@ function PostCardComponent({
           <>
             <RichText content={post.content} className="text-[13px]" clamp={stripMarkdown(post.content).length > 220} />
             {stripMarkdown(post.content).length > 220 && (
-              <Link href={`/posts/${post.id}`} className="inline-block mt-[6px] text-gold text-[12px] font-bold hover:underline">
+              <Link href={`/posts/${post.id}`} className="inline-block mt-[6px] text-gold-accessible text-[12px] font-bold hover:underline">
                 Read full post ↗
               </Link>
             )}
@@ -345,7 +345,7 @@ function PostCardComponent({
           </span>
         )}
         {post.bounty_tokens > 0 && (
-          <span className="flex items-center gap-1 px-[8px] py-[3px] rounded-full bg-gold/20 text-gold text-[10px] font-bold">
+          <span className="flex items-center gap-1 px-[8px] py-[3px] rounded-full bg-gold/20 text-gold-accessible text-[10px] font-bold">
             🪙 {post.bounty_tokens}
           </span>
         )}

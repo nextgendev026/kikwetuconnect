@@ -190,7 +190,7 @@ export function PostCard({
             Answer
           </Link>
         )}
-        <button className="flex items-center gap-1 px-3 py-2 rounded-full text-sm font-medium text-muted hover:bg-surface transition-colors">
+        <button className="flex items-center gap-1 px-3 py-2 rounded-full text-sm font-medium text-muted hover:bg-surface transition-colors" aria-label="Share post">
           <Share2 className="w-4 h-4" />
         </button>
         <button
