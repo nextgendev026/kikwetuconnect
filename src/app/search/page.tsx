@@ -112,7 +112,7 @@ function SearchContent() {
                       title={post.title || undefined}
                       content={post.content}
                       postType={post.post_type}
-                      authorName={post.profiles.full_name}
+                      authorName={post.profiles.full_name || post.profiles.username || 'User'}
                       authorHandle={post.profiles.username}
                       authorHeshima={post.profiles.heshima_rating}
                       isVerifiedExpert={post.profiles.is_verified_expert}

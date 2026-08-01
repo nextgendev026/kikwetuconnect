@@ -36,12 +36,20 @@ export default function UserProfilePage() {
     if (!username) { setNotFound(true); setLoading(false); return }
     ;(async () => {
       try {
-        // Resolve by username, falling back to id lookup so links using a UUID still work
-        const { data, error } = await supabase
+        // Resolve by username, falling back to an id lookup so links using a UUID still work.
+        // The old or(username.eq.X,id.eq.X) filter 400s for any non-UUID value because
+        // PostgREST type-checks id.eq.<word> against the uuid column, so we split it up.
+        const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        let { data, error } = await supabase
           .from('profiles')
           .select('*')
-          .or(`username.eq.${username},id.eq.${username}`)
+          .eq('username', username)
           .maybeSingle()
+        if (!data && !error && UUID_RE.test(username)) {
+          const byId = await supabase.from('profiles').select('*').eq('id', username).maybeSingle()
+          data = byId.data
+          error = byId.error
+        }
         if (cancelled) return
         if (error) { setLoadError(error.message); setLoading(false); return }
         if (!data) { setNotFound(true); setLoading(false); return }

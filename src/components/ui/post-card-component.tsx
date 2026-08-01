@@ -55,7 +55,7 @@ export function PostCard({
   userVoted = false,
   userSaved = false,
 }: PostCardProps) {
-  const initials = authorName
+  const initials = (authorName || 'User')
     .split(' ')
     .map((n) => n[0])
     .join('')

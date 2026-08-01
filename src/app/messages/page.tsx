@@ -4,6 +4,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useUser, useSupabase, toast } from '@/app/providers'
 import { useConversations, useMessages, Message } from '@/hooks/useConversations'
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 function MessagesInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -24,7 +26,7 @@ function MessagesInner() {
   const { messages, loading: msgsLoading, sendMessage, sendMediaMessage, startTyping, typingUsers, addReaction, removeReaction } = useMessages(convId)
 
   const openConversationWith = useCallback(async (userId: string) => {
-    if (!supabase || !user) return
+    if (!supabase || !user || !UUID_RE.test(userId)) return
     try {
       const { data: theirConvs } = await supabase.from('conversation_participants').select('conversation_id').eq('user_id', userId)
       const theirIds = theirConvs?.map(c => c.conversation_id) || []
@@ -51,21 +53,21 @@ function MessagesInner() {
 
   useEffect(() => {
     const cid = searchParams.get('conversation_id')
-    if (cid) { setConvId(cid); setSidebarOpen(false) }
+    if (cid && UUID_RE.test(cid)) { setConvId(cid); setSidebarOpen(false) }
     else {
       const uid = searchParams.get('user')
-      if (uid) { openConversationWith(uid); setSidebarOpen(false) }
+      if (uid && UUID_RE.test(uid)) { openConversationWith(uid); setSidebarOpen(false) }
     }
   }, [searchParams, openConversationWith])
 
   useEffect(() => { if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
   const activeConv = conversations.find(c => c.id === convId)
-  const convTitle = activeConv ? (activeConv.type === 'support' ? 'KikwetuConnect Support' : activeConv.participants.map(p => p.full_name || p.username).join(', ') || 'Conversation') : ''
+  const convTitle = activeConv ? (activeConv.type === 'support' ? 'KikwetuConnect Support' : activeConv.participants.map(p => p?.full_name || p?.username || 'User').join(', ') || 'Conversation') : ''
   const convAvatar = activeConv?.participants?.[0]
 
   const filteredConvs = conversations.filter(c => {
-    const title = c.participants.map(p => p.full_name || p.username).join(' ').toLowerCase()
+    const title = c.participants.map(p => p?.full_name || p?.username || 'User').join(' ').toLowerCase()
     return title.includes(search.toLowerCase()) || (c.last_message || '').toLowerCase().includes(search.toLowerCase())
   })
 

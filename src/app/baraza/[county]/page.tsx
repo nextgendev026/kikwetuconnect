@@ -260,7 +260,7 @@ export default function CountyHubPage() {
                   title={post.title || undefined}
                   content={post.content}
                   postType={post.post_type}
-                  authorName={post.profiles.full_name}
+                  authorName={post.profiles.full_name || post.profiles.username || 'User'}
                   authorHandle={post.profiles.username}
                   authorId={post.user_id}
                   currentUserId={profile?.id}
