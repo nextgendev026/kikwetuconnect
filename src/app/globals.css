@@ -84,6 +84,27 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .sidebar { background: var(--night); color: var(--ink); padding: 24px 16px; display: flex; flex-direction: column; gap: 24px; position: sticky; top: 0; height: 100vh; overflow: auto; transition: background-color .35s var(--ease-in-out); }
 .sidebar::-webkit-scrollbar { width: 3px; }
 .sidebar::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--line) 40%, transparent); border-radius: 3px; }
+
+/* Retractable sidebar: collapsed = icon-only rail */
+.app.sidebar-collapsed { grid-template-columns: 76px minmax(0, 1fr) 294px; }
+.app.sidebar-collapsed .sidebar { padding: 24px 8px; align-items: center; }
+.app.sidebar-collapsed .brand { justify-content: center; padding: 0; }
+.app.sidebar-collapsed .brand b,
+.app.sidebar-collapsed .brand small,
+.app.sidebar-collapsed .nav-label,
+.app.sidebar-collapsed .nav a span,
+.app.sidebar-collapsed .nav button span,
+.app.sidebar-collapsed .live-users,
+.app.sidebar-collapsed .user-mini strong,
+.app.sidebar-collapsed .user-mini small { display: none; }
+.app.sidebar-collapsed .nav a,
+.app.sidebar-collapsed .nav button { justify-content: center; padding: 0; gap: 0; }
+.app.sidebar-collapsed .nav a:hover,
+.app.sidebar-collapsed .nav button:hover { transform: none; }
+.app.sidebar-collapsed .user-mini { justify-content: center; padding: 16px 4px; }
+@media (max-width: 1180px) {
+  .app.sidebar-collapsed { grid-template-columns: 76px minmax(0, 1fr); }
+}
 .brand { display: flex; gap: 12px; align-items: center; padding: 0 10px; }
 .mark { width: 36px; height: 36px; border-radius: var(--radius-md); background: var(--gold); color: var(--night); display: grid; place-items: center; font: 800 18px var(--jakarta); transform: rotate(-6deg); flex: none; box-shadow: 0 2px 8px color-mix(in oklab, var(--gold) 25%, transparent); }
 .brand b { font: 800 15px var(--jakarta); letter-spacing: -.05em; }

@@ -34,6 +34,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [chatSending, setChatSending] = useState(false)
   const [showNotifTray, setShowNotifTray] = useState(false)
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && localStorage.getItem('kc-sidebar-collapsed') === '1') {
+        setSidebarCollapsed(true)
+      }
+    } catch { /* ignore storage errors */ }
+  }, [])
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed(c => {
+      const next = !c
+      try { localStorage.setItem('kc-sidebar-collapsed', next ? '1' : '0') } catch { /* ignore */ }
+      return next
+    })
+  }
 
   // Recognize existing follow relationships so Community follow buttons reflect real state
   useEffect(() => {
@@ -155,9 +172,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <ToolbarProvider>
-        <div className="app">
+        <div className={`app${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
           {/* Sidebar */}
-          <Sidebar initials={initials} profile={profile} onlineCount={onlineCount} onlineUsers={onlineUsers} />
+          <Sidebar initials={initials} profile={profile} onlineCount={onlineCount} onlineUsers={onlineUsers} collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
 
           {/* Main */}
           <main className="main">

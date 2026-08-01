@@ -7,7 +7,8 @@ import { isAdmin, ROLES } from '@/lib/roles'
 import {
   Home, Compass, Search, Grid3X3, GraduationCap, Briefcase,
   MessageSquare, Calendar, Store, Shield, Trophy,
-  Wallet, User, Settings, Zap, LogOut, MessageCircle, Heart
+  Wallet, User, Settings, Zap, LogOut, MessageCircle, Heart,
+  ChevronLeft, ChevronRight
 } from 'lucide-react'
 
 const sections = [
@@ -36,25 +37,27 @@ const sections = [
   ]},
 ]
 
-const navLinkStyle = (isActive: boolean): React.CSSProperties => ({
+const navLinkStyle = (isActive: boolean, collapsed: boolean): React.CSSProperties => ({
   height: 40,
   borderRadius: 11,
   background: isActive ? 'var(--gold)' : 'none',
   color: isActive ? 'var(--night)' : 'oklch(72% .025 151)',
   textAlign: 'left',
-  padding: '0 12px',
+  padding: collapsed ? 0 : '0 12px',
   fontSize: 12,
   display: 'flex',
   alignItems: 'center',
-  gap: 9,
+  justifyContent: collapsed ? 'center' : undefined,
+  gap: collapsed ? 0 : 9,
   fontWeight: isActive ? 700 : 400,
   textDecoration: 'none',
   transition: 'transform .2s var(--ease), background .2s var(--ease)',
 })
 
-export default function Sidebar({ initials, profile, onlineCount = 0, onlineUsers = [] }: {
+export default function Sidebar({ initials, profile, onlineCount = 0, onlineUsers = [], collapsed = false, onToggle }: {
   initials: string; profile: any
   onlineCount?: number; onlineUsers?: any[]
+  collapsed?: boolean; onToggle?: () => void
 }) {
   const path = usePathname()
   const adminUser = isAdmin(profile?.role)
@@ -113,7 +116,7 @@ export default function Sidebar({ initials, profile, onlineCount = 0, onlineUser
               const Icon = i.icon
               const isActive = path === i.href || (i.href !== '/feed' && path.startsWith(i.href))
               return (
-                <Link key={i.href} href={i.href} style={navLinkStyle(isActive)}>
+                <Link key={i.href} href={i.href} style={navLinkStyle(isActive, collapsed)}>
                   <Icon className={`icon ${i.iconClass || ''} w-3.5 h-3.5`} />
                   <span style={{ flex: 1 }}>{i.label}</span>
                 </Link>
@@ -121,10 +124,20 @@ export default function Sidebar({ initials, profile, onlineCount = 0, onlineUser
             })}
           </div>
         ))}
+        {typeof onToggle === 'function' && (
+          <button
+            onClick={onToggle}
+            style={navLinkStyle(false, collapsed)}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+            {collapsed ? <ChevronRight className="icon w-3.5 h-3.5" /> : <ChevronLeft className="icon w-3.5 h-3.5" />}
+            <span style={{ flex: 1 }}>{collapsed ? 'Expand' : 'Collapse'}</span>
+          </button>
+        )}
       </nav>
 
       {/* Live users section */}
-      <div style={{ marginTop: 12, padding: '0 4px' }}>
+      <div className="live-users" style={{ marginTop: 12, padding: '0 4px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, padding: '0 8px' }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 6px var(--green)' }} />
           <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em' }}>Live — {onlineCount} online</span>
