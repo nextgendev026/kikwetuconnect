@@ -145,7 +145,7 @@ function MessagesInner() {
         <div className="p-4 pb-2">
           <div className="flex items-center justify-between mb-3">
             <h1 className="font-extrabold text-lg m-0" style={{ color: 'var(--ink)' }}>Chats</h1>
-            <button onClick={() => setConvId(null)} className="text-xs border-0 cursor-pointer p-2 rounded-lg" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>+ New</button>
+            <button onClick={() => setConvId(null)} aria-label="Create new message" className="text-xs border-0 cursor-pointer p-2 rounded-lg" style={{ background: 'var(--raised)', color: 'var(--ink)' }}>+ New</button>
           </div>
           <input placeholder="Search conversations..." value={search} onChange={e => setSearch(e.target.value)}
             className="w-full h-[38px] rounded-[10px] px-3 text-[12px] outline-none" style={{ border: '1px solid var(--line)', background: 'var(--raised)', color: 'var(--ink)' }} />
