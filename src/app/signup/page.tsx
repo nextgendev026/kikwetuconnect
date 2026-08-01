@@ -262,8 +262,8 @@ function SignupForm() {
           {mode === 'login' ? (
             /* === LOGIN === */
             <div>
-              <div style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', fontWeight: 800, color: 'oklch(72% .15 84)' }}>Welcome back</div>
-              <h2 style={{ fontWeight: 800, fontSize: 'clamp(2rem,4vw,3rem)', lineHeight: 1, letterSpacing: '-.07em', margin: 0, fontFamily: "'Plus Jakarta Sans',sans-serif" }}>Good to see you.</h2>
+              <div style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', fontWeight: 800, color: 'oklch(50% .15 84)' }}>Welcome back</div>
+              <h2 style={{ fontWeight: 800, fontSize: 'clamp(2rem,4vw,3rem)', lineHeight: 1, letterSpacing: '-.07em', margin: 0, fontFamily: "'Plus Jakarta Sans',sans-serif", color: 'oklch(20% .01 91)' }}>Good to see you.</h2>
               <p style={{ color: 'oklch(52% .035 151)', fontSize: 13, lineHeight: 1.55, margin: '10px 0 24px' }}>Pick up where your circle left off.</p>
 
               {searchParams.get('reason') === 'elsewhere' && (
@@ -276,7 +276,7 @@ function SignupForm() {
                 <div style={{ padding: '12px 15px', borderRadius: 11, background: 'oklch(90% .16 28)', color: 'oklch(56% .16 28)', fontSize: 11, fontWeight: 700, marginBottom: 15 }}>{loginError}</div>
               )}
 
-              <button style={{ width: '100%', height: 46, background: 'oklch(99% .008 91)', border: '1px solid oklch(85% .035 91)', borderRadius: 11, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              <button style={{ width: '100%', height: 46, background: 'oklch(99% .008 91)', border: '1px solid oklch(85% .035 91)', borderRadius: 11, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'oklch(10% .01 91)' }}
                 onClick={() => toast('Google sign-in flow opened')}>
                 ◉ &nbsp; Continue with Google
               </button>
