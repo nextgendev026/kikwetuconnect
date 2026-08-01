@@ -7,6 +7,17 @@ import { BookOpen, MessageCircle, Award, TrendingUp, Zap, Calendar, Clock, Users
 interface HelpRequest { id: string; student_id: string; title: string; description: string; subject: string; budget_heshima: number; status: string; created_at: string; profiles: { id: string; full_name: string; username: string } | null }
 interface Session { id: string; request_id: string; expert_id: string; student_id: string; started_at: string; ended_at: string | null; duration_minutes: number | null; heshima_earned: number; status: string; expert_notes: string; student_rating: number; expert: { id: string; full_name: string; username: string } | null; student: { id: string; full_name: string; username: string } | null }
 interface Subject { id: string; name: string; icon: string }
+interface QuestionPost {
+  id: string
+  post_type: string
+  title: string | null
+  content: string
+  upvotes_count: number
+  answers_count: number
+  bounty_tokens: number
+  created_at: string
+  profiles: { id: string; full_name: string | null; username: string; is_verified_expert: boolean } | null
+}
 
 const SUBJECTS = ['Mathematics', 'English', 'Kiswahili', 'Sciences', 'History', 'Geography', 'Business', 'Computer', 'CRE', 'Agriculture', 'Home Science', 'Art']
 const s = {
@@ -24,8 +35,10 @@ export default function StudentsPage() {
   const { profile, loading: userLoading } = useUser()
   const [requests, setRequests] = useState<HelpRequest[]>([])
   const [sessions, setSessions] = useState<Session[]>([])
+  const [questions, setQuestions] = useState<QuestionPost[]>([])
+  const [questionsLoading, setQuestionsLoading] = useState(true)
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'help' | 'sessions'>('help')
+  const [tab, setTab] = useState<'help' | 'sessions' | 'questions'>('help')
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [reqForm, setReqForm] = useState({ title: '', description: '', subject: 'Mathematics', budget: 0 })
   const [submitting, setSubmitting] = useState(false)
@@ -35,7 +48,7 @@ export default function StudentsPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const [assigning, setAssigning] = useState<string | null>(null)
 
-  useEffect(() => { if (!userLoading) { fetchRequests(); if (profile) fetchSessions() } }, [userLoading])
+  useEffect(() => { if (!userLoading) { fetchRequests(); fetchQuestions(); if (profile) fetchSessions() } }, [userLoading])
 
   useEffect(() => {
     if (activeSession && sessionStart) {
@@ -63,6 +76,26 @@ export default function StudentsPage() {
       const active = data.find((s: any) => s.status === 'active')
       if (active) { setActiveSession(active as unknown as Session); setSessionStart(new Date(active.started_at)); setElapsed(Math.floor((Date.now() - new Date(active.started_at).getTime()) / 1000)) }
     }
+  }
+
+  const fetchQuestions = async () => {
+    setQuestionsLoading(true)
+    try {
+      const { data } = await supabase
+        .from('posts')
+        .select('id, post_type, title, content, upvotes_count, answers_count, bounty_tokens, created_at, profiles:user_id (id, full_name, username, is_verified_expert)')
+        .eq('post_type', 'inquiry')
+        .is('space_id', null)
+        .eq('is_hidden', false)
+        .order('created_at', { ascending: false })
+        .limit(30)
+      if (data) setQuestions(data as unknown as QuestionPost[])
+    } catch (err) { console.error(err) } finally { setQuestionsLoading(false) }
+  }
+
+  const openQuestionComposer = () => {
+    if (!profile) { toast('Sign in first'); return }
+    document.dispatchEvent(new CustomEvent('open-create-modal', { detail: { type: 'question' } }))
   }
 
   const handleCreateRequest = async () => {
@@ -141,13 +174,13 @@ export default function StudentsPage() {
           <p className="text-[10px]" style={{ color: 'var(--muted)' }}>Heshima Points</p>
         </div>
         <div style={s.cardSm}>
-          <Flame className="w-4 h-4 mb-1" style={{ color: 'var(--gold)' }} />
-          <div className="text-xl font-bold" style={{ color: 'var(--gold)' }}>{profile?.streak_days || 0}</div>
+          <Flame className="w-4 h-4 mb-1" style={{ color: 'var(--gold-text)' }} />
+          <div className="text-xl font-bold" style={{ color: 'var(--gold-text)' }}>{profile?.streak_days || 0}</div>
           <p className="text-[10px]" style={{ color: 'var(--muted)' }}>Day Streak</p>
         </div>
         <div style={s.cardSm}>
-          <Award className="w-4 h-4 mb-1" style={{ color: 'var(--green)' }} />
-          <div className="text-xl font-bold" style={{ color: 'var(--green)' }}>{sessions.filter(s => s.status === 'completed').length}</div>
+          <Award className="w-4 h-4 mb-1" style={{ color: 'var(--green-text)' }} />
+          <div className="text-xl font-bold" style={{ color: 'var(--green-text)' }}>{sessions.filter(s => s.status === 'completed').length}</div>
           <p className="text-[10px]" style={{ color: 'var(--muted)' }}>Sessions Done</p>
         </div>
         <div style={s.cardSm}>
@@ -160,7 +193,7 @@ export default function StudentsPage() {
       {/* Active Session Timer */}
       {activeSession && (
         <div style={{ ...s.card, marginBottom: 16, textAlign: 'center', borderColor: 'var(--green)' }}>
-          <p className="text-[10px] font-semibold mb-2" style={{ color: 'var(--green)' }}>Active Session</p>
+          <p className="text-[10px] font-semibold mb-2" style={{ color: 'var(--green-text)' }}>Active Session</p>
           <div className="text-[36px] font-mono font-bold" style={{ color: 'var(--ink)', letterSpacing: 2 }}>{formatTime(elapsed)}</div>
           <p className="text-[11px] mb-4" style={{ color: 'var(--muted)' }}>Helping a student — you earn 2 Heshima per minute</p>
           <button onClick={handleEndSession} style={{ ...s.btn, ...s.green, justifyContent: 'center' }}>
@@ -171,10 +204,10 @@ export default function StudentsPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-5 p-1 rounded-[12px]" style={{ background: 'var(--raised)' }}>
-        {(['help', 'sessions'] as const).map(t => (
+        {(['help', 'sessions', 'questions'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} className="flex-1 py-2 px-3 rounded-[10px] text-[11px] font-semibold transition-all"
             style={tab === t ? { background: 'var(--surface)', color: 'var(--ink)', boxShadow: 'var(--card-shadow)' } : { color: 'var(--muted)' }}>
-            {t === 'help' ? `Open Help (${requests.length})` : `My Sessions (${sessions.length})`}
+            {t === 'help' ? `Open Help (${requests.length})` : t === 'sessions' ? `My Sessions (${sessions.length})` : `Questions (${questions.length})`}
           </button>
         ))}
       </div>
@@ -194,8 +227,8 @@ export default function StudentsPage() {
                 <div key={r.id} style={s.card} className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: 'color-mix(in oklab, var(--green) 15%, var(--surface))', color: 'var(--green)' }}>{r.subject}</span>
-                      {r.budget_heshima > 0 && <span className="text-[10px] font-medium" style={{ color: 'var(--gold)' }}>🎯 {r.budget_heshima} Heshima</span>}
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full" style={{ background: 'color-mix(in oklab, var(--green) 15%, var(--surface))', color: 'var(--green-text)' }}>{r.subject}</span>
+                      {r.budget_heshima > 0 && <span className="text-[10px] font-medium" style={{ color: 'var(--gold-text)' }}>🎯 {r.budget_heshima} Heshima</span>}
                     </div>
                     <h3 className="text-[13px] font-bold" style={{ color: 'var(--ink)' }}>{r.title}</h3>
                     <p className="text-[11px] mt-1 line-clamp-2" style={{ color: 'var(--muted)' }}>{r.description}</p>
@@ -240,15 +273,66 @@ export default function StudentsPage() {
                         </p>
                       </div>
                       <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
-                        style={{ background: ses.status === 'completed' ? 'color-mix(in oklab, var(--green) 20%, var(--surface))' : 'color-mix(in oklab, var(--gold) 20%, var(--surface))', color: ses.status === 'completed' ? 'var(--green)' : 'var(--gold)' }}>
+                        style={{ background: ses.status === 'completed' ? 'color-mix(in oklab, var(--green) 20%, var(--surface))' : 'color-mix(in oklab, var(--gold) 20%, var(--surface))', color: ses.status === 'completed' ? 'var(--green-text)' : 'var(--gold-text)' }}>
                         {ses.status}
                       </span>
                     </div>
-                    {ses.heshima_earned > 0 && <p className="text-[11px] font-semibold" style={{ color: 'var(--green)' }}>+{ses.heshima_earned} Heshima earned</p>}
+                    {ses.heshima_earned > 0 && <p className="text-[11px] font-semibold" style={{ color: 'var(--green-text)' }}>+{ses.heshima_earned} Heshima earned</p>}
                     {ses.expert_notes && <p className="text-[10px] mt-1" style={{ color: 'var(--muted)' }}>Notes: {ses.expert_notes}</p>}
                   </div>
                 )
               })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Community Questions */}
+      {tab === 'questions' && (
+        <section>
+          <div style={s.cardSm} className="mb-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-[13px] font-bold" style={{ color: 'var(--ink)' }}>Community Questions</h2>
+                <p className="text-[10px]" style={{ color: 'var(--muted)' }}>Stuck on something? Ask the community — classmates and experts answer.</p>
+              </div>
+              {profile && (
+                <button onClick={openQuestionComposer} style={{ ...s.btn, ...s.primary, flexShrink: 0 }}>
+                  <Plus className="w-4 h-4" /> Ask
+                </button>
+              )}
+            </div>
+          </div>
+
+          {questionsLoading ? (
+            <div style={s.card} className="text-center py-10"><div className="animate-spin w-6 h-6 mx-auto border-2" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent', borderRadius: '50%' }} /></div>
+          ) : questions.length === 0 ? (
+            <div style={s.card} className="text-center py-12">
+              <HelpCircle className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--muted)', opacity: 0.3 }} />
+              <p className="text-sm font-medium mb-1" style={{ color: 'var(--ink)' }}>No questions yet</p>
+              <p className="text-xs mb-4" style={{ color: 'var(--muted)' }}>Be the first to ask the community</p>
+              {profile && <button onClick={openQuestionComposer} style={{ ...s.btn, ...s.primary }}><Plus className="w-4 h-4" /> Ask a Question</button>}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {questions.map(q => (
+                <Link key={q.id} href={`/posts/${q.id}`} style={s.card} className="flex items-start gap-3 block hover:opacity-95 transition-opacity">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'color-mix(in oklab, var(--blue) 15%, var(--surface))', color: 'var(--blue-text)' }}>Question</span>
+                      {q.bounty_tokens > 0 && <span className="text-[10px] font-medium" style={{ color: 'var(--gold-text)' }}>🎯 {q.bounty_tokens} Heshima</span>}
+                    </div>
+                    <h3 className="text-[13px] font-bold leading-snug" style={{ color: 'var(--ink)' }}>{q.title || q.content?.slice(0, 120)}</h3>
+                    <div className="flex items-center gap-3 mt-2 text-[10px]" style={{ color: 'var(--muted)' }}>
+                      <span>{q.profiles?.is_verified_expert ? '✓ ' : ''}{q.profiles?.full_name || q.profiles?.username || 'Student'}</span>
+                      <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" /> {q.answers_count}</span>
+                      <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> {q.upvotes_count}</span>
+                      <span>{new Date(q.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 mt-1 flex-shrink-0" style={{ color: 'var(--muted)' }} />
+                </Link>
+              ))}
             </div>
           )}
         </section>

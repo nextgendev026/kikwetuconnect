@@ -11,7 +11,6 @@ export const TABS = [
   { id: 'for_you', label: 'For you' },
   { id: 'following', label: 'Following' },
   { id: 'near_you', label: 'Near you' },
-  { id: 'questions', label: 'Questions' },
   { id: 'latest', label: 'Latest' },
   { id: 'saved', label: 'Saved' },
 ] as const
@@ -21,7 +20,6 @@ export type TabId = (typeof TABS)[number]['id']
 export const TYPE_FILTERS = [
   { id: 'all', label: 'All' },
   { id: 'baraza', label: 'Baraza' },
-  { id: 'inquiry', label: 'Inquiry' },
   { id: 'article', label: 'Article' },
   { id: 'poll', label: 'Poll' },
 ] as const

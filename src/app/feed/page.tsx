@@ -92,7 +92,6 @@ function EmptyState({ tab, hasCountyFilter }: { tab: TabId; hasCountyFilter: boo
     for_you: { title: 'Your feed is quiet', desc: 'Follow topics and people to personalize your feed' },
     following: { title: 'No posts from people you follow', desc: 'Follow more people to see their posts here' },
     near_you: { title: hasCountyFilter ? 'No posts in this county yet' : 'Select a county to see local posts', desc: 'Be the first to post from your area' },
-    questions: { title: 'No questions yet', desc: 'Ask the community something' },
     latest: { title: 'No posts yet', desc: 'The first post is waiting for you' },
     saved: { title: 'No saved posts', desc: 'Bookmark posts to find them later' },
   }
@@ -566,7 +565,7 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
       if (cursor) query = query.lt('created_at', cursor)
 
       if (typeFilter !== 'all') query = query.eq('post_type', typeFilter)
-      if (activeTab === 'questions') query = query.eq('post_type', 'inquiry')
+      query = query.neq('post_type', 'inquiry')
 
 
       if (activeTab === 'following' && profile) {
@@ -773,7 +772,6 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
           <span className="text-[10px] text-[var(--muted)] self-center mr-1">Create:</span>
           {[
             { label: 'Post', icon: '💬', mode: 'baraza' },
-            { label: 'Ask', icon: '❓', mode: 'inquiry' },
             { label: 'Poll', icon: '📊', mode: 'poll' },
             { label: 'Article', icon: '📄', mode: 'article' },
           ].map(action => (

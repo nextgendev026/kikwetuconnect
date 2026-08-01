@@ -84,6 +84,7 @@ export default function StoryStrip({ profile }: StoryStripProps) {
           .select('id, user_id, post_type, title, content, media_url, media_type, created_at, upvotes_count, answers_count, profiles:user_id(id, full_name, username, avatar_url, is_verified_expert)')
           .not('media_url', 'is', null)
           .is('space_id', null)
+          .neq('post_type', 'inquiry')
           .gte('created_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString())
           .order('created_at', { ascending: false })
           .limit(18)
@@ -119,7 +120,7 @@ export default function StoryStrip({ profile }: StoryStripProps) {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload: any) => {
         const p = payload.new as any
-        if (!p.media_url || p.space_id) return
+        if (!p.media_url || p.space_id || p.post_type === 'inquiry') return
         setShorts(prev => (prev.some(i => i.id === p.id) ? prev : [p as any, ...prev]).slice(0, 18))
       })
       .subscribe()
@@ -233,9 +234,6 @@ function ShortCard({ short }: { short: Short }) {
           <span className="w-[18px] h-[18px] rounded-full bg-gold text-night grid place-items-center text-[8px] font-extrabold border-[1.5px] border-gold/60">{fallback}</span>
         )}
       </div>
-      {short.post_type === 'inquiry' && (
-        <span className="absolute top-[8px] right-[8px] text-[9px] font-bold text-white px-[6px] py-[2px] rounded-full" style={{ background: 'rgba(0,0,0,0.55)' }}>Q</span>
-      )}
     </Link>
   )
 }

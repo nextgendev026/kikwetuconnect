@@ -82,6 +82,15 @@ export default function MarketPage() {
   // Listing detail modal
   const [detailItem, setDetailItem] = useState<Listing | null>(null)
 
+  // Edit listing modal
+  const editFileInputRef = useRef<HTMLInputElement>(null)
+  const [editItem, setEditItem] = useState<Listing | null>(null)
+  const [editForm, setEditForm] = useState({ title: '', description: '', price: '', category: 'Produce', county: '', status: 'active' })
+  const [editImages, setEditImages] = useState<string[]>([])
+  const [newPhotos, setNewPhotos] = useState<{ file: File; preview: string }[]>([])
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editImageFiles, setEditImageFiles] = useState<File[]>([])
+
   useEffect(() => { fetchListings() }, [category, county, sort])
   useEffect(() => { if (profile) { fetchSaved(); fetchOrders(); fetchMyListings() } }, [profile])
 
@@ -179,6 +188,69 @@ export default function MarketPage() {
     const preview = URL.createObjectURL(file)
     setCreateForm(p => ({ ...p, imageFile: file, imagePreview: preview }))
     e.target.value = ''
+  }
+
+  const openEdit = (item: Listing) => {
+    setEditItem(item)
+    setEditForm({ title: item.title, description: item.description, price: String(item.price), category: item.category, county: item.county || '', status: item.status })
+    setEditImages(item.images || [])
+    setNewPhotos([])
+    setEditImageFiles([])
+  }
+
+  const handleEditImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+    const valid = files.filter(f => f.size <= 10 * 1024 * 1024 && f.type.startsWith('image/'))
+    if (valid.length === 0) { toast('Select valid images (max 10MB each)'); e.target.value = ''; return }
+    const compressed = await Promise.all(valid.map(async f => {
+      try { return await imageCompress(f, { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true }) } catch { return f }
+    }))
+    const photos = compressed.map(f => ({ file: f, preview: URL.createObjectURL(f) }))
+    setNewPhotos(prev => [...prev, ...photos])
+    setEditImageFiles(prev => [...prev, ...compressed])
+    e.target.value = ''
+  }
+
+  const removeExistingPhoto = (url: string) => {
+    setEditImages(prev => prev.filter(u => u !== url))
+  }
+
+  const removeNewPhoto = (idx: number) => {
+    setNewPhotos(prev => {
+      URL.revokeObjectURL(prev[idx].preview)
+      const next = [...prev]; next.splice(idx, 1); return next
+    })
+    setEditImageFiles(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  const handleSaveEdit = async () => {
+    if (!profile || !editItem) return
+    if (!editForm.title.trim() || !editForm.price) { toast('Title and price required'); return }
+    setSavingEdit(true)
+    try {
+      const allImages = [...editImages]
+      for (const f of editImageFiles) {
+        const ext = f.name.split('.').pop() || 'jpg'
+        const path = `marketplace/${profile.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+        const { error: upErr } = await supabase.storage.from('public-media').upload(path, f, { upsert: true })
+        if (upErr) throw upErr
+        const { data: { publicUrl } } = supabase.storage.from('public-media').getPublicUrl(path)
+        allImages.push(publicUrl)
+      }
+      const { error } = await supabase.from('marketplace_listings').update({
+        title: editForm.title.trim(), description: editForm.description.trim(),
+        price: parseFloat(editForm.price), category: editForm.category,
+        county: editForm.county || null, status: editForm.status,
+        images: allImages.length > 0 ? allImages : null,
+      }).eq('id', editItem.id)
+      if (error) throw error
+      toast('Listing updated!')
+      setEditItem(null)
+      newPhotos.forEach(p => URL.revokeObjectURL(p.preview))
+      fetchMyListings(); fetchListings()
+      if (detailItem?.id === editItem.id) setDetailItem({ ...detailItem, ...editForm, status: editForm.status as Listing['status'], price: parseFloat(editForm.price), images: allImages.length > 0 ? allImages : null })
+    } catch (err: any) { toast(err.message || 'Failed to update') } finally { setSavingEdit(false) }
   }
 
   const handleBuy = async () => {
@@ -349,17 +421,23 @@ export default function MarketPage() {
                       </div>
                       <div className="p-[14px]">
                         <h3 className="text-[13px] font-bold truncate" style={{ color: 'var(--ink)' }}>{item.title}</h3>
-                        <p className="text-[15px] font-extrabold mt-1" style={{ color: 'var(--gold)' }}>KSh {item.price.toLocaleString()}</p>
+                        <p className="text-[15px] font-extrabold mt-1" style={{ color: 'var(--gold-text)' }}>KSh {item.price.toLocaleString()}</p>
                         <div className="flex items-center gap-2 mt-2 text-[10px]" style={{ color: 'var(--muted)' }}>
                           {item.county && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {item.county}</span>}
                           <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {item.views_count || 0}</span>
                           {item.seller_rating > 0 && <span className="flex items-center gap-1"><Star className="w-3 h-3" style={{ color: 'var(--gold)' }} /> {item.seller_rating}</span>}
                         </div>
                         {item.profiles && <p className="text-[10px] mt-1.5 truncate" style={{ color: 'var(--muted)' }}>by {item.profiles.full_name || item.profiles.username}</p>}
-                        <button onClick={e => { e.stopPropagation(); setBuyItem(item) }}
-                          style={{ width: '100%', ...s.btn, ...s.primaryBtn, justifyContent: 'center', marginTop: 10, padding: '8px', fontSize: 11 }}>
-                          <ShoppingBag className="w-3.5 h-3.5" /> Buy Now
-                        </button>
+                        <div className="flex gap-2" style={{ marginTop: 10 }}>
+                          <button onClick={e => { e.stopPropagation(); setBuyItem(item) }}
+                            style={{ flex: 1, ...s.btn, ...s.primaryBtn, justifyContent: 'center', padding: '8px', fontSize: 11 }}>
+                            <ShoppingBag className="w-3.5 h-3.5" /> Buy Now
+                          </button>
+                          <Link href={`/messages?user=${item.seller_id}`} onClick={e => e.stopPropagation()} aria-label="Message seller"
+                            style={{ ...s.btn, ...s.secondaryBtn, justifyContent: 'center', padding: '8px' }}>
+                            <MessageCircle className="w-3.5 h-3.5" />
+                          </Link>
+                        </div>
                       </div>
                     </div>
                   )
@@ -447,10 +525,21 @@ export default function MarketPage() {
                         {item.status}
                       </span>
                     </div>
-                    <p className="text-[14px] font-extrabold mt-0.5" style={{ color: 'var(--gold)' }}>KSh {item.price.toLocaleString()}</p>
+                    <p className="text-[14px] font-extrabold mt-0.5" style={{ color: 'var(--gold-text)' }}>KSh {item.price.toLocaleString()}</p>
                     <div className="flex items-center gap-3 text-[10px] mt-1" style={{ color: 'var(--muted)' }}>
                       <span><Eye className="w-3 h-3 inline" /> {item.views_count || 0}</span>
                       <span><ShoppingBag className="w-3 h-3 inline" /> {item.orders_count || 0} orders</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      <button onClick={() => openEdit(item)} style={{ ...s.btn, padding: '7px 14px', fontSize: 10, ...s.secondaryBtn }}>
+                        <Upload className="w-3 h-3" /> Edit / Photos
+                      </button>
+                      <button onClick={() => setDetailItem(item)} style={{ ...s.btn, padding: '7px 14px', fontSize: 10, ...s.secondaryBtn }}>
+                        <Eye className="w-3 h-3" /> View
+                      </button>
+                      <Link href={`/messages?user=${item.seller_id}`} style={{ ...s.btn, padding: '7px 14px', fontSize: 10, ...s.secondaryBtn }}>
+                        <MessageCircle className="w-3 h-3" /> DM Seller
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -517,6 +606,79 @@ export default function MarketPage() {
         </div>
       )}
 
+      {/* Edit Listing Modal */}
+      {editItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-center-scroll" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }} onClick={() => setEditItem(null)}>
+          <div style={{ ...s.card, width: 'min(520px, 100%)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold text-base" style={{ color: 'var(--ink)' }}>Edit Listing</h3>
+              <button onClick={() => setEditItem(null)} style={{ background: 'none', border: 0, color: 'var(--muted)', cursor: 'pointer' }}><X className="w-5 h-5" /></button>
+            </div>
+            <div className="space-y-3">
+              <div><label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>Title</label><input value={editForm.title} onChange={e => setEditForm(p => ({ ...p, title: e.target.value }))} style={s.input} /></div>
+              <div><label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>Description</label><textarea value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} style={{ ...s.input, minHeight: 70, resize: 'vertical' }} rows={3} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>Price (KSh)</label><input type="number" value={editForm.price} onChange={e => setEditForm(p => ({ ...p, price: e.target.value }))} style={s.input} /></div>
+                <div><label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>Category</label>
+                  <select value={editForm.category} onChange={e => setEditForm(p => ({ ...p, category: e.target.value }))} style={s.input}>
+                    {CATEGORIES.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>County</label>
+                  <select value={editForm.county} onChange={e => setEditForm(p => ({ ...p, county: e.target.value }))} style={s.input}>
+                    <option value="">Select county</option>
+                    {COUNTIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div><label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>Status</label>
+                  <select value={editForm.status} onChange={e => setEditForm(p => ({ ...p, status: e.target.value }))} style={s.input}>
+                    <option value="active">Active</option>
+                    <option value="sold">Sold</option>
+                    <option value="expired">Expired</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>Photos ({editImages.length + newPhotos.length})</label>
+                <input ref={editFileInputRef} type="file" accept="image/*" multiple onChange={handleEditImageSelect} style={{ display: 'none' }} />
+                {(editImages.length > 0 || newPhotos.length > 0) && (
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    {editImages.map((url, i) => (
+                      <div key={`e-${i}`} className="relative rounded-[10px] overflow-hidden h-[80px]" style={{ background: 'var(--raised)' }}>
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                        <button onClick={() => removeExistingPhoto(url)} aria-label="Remove photo"
+                          className="absolute top-1 right-1 w-6 h-6 rounded-full grid place-items-center" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)', color: '#fff', border: 0, cursor: 'pointer' }}>
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    {newPhotos.map((p, i) => (
+                      <div key={`n-${i}`} className="relative rounded-[10px] overflow-hidden h-[80px]" style={{ background: 'var(--raised)' }}>
+                        <img src={p.preview} alt="" className="w-full h-full object-cover" />
+                        <button onClick={() => removeNewPhoto(i)} aria-label="Remove photo"
+                          className="absolute top-1 right-1 w-6 h-6 rounded-full grid place-items-center" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)', color: '#fff', border: 0, cursor: 'pointer' }}>
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button type="button" onClick={() => editFileInputRef.current?.click()}
+                  style={{ ...s.input, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', padding: '14px', cursor: 'pointer', borderStyle: 'dashed' }}>
+                  <ImageIcon className="w-5 h-5" style={{ color: 'var(--muted)' }} />
+                  <span style={{ color: 'var(--muted)', fontSize: 12 }}>Add more photos</span>
+                </button>
+              </div>
+              <button onClick={handleSaveEdit} disabled={savingEdit} style={{ ...s.btn, ...s.primaryBtn, width: '100%', justifyContent: 'center' }}>
+                {savingEdit ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Buy Modal */}
       {buyItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-center-scroll" style={{ background: 'color-mix(in oklab, var(--night) 70%, transparent)' }} onClick={() => setBuyItem(null)}>
@@ -525,7 +687,7 @@ export default function MarketPage() {
               <h3 className="font-bold text-sm" style={{ color: 'var(--ink)' }}>Buy: {buyItem.title}</h3>
               <button onClick={() => setBuyItem(null)} style={{ background: 'none', border: 0, color: 'var(--muted)', cursor: 'pointer' }}><X className="w-5 h-5" /></button>
             </div>
-            <p className="text-[18px] font-extrabold mb-4" style={{ color: 'var(--gold)' }}>KSh {buyItem.price.toLocaleString()}</p>
+            <p className="text-[18px] font-extrabold mb-4" style={{ color: 'var(--gold-text)' }}>KSh {buyItem.price.toLocaleString()}</p>
             <div className="space-y-3">
               <div>
                 <label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>Quantity</label>
@@ -539,7 +701,7 @@ export default function MarketPage() {
               <div><label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>Delivery address</label><textarea value={buyForm.address} onChange={e => setBuyForm(p => ({ ...p, address: e.target.value }))} style={{ ...s.input, minHeight: 60, resize: 'vertical' }} placeholder="Village, landmark, directions..." rows={2} /></div>
               <div><label className="text-[10px] font-semibold block mb-1" style={{ color: 'var(--muted)' }}>Notes (optional)</label><input value={buyForm.notes} onChange={e => setBuyForm(p => ({ ...p, notes: e.target.value }))} style={s.input} placeholder="Any special instructions" /></div>
               <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid var(--line)' }}>
-                <span className="text-[13px]" style={{ color: 'var(--muted)' }}>Total: <strong className="text-[18px]" style={{ color: 'var(--gold)' }}>KSh {(buyItem.price * buyForm.quantity).toLocaleString()}</strong></span>
+                <span className="text-[13px]" style={{ color: 'var(--muted)' }}>Total: <strong className="text-[18px]" style={{ color: 'var(--gold-text)' }}>KSh {(buyItem.price * buyForm.quantity).toLocaleString()}</strong></span>
                 <button onClick={handleBuy} disabled={buying} style={{ ...s.btn, ...s.primaryBtn }}>
                   {buying ? '...' : <><CreditCard className="w-4 h-4" /> Place Order</>}
                 </button>
@@ -562,7 +724,7 @@ export default function MarketPage() {
                 <img src={detailItem.images[0]} alt="" className="w-full h-full object-cover" />
               </div>
             )}
-            <p className="text-[22px] font-extrabold mb-3" style={{ color: 'var(--gold)' }}>KSh {detailItem.price.toLocaleString()}</p>
+            <p className="text-[22px] font-extrabold mb-3" style={{ color: 'var(--gold-text)' }}>KSh {detailItem.price.toLocaleString()}</p>
             <p className="text-[13px] leading-relaxed mb-4" style={{ color: 'var(--ink)' }}>{detailItem.description || 'No description provided.'}</p>
             <div className="flex flex-wrap gap-3 text-[11px] mb-4" style={{ color: 'var(--muted)' }}>
               {detailItem.county && <span><MapPin className="w-3.5 h-3.5 inline" /> {detailItem.county}</span>}
@@ -595,6 +757,9 @@ export default function MarketPage() {
               <button onClick={() => { setDetailItem(null); setBuyItem(detailItem) }} style={{ flex: 1, ...s.btn, ...s.primaryBtn, justifyContent: 'center' }}>
                 <ShoppingBag className="w-4 h-4" /> Buy Now
               </button>
+              <Link href={`/messages?user=${detailItem.seller_id}`} style={{ ...s.btn, ...s.secondaryBtn }} aria-label="Message seller">
+                <MessageCircle className="w-4 h-4" />
+              </Link>
               <button onClick={() => { toggleSave(detailItem.id); setDetailItem(null) }} style={{ ...s.btn, ...s.secondaryBtn }}>
                 <Heart className={`w-4 h-4 ${savedIds.has(detailItem.id) ? 'fill-current' : ''}`} />
               </button>

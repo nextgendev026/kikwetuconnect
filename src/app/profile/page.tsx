@@ -311,7 +311,7 @@ export default function ProfilePage() {
             </div>
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-sm">Heshima Points</h3>
+            <h2 className="font-bold text-sm">Heshima Points</h2>
             <div className="flex items-center gap-3 mt-1">
               <p className="text-xs text-muted">Balance: <strong className="text-green">{profile.heshima_balance || 0}</strong></p>
               <p className="text-xs text-muted">Streak: <strong className="text-gold">{profile.streak_days || 0}d</strong></p>
