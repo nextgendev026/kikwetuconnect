@@ -1,12 +1,14 @@
 'use client'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { X, PenSquare, HelpCircle, BarChart3, ShoppingBag, Shield, Image, Video, Mic, Trash2, Upload, Plus, Minus, Coins, MapPin, Tag, Play } from 'lucide-react'
+import { X, PenSquare, HelpCircle, BarChart3, ShoppingBag, Shield, Image, Video, Mic, Trash2, Upload, Plus, Minus, Coins, MapPin, Tag, Play, FileText, Bold, Italic, Heading2, List, Link2, Quote } from 'lucide-react'
 import imageCompress from 'browser-image-compression'
 import MediaEditor from '@/components/MediaEditor'
+import { countWords } from '@/components/RichText'
 
 const TYPES = [
   { id: 'post', label: 'Post', icon: PenSquare, color: 'var(--green)' },
+  { id: 'article', label: 'Article', icon: FileText, color: 'var(--gold)' },
   { id: 'question', label: 'Question', icon: HelpCircle, color: 'var(--gold)' },
   { id: 'poll', label: 'Poll', icon: BarChart3, color: 'var(--blue)' },
   { id: 'listing', label: 'Mtaa listing', icon: ShoppingBag, color: 'var(--earth)' },
@@ -16,6 +18,7 @@ const TYPES = [
 
 const LABELS: Record<string, string> = {
   post: 'What is on your mind?',
+  article: 'Write a longer piece',
   question: 'What do you want to learn?',
   poll: 'What should the community weigh in on?',
   listing: 'What are you offering?',
@@ -25,6 +28,7 @@ const LABELS: Record<string, string> = {
 
 const PLACEHOLDERS: Record<string, string> = {
   post: 'Share a useful thought, update, or local insight...',
+  article: 'Write your article here. Use # headings, **bold**, *italic*, lists, > quotes and [links](https://...)...',
   question: 'Ask a specific question to get answers from experts...',
   poll: 'Ask the community to weigh in...',
   listing: 'Describe what you are selling or offering...',
@@ -166,6 +170,24 @@ export default function CreateModal() {
     mediaFiles.forEach(m => URL.revokeObjectURL(m.preview))
   }
 
+  const applyFormat = (prefix: string, suffix: string = prefix, placeholder?: string) => {
+    const el = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Content"]')
+    if (!el) return
+    const start = el.selectionStart ?? text.length
+    const end = el.selectionEnd ?? text.length
+    const selected = text.slice(start, end) || placeholder || ''
+    const next = text.slice(0, start) + prefix + selected + suffix + text.slice(end)
+    setText(next)
+    requestAnimationFrame(() => {
+      el.focus()
+      const cursor = start + prefix.length + selected.length + suffix.length
+      el.setSelectionRange(cursor, cursor)
+    })
+  }
+
+  const wordCount = countWords(text)
+  const isArticle = type === 'article' || (type === 'post' && wordCount > 100)
+
   const handlePublish = async () => {
     if (!user) { toast('Please sign in first'); return }
     if (type === 'listing') {
@@ -244,14 +266,14 @@ export default function CreateModal() {
         return
       }
 
-      const postType = type === 'question' ? 'inquiry' : type === 'poll' ? 'poll' : 'baraza'
-      const catMap: Record<string, string> = { post: 'Post', question: 'Ask', poll: 'Poll' }
+      const postType = type === 'question' ? 'inquiry' : type === 'poll' ? 'poll' : isArticle ? 'article' : 'baraza'
+      const catMap: Record<string, string> = { post: 'Post', question: 'Ask', poll: 'Poll', article: 'Article' }
       const insertData: any = {
         user_id: user.id, post_type: postType, content: text,
         title: title || text.split('\n')[0].slice(0, 100),
         media_url: mediaUrls[0] || null,
         media_type: mediaFiles[0]?.type || null,
-        category: catMap[type] || 'Post',
+        category: isArticle ? 'Article' : (catMap[type] || 'Post'),
         county_tag: countyTag,
         baraza_id: barazaId,
         space_id: spaceId,
@@ -358,6 +380,23 @@ export default function CreateModal() {
         {/* Body text */}
         <div style={{ marginBottom: 12 }}>
           <label style={label}>{type === 'poll' ? 'Context' : LABELS[type] || 'What is on your mind?'}</label>
+          {['post', 'article', 'question', 'poll'].includes(type) && (
+            <div style={{ display: 'flex', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
+              {[
+                { title: 'Bold', icon: Bold, action: () => applyFormat('**', '**', 'bold text') },
+                { title: 'Italic', icon: Italic, action: () => applyFormat('*', '*', 'italic text') },
+                { title: 'Heading', icon: Heading2, action: () => applyFormat('## ', '', 'Heading') },
+                { title: 'List', icon: List, action: () => applyFormat('- ', '', 'List item') },
+                { title: 'Link', icon: Link2, action: () => applyFormat('[', '](https://)', 'link text') },
+                { title: 'Quote', icon: Quote, action: () => applyFormat('> ', '', 'Quote') },
+              ].map(b => (
+                <button key={b.title} type="button" title={b.title} aria-label={b.title} onClick={b.action}
+                  style={{ width: 30, height: 30, display: 'grid', placeItems: 'center', background: 'var(--raised)', color: 'var(--muted)', border: '1px solid var(--line)', borderRadius: 8, cursor: 'pointer' }}>
+                  <b.icon className="w-3.5 h-3.5" />
+                </button>
+              ))}
+            </div>
+          )}
           <textarea ref={textareaRef} value={text} onChange={e => setText(e.target.value)}
             placeholder={PLACEHOLDERS[type] || 'Share a useful thought, update, or local insight...'}
             rows={type === 'poll' ? 2 : 4} aria-label="Content"
@@ -367,6 +406,18 @@ export default function CreateModal() {
               borderRadius: 12, fontFamily: 'inherit', color: 'var(--ink)',
               outline: 'none', fontSize: 13, resize: 'vertical',
             }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+            <span style={{ fontSize: 10, color: 'var(--muted)' }}>{wordCount} {wordCount === 1 ? 'word' : 'words'}</span>
+            {(type === 'post' || type === 'article') && (
+              <span style={{
+                padding: '2px 9px', borderRadius: 99, fontSize: 10, fontWeight: 700, letterSpacing: '.02em',
+                background: isArticle ? 'color-mix(in oklab, var(--gold) 18%, transparent)' : 'color-mix(in oklab, var(--green) 18%, transparent)',
+                color: isArticle ? 'var(--gold)' : 'var(--green)',
+              }}>
+                {isArticle ? 'Article — long-form' : 'Post — short & straight'}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Poll options */}
@@ -436,8 +487,8 @@ export default function CreateModal() {
           </div>
         )}
 
-        {/* County tag (for post, question, poll) */}
-        {['post', 'question', 'poll'].includes(type) && (
+        {/* County tag (for post, article, question, poll) */}
+        {['post', 'article', 'question', 'poll'].includes(type) && (
           <div style={{ marginBottom: 12 }}>
             <label style={label}><MapPin className="w-3 h-3" /> County tag (optional)</label>
             <select style={sel} value={countyTag || ''} onChange={e => setCountyTag(e.target.value || null)}>
@@ -447,8 +498,8 @@ export default function CreateModal() {
           </div>
         )}
 
-        {/* Media upload (post, question, poll, listing, and 24h stories) */}
-        {['post', 'question', 'poll', 'listing', 'story'].includes(type) && (
+        {/* Media upload (post, article, question, poll, listing, and 24h stories) */}
+        {['post', 'article', 'question', 'poll', 'listing', 'story'].includes(type) && (
           <>
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
               <input ref={fileInputRef} type="file" accept="image/*" multiple={type !== 'story'} onChange={e => handleMediaSelect(e, 'image')} className="hidden" />

@@ -62,7 +62,7 @@ export default function ShareMenu({ url, title, compact = false }: { url: string
           transition: 'all .18s ease',
         }}>
         <Share2 className={compact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
-        {!compact && 'Share'}
+        {!compact && <span className="hidden sm:inline">Share</span>}
       </button>
 
       {open && (

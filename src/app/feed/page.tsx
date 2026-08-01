@@ -6,6 +6,7 @@ import { ArrowUp, MessageCircle, Smile, Globe, Star, Flag, MoreHorizontal, Edit3
 import FeedAd from '@/components/FeedAd'
 import ShareMenu from '@/components/ShareMenu'
 import StoryStrip from '@/components/StoryStrip'
+import RichText, { stripMarkdown } from '@/components/RichText'
 import { COUNTIES, TABS, TYPE_FILTERS, EMOJI_REACTIONS } from '@/lib/feed-config'
 import type { TabId, TypeFilter } from '@/lib/feed-config'
 
@@ -61,13 +62,6 @@ function timeAgo(date: string): string {
 function getInitials(name: string | null | undefined): string {
   if (!name) return '?'
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-}
-
-function truncateContent(content: string, maxLen = 200): string {
-  if (content.length <= maxLen) return content
-  const firstPara = content.split(/\n\s*\n/)[0]
-  if (firstPara.length <= maxLen) return firstPara
-  return firstPara.slice(0, maxLen).replace(/\s+\S*$/, '') + '...'
 }
 
 function SkeletonCard() {
@@ -311,16 +305,22 @@ function PostCardComponent({
         <Link href={`/posts/${post.id}`} className="block text-cream font-bold text-[15px] mb-[6px] leading-[1.3] hover:text-gold transition-colors">{post.title}</Link>
       )}
 
-      {/* Content — truncated to first paragraph in feed */}
+      {/* Content — styled text (rich for articles, clamped in feed) */}
       <div className="mb-[12px]">
-        <p className="text-cream text-[13px] leading-[1.6] whitespace-pre-wrap break-words">
-          {translatedText || truncateContent(post.content)}
-          {translatedText && <span className="text-[10px] ml-1 opacity-50">(SW)</span>}
-        </p>
-        {!translatedText && post.content.length > 200 && (
-          <Link href={`/posts/${post.id}`} className="inline-block mt-[6px] text-gold text-[12px] font-bold hover:underline">
-            Read full post ↗
-          </Link>
+        {translatedText ? (
+          <p className="text-cream text-[13px] leading-[1.6] whitespace-pre-wrap break-words">
+            {translatedText}
+            <span className="text-[10px] ml-1 opacity-50">(SW)</span>
+          </p>
+        ) : (
+          <>
+            <RichText content={post.content} className="text-[13px]" clamp={stripMarkdown(post.content).length > 220} />
+            {stripMarkdown(post.content).length > 220 && (
+              <Link href={`/posts/${post.id}`} className="inline-block mt-[6px] text-gold text-[12px] font-bold hover:underline">
+                Read full post ↗
+              </Link>
+            )}
+          </>
         )}
       </div>
 
@@ -487,7 +487,7 @@ export default function FeedPage() {
 const [showCountyPicker, setShowCountyPicker] = useState(false)
   const [composerText, setComposerText] = useState('')
 
-  const composerTypeMap: Record<string, string> = { baraza: 'post', inquiry: 'question', poll: 'poll' }
+  const composerTypeMap: Record<string, string> = { baraza: 'post', inquiry: 'question', poll: 'poll', article: 'article' }
   const openCreateModal = (type?: string) => {
     document.dispatchEvent(new CustomEvent('open-create-modal', { detail: { type: type ? composerTypeMap[type] || 'post' : undefined } }))
   }
@@ -775,6 +775,7 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
             { label: 'Post', icon: '💬', mode: 'baraza' },
             { label: 'Ask', icon: '❓', mode: 'inquiry' },
             { label: 'Poll', icon: '📊', mode: 'poll' },
+            { label: 'Article', icon: '📄', mode: 'article' },
           ].map(action => (
             <button
               key={action.label}

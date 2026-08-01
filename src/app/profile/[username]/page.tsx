@@ -18,6 +18,7 @@ export default function UserProfilePage() {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [loadError, setLoadError] = useState('')
   const [activeTab, setActiveTab] = useState<Tab>('posts')
   const [postCount, setPostCount] = useState(0)
   const [posts, setPosts] = useState<any[]>([])
@@ -32,19 +33,25 @@ export default function UserProfilePage() {
 
   useEffect(() => {
     let cancelled = false
-    if (!username) return
+    if (!username) { setNotFound(true); setLoading(false); return }
     ;(async () => {
-      // Resolve by username, falling back to id lookup so links using a UUID still work
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .or(`username.eq.${username},id.eq.${username}`)
-        .maybeSingle()
-      if (cancelled) return
-      if (error) { toast(error.message); setLoading(false); return }
-      if (!data) { setNotFound(true); setLoading(false); return }
-      setProfile(data)
-      setLoading(false)
+      try {
+        // Resolve by username, falling back to id lookup so links using a UUID still work
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .or(`username.eq.${username},id.eq.${username}`)
+          .maybeSingle()
+        if (cancelled) return
+        if (error) { setLoadError(error.message); setLoading(false); return }
+        if (!data) { setNotFound(true); setLoading(false); return }
+        setProfile(data)
+      } catch (e: any) {
+        if (cancelled) return
+        setLoadError(e?.message || 'Failed to load profile')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     })()
     return () => { cancelled = true }
   }, [username, supabase])
@@ -157,6 +164,20 @@ export default function UserProfilePage() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
       <h2 style={{ fontWeight: 800, fontSize: 28, color: 'var(--ink)' }}>Profile not found</h2>
       <p style={{ color: 'var(--muted)' }}>@{username} doesn't exist on KikwetuConnect</p>
+    </div>
+  )
+
+  if (loadError || !profile) return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, textAlign: 'center', padding: 24 }}>
+      <h2 style={{ fontWeight: 800, fontSize: 24, color: 'var(--ink)' }}>Couldn't load this profile</h2>
+      <p style={{ color: 'var(--muted)', maxWidth: 380 }}>{loadError || 'Something went wrong. Please try again.'}</p>
+      <button onClick={() => window.location.reload()}
+        style={{
+          padding: '10px 22px', borderRadius: 11, fontWeight: 700, fontSize: 12,
+          background: 'var(--gold)', color: 'var(--night)', border: 0, cursor: 'pointer',
+        }}>
+        Retry
+      </button>
     </div>
   )
 

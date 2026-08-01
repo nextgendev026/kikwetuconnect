@@ -7,6 +7,7 @@ import { ArrowLeft, MessageCircle, TrendingUp, Bookmark, Shield, Star, MoreHoriz
 import { Button, Textarea } from '@/components/ui/form'
 import { useUser, useSupabase, toast } from '@/app/providers'
 import ShareMenu from '@/components/ShareMenu'
+import RichText from '@/components/RichText'
 
 interface Profile {
   id: string
@@ -371,7 +372,7 @@ export default function PostDetailPage() {
           </div>
         )}
         {post.title && <h1 className="text-2xl font-bold mb-4">{post.title}</h1>}
-        <p className="text-base text-text mb-4 leading-relaxed">{post.content}</p>
+        <RichText content={post.content} className="text-[15px] mb-4" />
 
         {/* Metadata */}
         <div className="flex flex-wrap gap-2 mb-4">
@@ -414,7 +415,7 @@ export default function PostDetailPage() {
               }`}
             >
               <TrendingUp className="w-4 h-4" />
-              Upvote
+              <span className="hidden sm:inline">Upvote</span>
             </button>
             <ShareMenu url={`/posts/${post.id}`} title={post.title || post.content.slice(0, 80)} />
             <button onClick={async () => {
@@ -430,7 +431,7 @@ export default function PostDetailPage() {
               className={`min-h-[44px] px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${userSaved ? 'bg-gold-bg text-gold' : 'text-muted hover:bg-surface'}`}
               aria-label={userSaved ? 'Unsave post' : 'Save post'}>
               <Bookmark className={`w-4 h-4 ${userSaved ? 'fill-current' : ''}`} />
-              {userSaved ? 'Saved' : 'Save'}
+              <span className="hidden sm:inline">{userSaved ? 'Saved' : 'Save'}</span>
             </button>
           </div>
         </div>
@@ -536,7 +537,7 @@ export default function PostDetailPage() {
                         }`}
                       >
                         <TrendingUp className="w-3 h-3" />
-                        Upvote
+                        <span className="hidden sm:inline">Upvote</span>
                       </button>
                       <ShareMenu compact url={`/posts/${post.id}`} title={`Answer on "${post.title || 'KikwetuConnect'}"`} />
                       <button
@@ -545,7 +546,7 @@ export default function PostDetailPage() {
                         aria-label="Report answer"
                       >
                         <Flag className="w-3 h-3" />
-                        Report
+                        <span className="hidden sm:inline">Report</span>
                       </button>
                     </div>
                   </div>

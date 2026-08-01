@@ -1,4 +1,5 @@
 import { createApiClient } from '@/lib/server-supabase'
+import { dispatchPushForNotification } from '@/lib/push-notifications'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     const { data: answeredPost } = await supabase
       .from('posts').select('user_id, title').eq('id', postId).maybeSingle()
     if (answeredPost && answeredPost.user_id !== user.id) {
-      await supabase.from('notifications').insert({
+      const { data: notifRow } = await supabase.from('notifications').insert({
         user_id: answeredPost.user_id,
         actor_id: user.id,
         type: 'new_answer',
@@ -60,7 +61,8 @@ export async function POST(request: NextRequest) {
         target_type: 'post',
         content: `New answer on "${(answeredPost.title || content).slice(0, 80)}"`,
         meta: { link: `/posts/${postId}` },
-      })
+      }).select().single()
+      if (notifRow) await dispatchPushForNotification(notifRow)
     }
 
     return NextResponse.json({

@@ -507,6 +507,23 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .clickable-box, [class*="cursor-pointer"] { min-height: 44px; }
 }
 
+/* Rich text rendering for posts & articles */
+.rich-text { line-height: 1.6; font-size: inherit; }
+.rich-text .rich-p { margin: 0 0 10px; white-space: pre-wrap; word-break: break-word; }
+.rich-text .rich-h1 { font-size: 22px; font-weight: 800; margin: 14px 0 8px; letter-spacing: -.02em; }
+.rich-text .rich-h2 { font-size: 18px; font-weight: 700; margin: 12px 0 6px; }
+.rich-text .rich-h3 { font-size: 15px; font-weight: 700; margin: 10px 0 6px; }
+.rich-text .rich-ul { margin: 0 0 10px; padding-left: 20px; list-style: disc; }
+.rich-text .rich-ol { margin: 0 0 10px; padding-left: 20px; list-style: decimal; }
+.rich-text .rich-li { margin-bottom: 4px; }
+.rich-text .rich-quote { border-left: 3px solid var(--gold); padding: 2px 12px; margin: 0 0 10px; color: var(--muted); font-style: italic; }
+.rich-text .rich-code { background: var(--raised); padding: 1px 5px; border-radius: 5px; font-family: ui-monospace, monospace; font-size: 12px; }
+.rich-text .rich-link { color: var(--gold); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.rich-text .rich-hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
+.rich-text .rich-strong { font-weight: 700; }
+.rich-text .rich-em { font-style: italic; }
+.rich-text .rich-strike { text-decoration: line-through; }
+
 /* Viewport-safe centered modals: when content is taller than the viewport,
    the overlay scrolls and the card stays reachable instead of clipping its top.
    Add `modal-center-scroll` to any `fixed inset-0 flex items-center justify-center` wrapper. */

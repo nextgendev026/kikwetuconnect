@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { dispatchPushForNotification } from '@/lib/push-notifications'
 import { NextRequest, NextResponse } from 'next/server'
 
 interface NotifyOptions {
@@ -39,6 +40,9 @@ export async function sendNotification(request: NextRequest, options: NotifyOpti
     created_at: now,
   }))
 
-  const { error } = await supabase.from('notifications').insert(rows)
+  const { data: inserted, error } = await supabase.from('notifications').insert(rows).select()
   if (error) console.error('sendNotification error:', error)
+  if (inserted?.length) {
+    for (const row of inserted) await dispatchPushForNotification(row)
+  }
 }

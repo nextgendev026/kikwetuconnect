@@ -1,5 +1,6 @@
 import { createApiClient, createServiceClient } from '@/lib/server-supabase'
 import { trackActivity } from '@/lib/activity'
+import { dispatchPushForNotification } from '@/lib/push-notifications'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
     .eq('id', target_id)
     .maybeSingle()
   if (target?.user_id && target.user_id !== user.id && vote_type === 1) {
-    await svc.from('notifications').insert({
+    const { data: notifRow } = await svc.from('notifications').insert({
       user_id: target.user_id,
       actor_id: user.id,
       type: 'upvote',
@@ -53,7 +54,8 @@ export async function POST(request: NextRequest) {
       target_type,
       content: `Your ${target_type === 'post' ? 'post' : 'answer'} was upvoted`,
       meta: { link: `/${target_type === 'post' ? 'posts' : 'answers'}/${target_id}` },
-    })
+    }).select().single()
+    if (notifRow) await dispatchPushForNotification(notifRow)
   }
 
   await trackActivity(supabase, {

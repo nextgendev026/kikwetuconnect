@@ -1,4 +1,5 @@
 import { createApiClient } from '@/lib/server-supabase'
+import { dispatchPushForNotification } from '@/lib/push-notifications'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -28,12 +29,13 @@ export async function POST(request: NextRequest) {
     if (sErr) return NextResponse.json({ error: sErr.message }, { status: 400 })
 
     // Notify student
-    await supabase.from('notifications').insert({
+    const { data: assignedNotif } = await supabase.from('notifications').insert({
       user_id: helpReq.student_id, actor_id: user.id,
       type: 'session_assigned', target_id: session.id, target_type: 'session',
       content: 'An expert has started a session for your help request',
       meta: { link: '/sessions' },
-    })
+    }).select().single()
+    if (assignedNotif) await dispatchPushForNotification(assignedNotif)
 
     return NextResponse.json({ session, message: 'Session started' })
   } catch (e: any) {
@@ -74,14 +76,17 @@ export async function PATCH(request: NextRequest) {
     // Notify both participants
     const sessionParticipants = [session.expert_id, session.student_id].filter(id => id !== user.id)
     if (sessionParticipants.length > 0) {
-      await supabase.from('notifications').insert(
+      const { data: endNotifs } = await supabase.from('notifications').insert(
         sessionParticipants.map(uid => ({
           user_id: uid, actor_id: user.id,
           type: 'session_ended', target_id: session_id, target_type: 'session',
           content: `Session completed (${duration_minutes} min)`,
           meta: { link: '/sessions' },
         }))
-      )
+      ).select()
+      if (endNotifs?.length) {
+        for (const n of endNotifs) await dispatchPushForNotification(n)
+      }
     }
 
     return NextResponse.json({ session: updated, message: `Session completed — ${duration_minutes} min` })
