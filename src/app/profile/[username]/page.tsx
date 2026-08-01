@@ -27,6 +27,7 @@ export default function UserProfilePage() {
   const [loadingPosts, setLoadingPosts] = useState(false)
   const [heshimaEarnings, setHeshimaEarnings] = useState<any[]>([])
   const [isFollowing, setIsFollowing] = useState(false)
+  const [followRequest, setFollowRequest] = useState<any>(null)
   const { user } = useUser()
   const router = useRouter()
   const { setConfig } = useToolbar()
@@ -76,9 +77,33 @@ export default function UserProfilePage() {
       toast(errBody?.error || 'Follow failed')
       return
     }
-    const { following } = await res.json()
-    setIsFollowing(following)
-    setProfile((prev: any) => ({ ...prev, follower_count: Math.max(0, (prev?.follower_count || 0) + (following ? 1 : -1)) }))
+    const result = await res.json()
+    if (result.action === 'unfollowed') {
+      setIsFollowing(false)
+      setFollowRequest(null)
+      setProfile((prev: any) => ({ ...prev, follower_count: Math.max(0, (prev?.follower_count || 0) - 1) }))
+      return
+    }
+    if (result.action === 'request_sent') {
+      setFollowRequest(result.followRequestId)
+      toast('Follow request sent')
+      return
+    }
+    if (result.action === 'request_pending') {
+      setFollowRequest(result.followRequest?.id)
+      toast('Follow request already pending')
+      return
+    }
+    if (result.action === 'already_following') {
+      setIsFollowing(true)
+      setFollowRequest(null)
+      return
+    }
+    // Fallback for direct follow (if no request system)
+    if (result.following !== undefined) {
+      setIsFollowing(result.following)
+      setProfile((prev: any) => ({ ...prev, follower_count: Math.max(0, (prev?.follower_count || 0) + (result.following ? 1 : -1)) }))
+    }
   }
 
   const handleMessage = async () => {
@@ -96,19 +121,29 @@ export default function UserProfilePage() {
   useEffect(() => {
     if (!profile || !user) return
     if (profile.id === user.id) { setConfig(null); return }
+    const isPending = !!followRequest
     setConfig({
       actions: [
-        { icon: Heart, label: isFollowing ? 'Following' : 'Follow', onClick: handleFollow, variant: isFollowing ? 'default' : 'gold', active: isFollowing },
+        { icon: Heart, label: isFollowing ? 'Following' : isPending ? 'Requested' : 'Follow', onClick: handleFollow, variant: isFollowing ? 'default' : isPending ? 'default' : 'gold', active: isFollowing || isPending },
         { icon: MessageCircle, label: 'Message', onClick: handleMessage },
       ],
     })
     return () => setConfig(null)
-  }, [profile, user, isFollowing, setConfig])
+  }, [profile, user, isFollowing, followRequest, setConfig])
 
   useEffect(() => {
     if (!profile || !user) return
     supabase.from('follows').select('id').eq('follower_id', user.id).eq('following_id', profile.id).maybeSingle()
-      .then(({ data }: { data: any }) => setIsFollowing(!!data))
+      .then(({ data }: { data: any }) => {
+        setIsFollowing(!!data)
+        if (!data) {
+          // Check for pending follow request
+          supabase.from('follow_requests').select('id').eq('requester_id', user.id).eq('target_id', profile.id).eq('status', 'pending').maybeSingle()
+            .then(({ data: req }: { data: any }) => setFollowRequest(req?.id || null))
+        } else {
+          setFollowRequest(null)
+        }
+      })
   }, [profile, user, supabase])
 
   useEffect(() => {

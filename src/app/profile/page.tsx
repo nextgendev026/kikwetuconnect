@@ -44,6 +44,8 @@ export default function ProfilePage() {
   const [localCoverUrl, setLocalCoverUrl] = useState<string | null>(null)
   const [followingCount, setFollowingCount] = useState(0)
   const [followerCount, setFollowerCount] = useState(0)
+  const [pendingFollowRequests, setPendingFollowRequests] = useState<any[]>([])
+  const [sentFollowRequests, setSentFollowRequests] = useState<any[]>([])
 
   useHeshimaRealtime()
 
@@ -100,7 +102,7 @@ export default function ProfilePage() {
 
     const safeQuery = async (fn: () => any, fb: any = null) => { try { return await fn() } catch { return { data: fb } } }
 
-    const [answersRes, questionsRes, tokensRes, badgesRes, postsRes, savesRes, countRes, featuredRes, earningsRes] = await Promise.all([
+    const [answersRes, questionsRes, tokensRes, badgesRes, postsRes, savesRes, countRes, featuredRes, earningsRes, pendingRequestsRes, sentRequestsRes] = await Promise.all([
       safeQuery(() => supabase.from('answers').select('id').eq('user_id', profile.id)),
       safeQuery(() => supabase.from('posts').select('id').eq('user_id', profile.id).eq('post_type', 'inquiry')),
       safeQuery(() => supabase.from('tokens').select('amount').eq('user_id', profile.id)),
@@ -128,6 +130,8 @@ export default function ProfilePage() {
         ? safeQuery(() => supabase.from('posts').select('*').eq('id', profile.featured_post_id).maybeSingle())
         : Promise.resolve({ data: null }),
       safeQuery(() => supabase.from('heshima_earnings').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(10)),
+      safeQuery(() => supabase.rpc('get_pending_follow_requests')),
+      safeQuery(() => supabase.rpc('get_sent_follow_requests')),
     ])
 
     setStats({
@@ -151,6 +155,13 @@ export default function ProfilePage() {
     setSavedItems((savesRes.data as unknown as SavedItem[]) || [])
     if (featuredRes.data) setFeaturedPost(featuredRes.data as Post)
     if (earningsRes.data) setRecentEarnings(earningsRes.data as any[])
+    
+    if (pendingRequestsRes.data?.requests) {
+      setPendingFollowRequests(pendingRequestsRes.data.requests)
+    }
+    if (sentRequestsRes.data?.requests) {
+      setSentFollowRequests(sentRequestsRes.data.requests)
+    }
 
     setLoadingData(false)
   }, [profile, supabase])
@@ -591,6 +602,99 @@ export default function ProfilePage() {
           </>
         )}
       </section>
+
+      {/* Follow Requests */}
+      {(pendingFollowRequests.length > 0 || sentFollowRequests.length > 0) && (
+        <section className="card section mb-6">
+          <h3 className="font-bold text-sm mb-3">Follow Requests</h3>
+          {pendingFollowRequests.length > 0 && (
+            <div className="space-y-2 mb-4">
+              <h4 className="text-xs font-semibold text-muted uppercase tracking-wider">Pending Requests ({pendingFollowRequests.length})</h4>
+              {pendingFollowRequests.map((req: any) => (
+                <div key={req.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--raised)', border: '1px solid var(--line)' }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full flex-shrink-0 grid place-items-center text-xs font-bold" style={{ background: req.avatar_url ? 'none' : 'var(--gold)', color: req.avatar_url ? 'none' : 'var(--night)' }}>
+                      {req.avatar_url ? <img src={req.avatar_url} alt="" className="w-full h-full rounded-full object-cover" /> : (req.full_name?.[0] || '?')}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{req.full_name || req.username}</p>
+                      <p className="text-xs text-muted">@{req.username} wants to follow you</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={async () => {
+                      try {
+                        const res = await fetch('/api/profile', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ action: 'accept_follow_request', request_id: req.id })
+                        })
+                        if (res.ok) {
+                          toast('Follow request accepted')
+                          setPendingFollowRequests(prev => prev.filter(r => r.id !== req.id))
+                          setFollowerCount(prev => prev + 1)
+                        }
+                      } catch { toast('Failed to accept') }
+                    }} className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{ background: 'var(--green)', color: 'var(--night)', border: 0, cursor: 'pointer' }}>
+                      Accept
+                    </button>
+                    <button onClick={async () => {
+                      try {
+                        const res = await fetch('/api/profile', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ action: 'decline_follow_request', request_id: req.id })
+                        })
+                        if (res.ok) {
+                          toast('Follow request declined')
+                          setPendingFollowRequests(prev => prev.filter(r => r.id !== req.id))
+                        }
+                      } catch { toast('Failed to decline') }
+                    }} className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{ background: 'var(--raised)', color: 'var(--ink)', border: '1px solid var(--line)', cursor: 'pointer' }}>
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {sentFollowRequests.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-muted uppercase tracking-wider">Sent Requests ({sentFollowRequests.length})</h4>
+              {sentFollowRequests.map((req: any) => (
+                <div key={req.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--raised)', border: '1px solid var(--line)' }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full flex-shrink-0 grid place-items-center text-xs font-bold" style={{ background: req.avatar_url ? 'none' : 'var(--gold)', color: req.avatar_url ? 'none' : 'var(--night)' }}>
+                      {req.avatar_url ? <img src={req.avatar_url} alt="" className="w-full h-full rounded-full object-cover" /> : (req.full_name?.[0] || '?')}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">{req.full_name || req.username}</p>
+                      <p className="text-xs text-muted">Requested to follow @{req.username} · {req.status === 'pending' ? 'Pending' : req.status}</p>
+                    </div>
+                  </div>
+                  {req.status === 'pending' && (
+                    <button onClick={async () => {
+                      try {
+                        const res = await fetch('/api/profile', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ action: 'cancel_follow_request', target_user_id: req.target_id })
+                        })
+                        if (res.ok) {
+                          toast('Follow request cancelled')
+                          setSentFollowRequests(prev => prev.filter(r => r.id !== req.id))
+                        }
+                      } catch { toast('Failed to cancel') }
+                    }} className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{ background: 'var(--raised)', color: 'var(--ink)', border: '1px solid var(--line)', cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Account Menu */}
       <section className="card section mb-6">
