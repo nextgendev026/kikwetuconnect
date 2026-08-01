@@ -11,7 +11,7 @@ const TYPES = [
   { id: 'poll', label: 'Poll', icon: BarChart3, color: 'var(--blue)' },
   { id: 'listing', label: 'Mtaa listing', icon: ShoppingBag, color: 'var(--earth)' },
   { id: 'alert', label: 'Safety update', icon: Shield, color: 'var(--red)' },
-  { id: 'story', label: 'Story (24h)', icon: Play, color: 'var(--blue)' },
+  { id: 'story', label: 'Idea (24h)', icon: Play, color: 'var(--blue)' },
 ]
 
 const LABELS: Record<string, string> = {
@@ -20,7 +20,7 @@ const LABELS: Record<string, string> = {
   poll: 'What should the community weigh in on?',
   listing: 'What are you offering?',
   alert: 'What useful update should neighbours know?',
-  story: 'Add a caption to your 24h story',
+  story: 'Add a caption to your 24h idea',
 }
 
 const PLACEHOLDERS: Record<string, string> = {
@@ -29,7 +29,7 @@ const PLACEHOLDERS: Record<string, string> = {
   poll: 'Ask the community to weigh in...',
   listing: 'Describe what you are selling or offering...',
   alert: 'Describe the safety concern or update...',
-  story: 'Add a caption to your story (optional)...',
+  story: 'Add a caption to your idea (optional)...',
 }
 
 const LISTING_CATEGORIES = ['Produce', 'Services', 'Crafts', 'Livestock', 'Tools', 'Other']
@@ -217,7 +217,7 @@ export default function CreateModal() {
 
       // Story publishing: single media required, 15s video cap, 24h expiry (via RPC)
       if (type === 'story') {
-        if (mediaFiles.length === 0) { toast('Add a photo or 15s video for your story'); return }
+        if (mediaFiles.length === 0) { toast('Add a photo or 15s video for your idea'); return }
         if (mediaFiles.length > 1) { toast('Stories support a single image or video'); return }
         const m = mediaFiles[0]
         const isVideo = m.type.startsWith('video/')
@@ -238,7 +238,7 @@ export default function CreateModal() {
           p_thumbnail_url: null,
         })
         if (storyErr) throw storyErr
-        toast('Story shared! Visible for 24h.')
+        toast('Idea shared! Visible for 24h.')
         window.location.href = '/feed'
         resetForm()
         return

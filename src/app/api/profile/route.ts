@@ -1,4 +1,5 @@
 import { createApiClient, createServiceClient } from '@/lib/server-supabase'
+import { trackActivity } from '@/lib/activity'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -31,6 +32,8 @@ export async function POST(request: NextRequest) {
         const { error: rpc2 } = await svc.rpc('decrement_following_count', { user_id: user.id })
         if (rpc2) console.error('decrement_following_count error:', rpc2)
 
+        await trackActivity(supabase, { eventType: 'unfollow', entityType: 'user', entityId: target_user_id }, user.id)
+
         return NextResponse.json({ following: false })
       }
 
@@ -52,6 +55,8 @@ export async function POST(request: NextRequest) {
         p_content: 'started following you',
       })
       if (notifErr) console.error('create_notification error:', notifErr)
+
+      await trackActivity(supabase, { eventType: 'follow', entityType: 'user', entityId: target_user_id }, user.id)
 
       return NextResponse.json({ following: true })
     }

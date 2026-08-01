@@ -1,4 +1,5 @@
 import { createApiClient } from '@/lib/server-supabase'
+import { trackActivity } from '@/lib/activity'
 import { NextRequest, NextResponse } from 'next/server'
 
 type PendingSignup = { at: number }
@@ -86,6 +87,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    await trackActivity(supabase, {
+      eventType: 'signup',
+      metadata: { county: county || null, area: area || null, role: role || null, device: device || null },
+    }, data.user?.id || null)
 
     return NextResponse.json({
       user: data.user,

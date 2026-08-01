@@ -142,8 +142,8 @@ export default function StoryStrip({ profile }: StoryStripProps) {
         <div className="flex items-center justify-between mb-[10px]">
           <h2 className="flex items-center gap-[6px] text-[13px] font-extrabold tracking-[-.01em]" style={{ fontFamily: "'Plus Jakarta Sans'" }}>
             <Play className="w-[14px] h-[14px] text-gold fill-gold" />
-            <span className="text-cream">Stories</span>
-            <span className="text-[var(--muted)] font-semibold text-[11px]">24-hour reels & community shorts</span>
+            <span className="text-cream">My ideas</span>
+            <span className="text-[var(--muted)] font-semibold text-[11px]">24-hour photos & short videos</span>
           </h2>
         </div>
 
@@ -152,13 +152,13 @@ export default function StoryStrip({ profile }: StoryStripProps) {
           <button
             onClick={openComposer}
             className="flex-shrink-0 w-[90px] h-[130px] rounded-[16px] border-2 border-dashed border-[var(--line)] flex flex-col items-center justify-center gap-[8px] text-[var(--muted)] hover:border-gold hover:text-gold transition-colors cursor-pointer"
-            aria-label="Add a story"
+            aria-label="Share an idea"
             style={{ background: 'linear-gradient(135deg, color-mix(in oklab, var(--gold) 10%, var(--surface)), var(--surface))' }}
           >
             <span className="w-[30px] h-[30px] rounded-full grid place-items-center bg-gold/15">
               <Plus className="w-[16px] h-[16px] text-gold" />
             </span>
-            <span className="text-[11px] font-bold">Your story</span>
+            <span className="text-[11px] font-bold">My ideas</span>
           </button>
 
           {/* Your existing (unexpired) story */}

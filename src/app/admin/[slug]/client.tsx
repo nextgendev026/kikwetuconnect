@@ -15,6 +15,7 @@ const PAGE_META: Record<string, { title: string; desc: string }> = {
   payments: { title: 'Payments you can explain.', desc: 'Monitor tips, bounties, M-Pesa callbacks, fees, payouts, and exceptions.' },
   settings: { title: 'Platform settings', desc: 'Control defaults without burying the consequences.' },
   audit: { title: 'Every action leaves a trace.', desc: 'Inspect admin actions, reasons, state changes, and follow-up requirements.' },
+  activity: { title: "What's happening across the platform.", desc: 'Track live activity, errors, flagged content, and learned user patterns — all in one view.' },
 }
 
 const s = {
@@ -834,6 +835,223 @@ function AuditPage() {
   )
 }
 
+// =============== ACTIVITY ===============
+function ActivityPage() {
+  const supabase = useSupabase()
+  const [data, setData] = useState<any>(null)
+  const [patterns, setPatterns] = useState<any[]>([])
+  const [refreshing, setRefreshing] = useState(false)
+
+  const fetchOverview = useCallback(() => {
+    if (typeof supabase?.rpc !== 'function') return
+    supabase.rpc('admin_activity_overview').then(({ data: d }) => {
+      if (d) setData(d)
+    })
+  }, [supabase])
+
+  const fetchPatterns = useCallback(() => {
+    if (typeof supabase?.rpc !== 'function') return
+    supabase.rpc('admin_user_patterns', { p_limit: 15 }).then(({ data }) => {
+      if (Array.isArray(data)) setPatterns(data)
+    })
+  }, [supabase])
+
+  useEffect(() => {
+    fetchOverview()
+    fetchPatterns()
+  }, [fetchOverview, fetchPatterns])
+
+  const handleResolveError = async (id: string) => {
+    const { error } = await supabase.rpc('resolve_error', { p_error_id: id, p_resolution: 'Resolved by admin' })
+    if (error) { toast(error.message); return }
+    toast('Error resolved')
+    fetchOverview()
+  }
+
+  const handleReviewFlag = async (id: string, action: 'dismiss' | 'action_taken') => {
+    const { error } = await supabase.rpc('review_content_flag', { p_flag_id: id, p_action: action })
+    if (error) { toast(error.message); return }
+    toast(action === 'dismiss' ? 'Flag dismissed' : 'Content removed')
+    fetchOverview()
+  }
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    try {
+      const { data: updated } = await supabase.rpc('refresh_user_patterns')
+      toast(`Patterns rebuilt (${updated ?? 0} users)`)
+      fetchPatterns()
+    } catch (e: any) { toast(e?.message || 'Refresh failed') }
+    finally { setRefreshing(false) }
+  }
+
+  if (!data) return s.spinner()
+
+  const t = data.totals || {}
+  const maxDay = Math.max(1, ...(data.by_day || []).map((d: any) => d.count))
+  const maxType = Math.max(1, ...(data.by_type || []).map((d: any) => d.count))
+  const maxUser = Math.max(1, ...(data.top_users || []).map((d: any) => d.events))
+
+  return (
+    <>
+      <PageHeader slug="activity" meta={PAGE_META.activity}
+        extra={<button onClick={handleRefresh} disabled={refreshing} style={s.btn('var(--raised)', 'var(--ink)')}>{refreshing ? 'Rebuilding...' : '↻ Rebuild patterns'}</button>} />
+
+      <KpiCards items={[
+        { label: 'Events · last hour', value: (t.hour || 0).toLocaleString(), color: 'green' },
+        { label: 'Events · last day', value: (t.day || 0).toLocaleString(), color: 'green' },
+        { label: 'Events · last week', value: (t.week || 0).toLocaleString(), sub: `${(t.all_time || 0).toLocaleString()} all-time` },
+        { label: 'Open errors', value: (data.errors?.open || 0), color: (data.errors?.open || 0) > 0 ? 'red' : 'green', sub: `${data.errors?.today || 0} today` },
+      ]} />
+
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, marginBottom: 14 }}>
+        {/* Daily activity (30d) */}
+        <div style={s.card()}>
+          <h3 style={{ fontWeight: 700, fontSize: 12, margin: '0 0 12px', color: 'var(--ink)' }}>Daily activity · last 30 days</h3>
+          {data.by_day?.length ? (
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 120 }}>
+              {data.by_day.map((d: any, i: number) => (
+                <div key={i} title={`${d.day}: ${d.count}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '100%' }}>
+                  <div style={{ width: '100%', background: 'var(--gold)', borderRadius: '3px 3px 0 0', opacity: d.count === 0 ? 0.15 : 0.55 + (d.count / maxDay) * 0.45, height: `${Math.max(2, (d.count / maxDay) * 100)}%` }} />
+                </div>
+              ))}
+            </div>
+          ) : <p style={{ fontSize: 11, color: 'var(--muted)' }}>No activity recorded yet.</p>}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 9, color: 'var(--muted)' }}>
+            <span>{data.by_day?.[0]?.day}</span>
+            <span>{data.by_day?.[data.by_day.length - 1]?.day}</span>
+          </div>
+        </div>
+
+        {/* Flags */}
+        <div style={s.card()}>
+          <h3 style={{ fontWeight: 700, fontSize: 12, margin: '0 0 12px', color: 'var(--ink)' }}>Content flags</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
+            {[
+              { l: 'Pending', v: data.flags?.pending || 0, c: 'orange' },
+              { l: 'Week', v: data.flags?.week || 0, c: 'blue' },
+              { l: 'Total', v: data.flags?.total || 0, c: 'green' },
+            ].map((f, i) => (
+              <div key={i} style={{ background: 'var(--raised)', borderRadius: 10, padding: '10px 8px', textAlign: 'center' }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: `var(--${f.c})` }}>{f.v}</div>
+                <div style={{ fontSize: 9, color: 'var(--muted)', marginTop: 2 }}>{f.l}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'grid', gap: 8, maxHeight: 300, overflowY: 'auto' }}>
+            {(data.flags?.recent || []).slice(0, 8).map((f: any) => (
+              <div key={f.id} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={s.tag()}>{f.content_type}</span>
+                  <small style={{ fontSize: 9, color: 'var(--muted)' }}>{f.created_at ? new Date(f.created_at).toLocaleString() : ''}</small>
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--ink)', margin: '6px 0' }}>{f.reason}</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={s.badge(f.risk_score >= 60 ? 'red' : f.risk_score >= 30 ? 'orange' : 'green')}>risk {f.risk_score}</span>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => handleReviewFlag(f.id, 'dismiss')} disabled={f.status !== 'pending'} style={s.btn('var(--raised)', 'var(--muted)')}>Dismiss</button>
+                    <button onClick={() => handleReviewFlag(f.id, 'action_taken')} disabled={f.status !== 'pending'} style={s.btn('var(--red-soft)', 'var(--red)')}>Remove</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {(data.flags?.recent || []).length === 0 && <p style={{ fontSize: 11, color: 'var(--muted)' }}>No flags yet.</p>}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+        {/* Activity by type (7d) */}
+        <div style={s.card()}>
+          <h3 style={{ fontWeight: 700, fontSize: 12, margin: '0 0 12px', color: 'var(--ink)' }}>Activity by type · last 7 days</h3>
+          <div style={{ display: 'grid', gap: 6 }}>
+            {(data.by_type || []).map((b: any, i: number) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ width: 130, fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.type}</span>
+                <div style={{ flex: 1, height: 12, background: 'var(--raised)', borderRadius: 6, overflow: 'hidden' }}>
+                  <div style={{ width: `${(b.count / maxType) * 100}%`, height: '100%', background: 'var(--gold)', borderRadius: 6 }} />
+                </div>
+                <b style={{ width: 40, textAlign: 'right', fontSize: 11, color: 'var(--ink)' }}>{b.count}</b>
+              </div>
+            ))}
+            {(data.by_type || []).length === 0 && <p style={{ fontSize: 11, color: 'var(--muted)' }}>No activity yet.</p>}
+          </div>
+        </div>
+
+        {/* Recent errors */}
+        <div style={s.card()}>
+          <h3 style={{ fontWeight: 700, fontSize: 12, margin: '0 0 12px', color: 'var(--ink)' }}>Recent errors</h3>
+          <div style={{ display: 'grid', gap: 8, maxHeight: 320, overflowY: 'auto' }}>
+            {(data.errors?.recent || []).map((e: any) => (
+              <div key={e.id} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <span style={s.tag(e.status === 'open')}>{e.source || 'unknown'}</span>
+                  <span style={s.badge(e.status === 'open' ? 'red' : 'green')}>{e.status}</span>
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--ink)', margin: '6px 0 2px', wordBreak: 'break-word' }}>{e.message?.slice(0, 120)}</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  <small style={{ fontSize: 9, color: 'var(--muted)' }}>{e.route || '—'} · {e.created_at ? new Date(e.created_at).toLocaleString() : ''}</small>
+                  {e.status === 'open' && (
+                    <button onClick={() => handleResolveError(e.id)} style={s.btn('var(--raised)', 'var(--green)')}>Resolve</button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {(data.errors?.recent || []).length === 0 && <p style={{ fontSize: 11, color: 'var(--muted)' }}>No errors reported.</p>}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        {/* Top active users */}
+        <div style={s.card()}>
+          <h3 style={{ fontWeight: 700, fontSize: 12, margin: '0 0 12px', color: 'var(--ink)' }}>Top active users · last 7 days</h3>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {(data.top_users || []).map((u: any, i: number) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ width: 20, textAlign: 'center', fontSize: 10, color: 'var(--muted)', fontWeight: 800 }}>{i + 1}</span>
+                <code style={{ fontSize: 10, color: 'var(--ink)', flex: 1 }}>{u.user_id?.slice(0, 8)}</code>
+                <div style={{ width: 120, height: 10, background: 'var(--raised)', borderRadius: 6, overflow: 'hidden' }}>
+                  <div style={{ width: `${(u.events / maxUser) * 100}%`, height: '100%', background: 'var(--green)', borderRadius: 6 }} />
+                </div>
+                <b style={{ width: 50, textAlign: 'right', fontSize: 11, color: 'var(--ink)' }}>{u.events}</b>
+                {u.risk > 0 && <span style={s.badge('orange')}>risk {u.risk}</span>}
+              </div>
+            ))}
+            {(data.top_users || []).length === 0 && <p style={{ fontSize: 11, color: 'var(--muted)' }}>No activity yet.</p>}
+          </div>
+        </div>
+
+        {/* Learned user patterns */}
+        <div style={s.card({ padding: 0, overflow: 'hidden' })}>
+          <h3 style={{ fontWeight: 700, fontSize: 12, margin: '14px 14px 0', color: 'var(--ink)' }}>User patterns · risk & engagement</h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11, marginTop: 8 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--line)' }}>
+                <th style={{ padding: '8px 14px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>User</th>
+                <th style={{ padding: '8px 6px', textAlign: 'right', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Engage</th>
+                <th style={{ padding: '8px 6px', textAlign: 'right', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Risk</th>
+                <th style={{ padding: '8px 14px', textAlign: 'right', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Active</th>
+              </tr>
+            </thead>
+            <tbody>
+              {patterns.map((p: any) => (
+                <tr key={p.user_id} style={{ borderBottom: '1px solid var(--line)' }}>
+                  <td style={{ padding: '8px 14px', color: 'var(--ink)' }}>{p.username || p.full_name || p.user_id?.slice(0, 8)}</td>
+                  <td style={{ padding: '8px 6px', textAlign: 'right', color: 'var(--ink)' }}>{p.engagement}</td>
+                  <td style={{ padding: '8px 6px', textAlign: 'right' }}>{p.risk > 0 ? <span style={s.badge(p.risk >= 20 ? 'red' : 'orange')}>{p.risk}</span> : <span style={{ color: 'var(--muted)' }}>0</span>}</td>
+                  <td style={{ padding: '8px 14px', textAlign: 'right', color: 'var(--muted)' }}>{p.active_hours?.length || 0}h{p.last_active ? ' · ' + new Date(p.last_active).toLocaleDateString() : ''}</td>
+                </tr>
+              ))}
+              {patterns.length === 0 && <tr><td colSpan={4} style={{ padding: 20, textAlign: 'center', color: 'var(--muted)' }}>No patterns yet</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // =============== MAIN DISPATCH ===============
 export default function AdminPageClient({ slug }: { slug: string }) {
   const supabase = useSupabase()
@@ -850,6 +1068,7 @@ export default function AdminPageClient({ slug }: { slug: string }) {
     payments: () => <PaymentsPage />,
     settings: () => <SettingsPage />,
     audit: () => <AuditPage />,
+    activity: () => <ActivityPage />,
   }
 
   const Page = pages[slug]

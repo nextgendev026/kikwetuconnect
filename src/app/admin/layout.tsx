@@ -4,13 +4,14 @@ import { useUser, useSupabase, useTheme, toast } from '@/app/providers'
 import { useEffect, useState } from 'react'
 import { isAdmin } from '@/lib/roles'
 import {
-  LayoutDashboard, BarChart3, Activity, ShieldCheck, BadgeCheck, Users,
+  LayoutDashboard, BarChart3, Activity, Radar, ShieldCheck, BadgeCheck, Users,
   Grid3X3, Store, Siren, Wallet, Megaphone, Settings, ScrollText, Sun, Moon, X, Bell, Plus, Search, Menu
 } from 'lucide-react'
 
 const NAV = {
   Monitor: [
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+    { id: 'activity', label: 'Activity', icon: Radar },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'health', label: 'Platform health', icon: Activity },
   ],

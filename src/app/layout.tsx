@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next"
 import './globals.css'
 import { Providers, ShellRouter } from './providers'
 import PwaSetup from '@/components/PwaSetup'
+import ErrorBoundary from '@/components/ErrorBoundary'
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--jakarta', weight: ['400', '500', '600', '700', '800'], display: 'swap' })
 const dm = DM_Sans({ subsets: ['latin'], variable: '--dm', weight: ['400', '500', '600', '700'], display: 'swap' })
@@ -54,7 +55,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen antialiased">
         <Providers>
-          <ShellRouter>{children}</ShellRouter>
+          <ErrorBoundary>
+            <ShellRouter>{children}</ShellRouter>
+          </ErrorBoundary>
           <PwaSetup />
         </Providers>
         <Analytics />

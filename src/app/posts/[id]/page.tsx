@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeft, MessageCircle, TrendingUp, Bookmark, Shield, Star, MoreHorizontal, Edit3, Trash2, EyeOff, Eye } from 'lucide-react'
+import { ArrowLeft, MessageCircle, TrendingUp, Bookmark, Shield, Star, MoreHorizontal, Edit3, Trash2, EyeOff, Eye, Flag } from 'lucide-react'
 import { Button, Textarea } from '@/components/ui/form'
 import { useUser, useSupabase, toast } from '@/app/providers'
 import ShareMenu from '@/components/ShareMenu'
@@ -209,6 +209,24 @@ export default function PostDetailPage() {
       await fetchAnswers()
     } catch (err: any) {
       setError(err.message)
+    }
+  }
+
+  const reportAnswer = async (answerId: string) => {
+    if (!profile) {
+      setError('Please sign in to report')
+      return
+    }
+    try {
+      const res = await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content_type: 'answer', content_id: answerId, reason: 'Reported by user' }),
+      })
+      if (res.ok) toast('Report submitted. Moderators will review.')
+      else toast('Failed to submit report')
+    } catch {
+      toast('Report failed')
     }
   }
 
@@ -521,6 +539,14 @@ export default function PostDetailPage() {
                         Upvote
                       </button>
                       <ShareMenu compact url={`/posts/${post.id}`} title={`Answer on "${post.title || 'KikwetuConnect'}"`} />
+                      <button
+                        onClick={() => reportAnswer(answer.id)}
+                        className="min-h-[36px] px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 text-muted hover:bg-surface"
+                        aria-label="Report answer"
+                      >
+                        <Flag className="w-3 h-3" />
+                        Report
+                      </button>
                     </div>
                   </div>
                 </div>

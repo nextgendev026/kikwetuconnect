@@ -8,6 +8,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import CreateModal from '@/components/CreateModal'
 import NotificationTray from '@/components/NotificationTray'
 import { ToolbarProvider } from '@/lib/toolbar'
+import { trackActivity } from '@/lib/activity'
 import { Send, MessageSquare, Bell, Sun, Moon } from 'lucide-react'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -42,6 +43,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         if (data) setFollowingIds(new Set((data as any[]).map(f => f.following_id)))
       })
   }, [profile, supabase])
+
+  // Record one session-start event per shell mount (activity engine / patterns)
+  const sessionTrackedRef = useRef(false)
+  useEffect(() => {
+    if (!profile || !supabase || sessionTrackedRef.current) return
+    sessionTrackedRef.current = true
+    void trackActivity(supabase, { eventType: 'session_started', metadata: { path } }, profile.id)
+  }, [profile, supabase, path])
 
   const fetchUnreadCount = useCallback(async () => {
     if (!profile || !supabase) return

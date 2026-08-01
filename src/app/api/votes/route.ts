@@ -1,4 +1,5 @@
 import { createApiClient, createServiceClient } from '@/lib/server-supabase'
+import { trackActivity } from '@/lib/activity'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
@@ -54,6 +55,13 @@ export async function POST(request: NextRequest) {
       meta: { link: `/${target_type === 'post' ? 'posts' : 'answers'}/${target_id}` },
     })
   }
+
+  await trackActivity(supabase, {
+    eventType: vote_type === 1 ? 'post_upvoted' : 'post_downvoted',
+    entityType: target_type,
+    entityId: target_id,
+  }, user.id)
+
   return NextResponse.json({ vote_type })
 }
 

@@ -222,6 +222,19 @@ function PostCardComponent({
     finally { setLoadingTrans(false) }
   }
 
+  const handleReport = async (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation()
+    try {
+      const res = await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content_type: 'post', content_id: post.id, reason: 'Reported by user' }),
+      })
+      if (res.ok) toast('Report submitted. Moderators will review.')
+      else toast('Failed to submit report')
+    } catch { toast('Report failed') }
+  }
+
   return (
     <div className="bg-night2 border border-[var(--line)] rounded-[16px] p-[18px] mb-[12px] animate-rise card-hover">
       {/* Header */}
@@ -401,7 +414,7 @@ function PostCardComponent({
           </button>
 
           <button
-            onClick={() => toast('Report submitted. Moderators will review.')}
+            onClick={handleReport}
             className="action-button"
             aria-label="Report post"
           >
