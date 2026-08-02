@@ -286,13 +286,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {chatConvId ? (
           <>
             <div className="chat-head">
-              <button className="chat-close" style={{ marginRight: 4 }} onClick={() => setChatConvId(null)}>←</button>
+              <button className="chat-close" style={{ marginRight: 4 }} onClick={() => setChatConvId(null)} aria-label="Back to conversations">←</button>
               <span className="avatar g" style={{ width: 32, height: 32, fontSize: 10 }}>KC</span>
               <div className="chat-head-main">
                 <b>KikwetuConnect</b>
                 <small>Support &amp; updates</small>
               </div>
-              <button className="chat-close" onClick={() => { setChatOpen(false); setChatConvId(null) }}>×</button>
+              <button className="chat-close" onClick={() => { setChatOpen(false); setChatConvId(null) }} aria-label="Close chat">×</button>
             </div>
             <div className="chat-list" style={{ overflowY: 'auto', flex: 1 }}>
               {chatMessages.length === 0 ? (
@@ -316,7 +316,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <input value={chatInput} onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleChatSend() } }}
                 placeholder="Write a message..." disabled={!chatConvId} />
-              <button onClick={handleChatSend} disabled={!chatConvId || !chatInput.trim() || chatSending}>↗</button>
+              <button onClick={handleChatSend} disabled={!chatConvId || !chatInput.trim() || chatSending} aria-label="Send message">↗</button>
             </div>
           </>
         ) : (
@@ -329,7 +329,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <b>Messages</b>
                 <small>{onlineCount} online now</small>
               </div>
-              <button className="chat-close" onClick={() => setChatOpen(false)}>×</button>
+              <button className="chat-close" onClick={() => setChatOpen(false)} aria-label="Close messages">×</button>
             </div>
             <div className="chat-list" style={{ overflowY: 'auto', flex: 1 }}>
               {onlineUsers.length === 0 ? (

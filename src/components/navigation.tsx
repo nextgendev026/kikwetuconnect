@@ -76,15 +76,15 @@ export function TopBar() {
         />
       </form>
       <div className="tools flex items-center gap-2">
-        <button className="icon w-9 h-9 rounded-full bg-transparent text-quiet flex items-center justify-center hover:bg-surface hover:text-text transition-colors">
-          <Globe className="w-5 h-5" />
+        <button className="icon w-9 h-9 rounded-full bg-transparent text-quiet flex items-center justify-center hover:bg-surface hover:text-text transition-colors" aria-label="Language">
+          <Globe className="w-5 h-5" aria-hidden="true" />
         </button>
-        <button className="icon w-9 h-9 rounded-full bg-transparent text-quiet flex items-center justify-center hover:bg-surface hover:text-text transition-colors relative">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red rounded-full"></span>
+        <button className="icon w-9 h-9 rounded-full bg-transparent text-quiet flex items-center justify-center hover:bg-surface hover:text-text transition-colors relative" aria-label="Notifications">
+          <Bell className="w-5 h-5" aria-hidden="true" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red rounded-full" aria-hidden="true"></span>
         </button>
-        <button className="icon w-9 h-9 rounded-full bg-transparent text-quiet flex items-center justify-center hover:bg-surface hover:text-text transition-colors">
-          <User className="w-5 h-5" />
+        <button className="icon w-9 h-9 rounded-full bg-transparent text-quiet flex items-center justify-center hover:bg-surface hover:text-text transition-colors" aria-label="Profile">
+          <User className="w-5 h-5" aria-hidden="true" />
         </button>
         <Button
           variant="primary"

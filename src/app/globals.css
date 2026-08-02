@@ -558,11 +558,13 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   --gold-text: oklch(46% .10 84);
   --green-text: oklch(40% .13 151);
   --blue-text: oklch(38% .12 260);
+  --faint-accessible: oklch(38% .03 151);
 }
 [data-theme=dark] {
   --gold-text: oklch(78% .14 84);
   --green-text: oklch(74% .12 151);
   --blue-text: oklch(74% .12 260);
+  --faint-accessible: oklch(72% .02 151);
 }
 .text-gold-accessible { color: var(--gold-text); }
 .text-green-accessible { color: var(--green-text); }

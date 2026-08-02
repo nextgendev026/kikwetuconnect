@@ -215,7 +215,7 @@ function MessagesInner() {
           <>
             {/* Chat header */}
             <div className="flex items-center gap-3 px-4 h-[64px] border-b flex-shrink-0" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
-              <button onClick={() => setSidebarOpen(true)} className="md:hidden bg-none border-0 text-lg cursor-pointer" style={{ color: 'var(--muted)' }}>\u2190</button>
+              <button onClick={() => setSidebarOpen(true)} aria-label="Back to conversations" className="md:hidden bg-none border-0 text-lg cursor-pointer" style={{ color: 'var(--muted)' }}>\u2190</button>
               <div className="w-[40px] h-[40px] rounded-full flex-shrink-0 grid place-items-center text-sm font-bold overflow-hidden" style={{ background: convAvatar?.avatar_url ? 'none' : 'var(--gold)', color: convAvatar?.avatar_url ? 'none' : 'var(--night)' }}>
                 {convAvatar?.avatar_url ? <img src={convAvatar.avatar_url} alt="" className="w-full h-full object-cover" /> : (convAvatar?.full_name?.[0] || '?')}
               </div>
@@ -301,10 +301,10 @@ function MessagesInner() {
                                   return acc
                                 }, {})
                               ).map(([emoji]) => (
-                                <button key={emoji} onClick={() => handleReaction(msg.id, emoji)}
+                                <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} aria-label={`React with ${emoji}`}
                                   className={`text-xs px-1.5 py-0.5 rounded-full border cursor-pointer ${msg.reactions?.some(r => r.user_id === user?.id && r.emoji === emoji) ? 'border' : ''}`}
                                   style={{ background: msg.reactions?.some(r => r.user_id === user?.id && r.emoji === emoji) ? 'var(--gold)' : 'var(--surface)', borderColor: 'var(--line)' }}>
-                                  {emoji}
+                                  <span aria-hidden="true">{emoji}</span>
                                 </button>
                               ))}
                             </div>
@@ -328,15 +328,15 @@ function MessagesInner() {
                           {/* Actions on hover */}
                           <div className={`absolute top-0 ${isOwn(msg.sender_id) ? 'left-0 -translate-x-full pr-1' : 'right-0 translate-x-full pl-1'} opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5`}>
                             <button onClick={() => { setReplyTo({ id: msg.id, content: msg.content?.slice(0, 80) || '' }); (document.querySelector('.composer-input') as HTMLInputElement)?.focus() }}
-                              className="w-[28px] h-[28px] rounded-full grid place-items-center text-xs border-0 cursor-pointer" style={{ background: 'var(--surface)', color: 'var(--muted)' }}>\u21A9</button>
+                              className="w-[28px] h-[28px] rounded-full grid place-items-center text-xs border-0 cursor-pointer" style={{ background: 'var(--surface)', color: 'var(--muted)' }} aria-label="Reply to message">\u21A9</button>
                             <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)}
-                              className="w-[28px] h-[28px] rounded-full grid place-items-center text-xs border-0 cursor-pointer" style={{ background: 'var(--surface)', color: 'var(--muted)' }}>\uD83D\uDE00</button>
+                              className="w-[28px] h-[28px] rounded-full grid place-items-center text-xs border-0 cursor-pointer" style={{ background: 'var(--surface)', color: 'var(--muted)' }} aria-label="Add reaction">\uD83D\uDE00</button>
                           </div>
                           {/* Inline emoji picker */}
                           {showEmojiPicker === msg.id && (
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex gap-1 p-1.5 rounded-xl z-10" style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}>
                               {['\uD83D\uDC4D', '\uD83D\uDC4E', '\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDE0A', '\uD83D\uDE22', '\uD83D\uDE21', '\uD83D\uDE4F'].map(e => (
-                                <button key={e} onClick={() => handleReaction(msg.id, e)} className="text-lg border-0 bg-none cursor-pointer hover:scale-125 transition-transform">{e}</button>
+                                <button key={e} onClick={() => handleReaction(msg.id, e)} aria-label={`React with ${e}`} className="text-lg border-0 bg-none cursor-pointer hover:scale-125 transition-transform">{e}</button>
                               ))}
                             </div>
                           )}
@@ -362,17 +362,17 @@ function MessagesInner() {
                   <div className="text-[10px] font-bold" style={{ color: 'var(--gold)' }}>Replying</div>
                   <div className="text-xs truncate" style={{ color: 'var(--muted)' }}>{replyTo.content}</div>
                 </div>
-                <button onClick={() => setReplyTo(null)} className="bg-none border-0 cursor-pointer text-sm" style={{ color: 'var(--muted)' }}>\u2715</button>
+                <button onClick={() => setReplyTo(null)} aria-label="Cancel reply" className="bg-none border-0 cursor-pointer text-sm" style={{ color: 'var(--muted)' }}>\u2715</button>
               </div>
             )}
 
             {/* Composer */}
             <div className="flex items-center gap-2 px-4 py-3 border-t" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
-              <button onClick={() => imageInputRef.current?.click()} className="w-[36px] h-[36px] rounded-full grid place-items-center text-sm flex-shrink-0 border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              <button onClick={() => imageInputRef.current?.click()} aria-label="Upload image" className="w-[36px] h-[36px] rounded-full grid place-items-center text-sm flex-shrink-0 border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
               </button>
-              <button onClick={() => fileInputRef.current?.click()} className="w-[36px] h-[36px] rounded-full grid place-items-center text-sm flex-shrink-0 border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+              <button onClick={() => fileInputRef.current?.click()} aria-label="Attach file" className="w-[36px] h-[36px] rounded-full grid place-items-center text-sm flex-shrink-0 border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
               </button>
               <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFileSelect(e, 'image/*')} />
               <input ref={fileInputRef} type="file" className="hidden" onChange={e => handleFileSelect(e, 'file')} />
@@ -383,10 +383,10 @@ function MessagesInner() {
                   style={{ background: 'var(--raised)', border: '1px solid var(--line)', color: 'var(--ink)', maxHeight: 120 }}
                   onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px' }} />
               </div>
-              <button onClick={handleSend} disabled={!input.trim()}
+              <button onClick={handleSend} disabled={!input.trim()} aria-label="Send message"
                 className="w-[42px] h-[42px] rounded-full grid place-items-center border-0 cursor-pointer transition-opacity flex-shrink-0"
-                style={{ background: input.trim() ? 'var(--gold)' : 'var(--raised)', color: input.trim() ? 'var(--night)' : 'var(--muted)', opacity: input.trim() ? 1 : 0.5 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                style={{ background: input.trim() ? 'var(--gold)' : 'var(--raised)', color: input.trim() ? 'var(--night)' : 'var(--faint)', opacity: input.trim() ? 1 : 0.9 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
               </button>
             </div>
           </>

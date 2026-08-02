@@ -276,7 +276,7 @@ function PostCardComponent({
           {currentUserId === post.user_id && (
             <div className="relative">
               <button onClick={() => setShowMenu(!showMenu)} className="action-button w-[28px] h-[28px]" aria-label="Post options">
-                <MoreHorizontal className="w-4 h-4" />
+                <MoreHorizontal className="w-4 h-4" aria-hidden="true" />
               </button>
               {showMenu && (
                 <>
@@ -325,13 +325,13 @@ function PostCardComponent({
 
       {/* Media */}
       {post.media_url && (
-        <Link href={`/posts/${post.id}`} className="mb-[12px] rounded-[12px] overflow-hidden bg-deep border border-[var(--line)] block">
+        <Link href={`/posts/${post.id}`} aria-label="View post media" className="mb-[12px] rounded-[12px] overflow-hidden bg-deep border border-[var(--line)] block">
           {post.media_type?.startsWith('video/') ? (
             <div className="h-[200px] flex items-center justify-center bg-deep">
-              <span className="text-[40px] opacity-50">🎥</span>
+              <span className="text-[40px] opacity-50" aria-hidden="true">🎥</span>
             </div>
           ) : (
-            <img src={post.media_url} alt="" className="w-full h-auto max-h-[300px] object-cover" loading="lazy" />
+            <img src={post.media_url} alt="" aria-hidden="true" className="w-full h-auto max-h-[300px] object-cover" loading="lazy" />
           )}
         </Link>
       )}
@@ -356,18 +356,18 @@ function PostCardComponent({
           <button
             onClick={() => onVote(post.id, post.user_vote === 1 ? null : 1)}
             className={`action-button ${post.user_vote === 1 ? 'active-vote' : ''}`}
-            aria-label={post.user_vote === 1 ? 'Remove upvote' : 'Upvote'}
+            aria-label={post.user_vote === 1 ? 'Remove upvote' : `Upvote, ${post.upvotes_count || 0} upvotes`}
           >
-            <ArrowUp className={`w-4 h-4 ${post.user_vote === 1 ? 'text-green' : ''}`} />
+            <ArrowUp className={`w-4 h-4 ${post.user_vote === 1 ? 'text-green' : ''}`} aria-hidden="true" />
             <span>{post.upvotes_count || 0}</span>
           </button>
 
           <Link
             href={`/posts/${post.id}`}
             className="action-button feed-action-link"
-            aria-label={post.post_type === 'inquiry' ? 'Answers' : 'Comments'}
+            aria-label={post.post_type === 'inquiry' ? `${post.answers_count || 0} answers` : `${post.answers_count || 0} comments`}
           >
-            <MessageCircle className="w-4 h-4" />
+            <MessageCircle className="w-4 h-4" aria-hidden="true" />
             <span>{post.answers_count || 0}</span>
           </Link>
 
@@ -377,7 +377,7 @@ function PostCardComponent({
               className="action-button"
               aria-label="React to post"
             >
-              <Smile className="w-4 h-4" />
+              <Smile className="w-4 h-4" aria-hidden="true" />
               {Object.keys(reactions).length > 0 && <span className="text-[10px]">{Object.values(reactions).reduce((a, b) => a + b, 0)}</span>}
             </button>
             {showReactions && (
@@ -401,7 +401,7 @@ function PostCardComponent({
             className={`action-button ${translatedText ? 'active-vote' : ''}`}
             aria-label={translatedText ? 'Show original' : 'Translate to Swahili'}
           >
-            {loadingTrans ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <Globe className="w-4 h-4" />}
+            {loadingTrans ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" aria-hidden="true" /> : <Globe className="w-4 h-4" aria-hidden="true" />}
           </button>
 
           <button
@@ -409,7 +409,7 @@ function PostCardComponent({
             className={`action-button ${post.user_saved ? 'active-save' : ''}`}
             aria-label={post.user_saved ? 'Unsave post' : 'Save post'}
           >
-            <Star className={`w-4 h-4 ${post.user_saved ? 'fill-current text-gold' : ''}`} />
+            <Star className={`w-4 h-4 ${post.user_saved ? 'fill-current text-gold' : ''}`} aria-hidden="true" />
           </button>
 
           <button
@@ -417,7 +417,7 @@ function PostCardComponent({
             className="action-button"
             aria-label="Report post"
           >
-            <Flag className="w-4 h-4" />
+            <Flag className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -426,8 +426,8 @@ function PostCardComponent({
       {Object.keys(reactions).length > 0 && (
         <div className="flex flex-wrap gap-[4px] mt-[8px] pt-[8px] border-t border-[var(--line)]">
           {Object.entries(reactions).map(([emoji, count]) => (
-            <button key={emoji} onClick={() => handleReact(emoji)} className="flex items-center gap-1 px-[8px] py-[3px] rounded-full text-[11px] transition-colors" style={{ background: 'var(--raised)', color: 'var(--muted)' }} onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--gold)' }} onMouseLeave={e => { e.currentTarget.style.background = 'var(--raised)'; e.currentTarget.style.color = 'var(--muted)' }}>
-              <span>{emoji}</span>
+            <button key={emoji} onClick={() => handleReact(emoji)} aria-label={`React with ${emoji}, ${count} reaction${count === 1 ? '' : 's'}`} className="flex items-center gap-1 px-[8px] py-[3px] rounded-full text-[11px] transition-colors" style={{ background: 'var(--raised)', color: 'var(--faint-accessible)' }} onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--gold)' }} onMouseLeave={e => { e.currentTarget.style.background = 'var(--raised)'; e.currentTarget.style.color = 'var(--faint-accessible)' }}>
+              <span aria-hidden="true">{emoji}</span>
               <span className="font-semibold">{count}</span>
             </button>
           ))}
@@ -732,10 +732,10 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
           <button
             key={tab.id}
             onClick={() => { setActiveTab(tab.id); if (tab.id !== 'near_you') setCountyFilter(null) }}
-            className={`flex-shrink-0 px-[14px] py-[7px] rounded-full text-[12px] font-semibold transition-all ${
+            className={`flex-shrink-0 px-[14px] py-[7px] rounded-full text-[13px] font-semibold transition-all ${
               activeTab === tab.id
                 ? 'bg-gold text-night'
-                : 'text-[var(--muted)] hover:bg-deep hover:text-cream'
+                : 'text-[var(--faint-accessible)] hover:bg-deep hover:text-cream'
             }`}
           >
             {tab.label}
@@ -803,8 +803,8 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
           {profile?.county_hub && (
             <button
               onClick={(e) => { e.stopPropagation(); setCountyFilter(countyFilter === profile.county_hub ? null : profile.county_hub) }}
-              className={`flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold transition-all ml-auto ${
-                countyFilter === profile.county_hub ? 'bg-green/20 text-green' : 'text-[var(--muted)] hover:bg-[var(--raised)] hover:text-cream'
+              className={`flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[12px] font-semibold transition-all ml-auto ${
+                countyFilter === profile.county_hub ? 'bg-green/20 text-green' : 'text-[var(--faint-accessible)] hover:bg-[var(--raised)] hover:text-cream'
               }`}
             >
               <span>📍</span>
@@ -820,10 +820,10 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
           <button
             key={f.id}
             onClick={() => setTypeFilter(f.id)}
-            className={`flex-shrink-0 px-[12px] py-[5px] rounded-full text-[11px] font-semibold transition-all ${
+            className={`flex-shrink-0 px-[12px] py-[5px] rounded-full text-[12px] font-semibold transition-all ${
               typeFilter === f.id
                 ? 'bg-cream text-night'
-                : 'text-[var(--muted)] border border-[var(--line)] hover:bg-deep hover:text-cream'
+                : 'text-[var(--faint-accessible)] border border-[var(--line)] hover:bg-deep hover:text-cream'
             }`}
           >
             {f.label}
@@ -832,8 +832,8 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
         <div className="relative">
           <button
             onClick={() => setShowCountyPicker(!showCountyPicker)}
-            className={`flex-shrink-0 flex items-center gap-1 px-[12px] py-[5px] rounded-full text-[11px] font-semibold transition-all ${
-              countyFilter ? 'bg-green/20 text-green border border-green/30' : 'text-[var(--muted)] border border-[var(--line)] hover:bg-deep hover:text-cream'
+            className={`flex-shrink-0 flex items-center gap-1 px-[12px] py-[5px] rounded-full text-[12px] font-semibold transition-all ${
+              countyFilter ? 'bg-green/20 text-green border border-green/30' : 'text-[var(--faint-accessible)] border border-[var(--line)] hover:bg-deep hover:text-cream'
             }`}
           >
             <span>📍</span>
@@ -843,7 +843,7 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowCountyPicker(false)} />
               <div className="absolute top-full left-0 mt-1 w-[200px] max-h-[240px] overflow-y-auto bg-night2 border border-[var(--line)] rounded-[12px] p-[6px] shadow-xl z-20 animate-rise">
-                <button onClick={() => { setCountyFilter(null); setShowCountyPicker(false) }} className="w-full text-left px-[10px] py-[6px] rounded-[8px] text-[12px] text-[var(--muted)] hover:bg-deep transition-colors">All counties</button>
+                <button onClick={() => { setCountyFilter(null); setShowCountyPicker(false) }} className="w-full text-left px-[10px] py-[6px] rounded-[8px] text-[12px] text-[var(--faint-accessible)] hover:bg-deep transition-colors">All counties</button>
                 {COUNTIES.map(c => (
                   <button
                     key={c}
