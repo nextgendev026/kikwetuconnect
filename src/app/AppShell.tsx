@@ -9,6 +9,7 @@ import CreateModal from '@/components/CreateModal'
 import NotificationTray from '@/components/NotificationTray'
 import { ToolbarProvider } from '@/lib/toolbar'
 import { trackActivity } from '@/lib/activity'
+import { usePresence } from '@/hooks/usePresence'
 import { Send, MessageSquare, Bell, Sun, Moon } from 'lucide-react'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -19,8 +20,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname()
   const [chatOpen, setChatOpen] = useState(false)
   const [chatInput, setChatInput] = useState('')
-  const [onlineCount, setOnlineCount] = useState(0)
-  const [onlineUsers, setOnlineUsers] = useState<any[]>([])
+  const { onlineCount, onlineUsers } = usePresence()
   const [trendingTopics, setTrendingTopics] = useState<any[]>([])
   const [postCount, setPostCount] = useState(0)
   const [userCount, setUserCount] = useState(0)
@@ -99,28 +99,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     supabase.from('topics').select('name').order('follower_count', { ascending: false }).limit(3).then(({ data }: { data: any }) => { if (data) setTrendingTopics(data) })
     supabase.from('moderation_queue').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setModerationCount(count ?? 0) })
   }, [supabase])
-
-  useEffect(() => {
-    if (!supabase) return
-    const channel = supabase.channel('online-presence')
-    channel.on('presence', { event: 'sync' }, () => {
-      const state = channel.presenceState()
-      const userIds = Object.keys(state)
-      setOnlineCount(userIds.length)
-      if (userIds.length > 0) {
-        supabase.from('profiles').select('id, username, full_name, avatar_url, heshima_rating, county_hub, is_verified_expert').in('id', userIds).then(({ data }: { data: any[] | null }) => {
-          if (data) setOnlineUsers(data)
-        })
-      } else {
-        setOnlineUsers([])
-      }
-    }).subscribe(async (status: string) => {
-      if (status === 'SUBSCRIBED') {
-        await channel.track({ user_id: profile?.id, online_at: new Date().toISOString() })
-      }
-    })
-    return () => { supabase.removeChannel(channel) }
-  }, [supabase, profile?.id])
 
   useEffect(() => {
     if (!chatConvId || !supabase) return

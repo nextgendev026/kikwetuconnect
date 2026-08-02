@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useUser, useSupabase, toast } from '@/app/providers'
 import { useConversations, useMessages, Message } from '@/hooks/useConversations'
+import { usePresence } from '@/hooks/usePresence'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -12,10 +13,12 @@ function MessagesInner() {
   const { user, profile } = useUser()
   const supabase = useSupabase()
   const { conversations, loading: convsLoading, fetchConversations } = useConversations()
+  const { onlineIds, onlineCount } = usePresence()
 
   const [convId, setConvId] = useState<string | null>(null)
   const [input, setInput] = useState('')
   const [search, setSearch] = useState('')
+  const [onlineOnly, setOnlineOnly] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null)
   const [replyTo, setReplyTo] = useState<{ id: string; content: string } | null>(null)
@@ -65,7 +68,12 @@ function MessagesInner() {
 
   const filteredConvs = conversations.filter(c => {
     const title = c.participants.map(p => p?.full_name || p?.username || 'User').join(' ').toLowerCase()
-    return title.includes(search.toLowerCase()) || (c.last_message || '').toLowerCase().includes(search.toLowerCase())
+    const matchesSearch = title.includes(search.toLowerCase()) || (c.last_message || '').toLowerCase().includes(search.toLowerCase())
+    if (!matchesSearch) return false
+    if (onlineOnly) {
+      return c.type !== 'support' && c.participants.some(p => onlineIds.has(p.id))
+    }
+    return true
   })
 
   const handleSend = async () => {
@@ -142,7 +150,15 @@ function MessagesInner() {
         <div className="p-4 pb-2">
           <div className="flex items-center justify-between mb-3">
             <h1 className="font-extrabold text-lg m-0" style={{ color: 'var(--ink)' }}>Chats</h1>
-            <button onClick={() => setConvId(null)} aria-label="Create new message" className="text-xs border-0 cursor-pointer p-2 rounded-lg" style={{ background: 'var(--raised)', color: 'var(--ink)' }}>+ New</button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setOnlineOnly(o => !o)} aria-label="Toggle online users only"
+                className="text-xs border-0 cursor-pointer px-2.5 h-[30px] rounded-lg font-semibold"
+                style={{ background: onlineOnly ? 'var(--gold)' : 'var(--raised)', color: onlineOnly ? 'var(--night)' : 'var(--ink)' }}>
+                <span className="inline-block w-1.5 h-1.5 rounded-full mr-1" style={{ background: onlineOnly ? 'var(--night)' : 'var(--green)' }} />
+                Online {onlineCount > 0 ? `(${onlineCount})` : ''}
+              </button>
+              <button onClick={() => setConvId(null)} aria-label="Create new message" className="text-xs border-0 cursor-pointer p-2 rounded-lg" style={{ background: 'var(--raised)', color: 'var(--ink)' }}>+ New</button>
+            </div>
           </div>
           <input placeholder="Search conversations..." value={search} onChange={e => setSearch(e.target.value)}
             className="w-full h-[38px] rounded-[10px] px-3 text-[12px] outline-none" style={{ border: '1px solid var(--line)', background: 'var(--raised)', color: 'var(--ink)' }} />
@@ -153,20 +169,22 @@ function MessagesInner() {
               <div className="w-[48px] h-[48px] rounded-full" style={{ background: 'var(--raised)' }} />
               <div className="flex-1"><div className="h-3 w-24 rounded mb-2" style={{ background: 'var(--raised)' }} /><div className="h-2 w-32 rounded" style={{ background: 'var(--raised)' }} /></div>
             </div>
-          )) : filteredConvs.length === 0 ? (
+          )          ) : filteredConvs.length === 0 ? (
             <div className="text-center py-10" style={{ color: 'var(--muted)' }}>
               <div className="text-3xl mb-2">\uD83D\uDCAC</div>
-              <p className="text-xs">No conversations yet</p>
+              <p className="text-xs">{onlineOnly ? 'No online conversations right now' : 'No conversations yet'}</p>
               <p className="text-[10px] mt-1">Message someone from their profile</p>
             </div>
           ) : filteredConvs.map(c => {
             const avatar = c.participants?.[0]
+            const isOnline = c.type !== 'support' && c.participants.some(p => onlineIds.has(p.id))
             return (
               <button key={c.id} onClick={() => { setConvId(c.id); setSidebarOpen(false) }}
                 className="w-full flex items-center gap-3 p-3 rounded-xl text-left border-0 cursor-pointer mb-0.5 transition-colors"
                 style={{ background: convId === c.id ? 'var(--raised)' : 'none' }}>
-                <div className="w-[48px] h-[48px] rounded-full flex-shrink-0 grid place-items-center text-sm font-bold overflow-hidden" style={{ background: avatar?.avatar_url ? 'none' : 'var(--gold)', color: avatar?.avatar_url ? 'none' : 'var(--night)' }}>
+                <div className="w-[48px] h-[48px] rounded-full flex-shrink-0 grid place-items-center text-sm font-bold overflow-hidden relative" style={{ background: avatar?.avatar_url ? 'none' : 'var(--gold)', color: avatar?.avatar_url ? 'none' : 'var(--night)' }}>
                   {avatar?.avatar_url ? <img src={avatar.avatar_url} alt="" className="w-full h-full object-cover" /> : (avatar?.full_name?.[0] || '?')}
+                  {isOnline && <span className="absolute bottom-0 right-0 w-[11px] h-[11px] rounded-full" style={{ background: 'var(--green)', border: '2px solid var(--surface)' }} />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center gap-2">
@@ -203,7 +221,15 @@ function MessagesInner() {
               </div>
               <div className="flex-1 min-w-0">
                 <strong className="text-sm block truncate" style={{ color: 'var(--ink)' }}>{convTitle}</strong>
-                {typingUsers.length > 0 && <span className="text-[10px]" style={{ color: 'var(--green)' }}>{typingUsers.map(t => t.full_name || t.username).join(', ')} typing...</span>}
+                {typingUsers.length > 0 ? (
+                  <span className="text-[10px]" style={{ color: 'var(--green)' }}>{typingUsers.map(t => t.full_name || t.username).join(', ')} typing...</span>
+                ) : (
+                  activeConv && activeConv.type !== 'support' && activeConv.participants.some(p => onlineIds.has(p.id)) && (
+                    <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--green)' }}>
+                      <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: 'var(--green)' }} />Online
+                    </span>
+                  )
+                )}
               </div>
             </div>
 

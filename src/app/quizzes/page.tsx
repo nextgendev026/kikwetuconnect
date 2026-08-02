@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { Trophy, Brain, Star, Clock, CheckCircle2, XCircle, ArrowLeft, ArrowRight, Award, Flame, BookOpen, Medal, Sparkles, RotateCcw, BarChart3, ChevronRight } from 'lucide-react'
+import { Trophy, Brain, Clock, CheckCircle2, XCircle, ArrowLeft, ArrowRight, Award, Flame, BookOpen, Medal, Sparkles, RotateCcw, BarChart3, Bookmark, PlayCircle } from 'lucide-react'
 
 const categories = [
   { id: 'counties', label: 'Counties', icon: '📍', color: 'var(--blue)' },
@@ -51,6 +51,9 @@ export default function QuizzesPage() {
   const [badges, setBadges] = useState<any[]>([])
   const [randomQuiz, setRandomQuiz] = useState(false)
   const [heshimaRating, setHeshimaRating] = useState(profile?.heshima_rating || 0)
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
+  const [savedOnly, setSavedOnly] = useState(false)
+  const [progressMap, setProgressMap] = useState<Record<string, { current_question: number; selected_answers: number[] }>>({})
 
   // Sync local heshima with profile context
   useEffect(() => { setHeshimaRating(profile?.heshima_rating || 0) }, [profile?.heshima_rating])
@@ -66,6 +69,66 @@ export default function QuizzesPage() {
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [user, supabase])
+
+  // Load saved quizzes + in-progress resume state
+  useEffect(() => {
+    if (!user) return
+    fetchSaved()
+    fetchProgressMap()
+  }, [user])
+
+  // Realtime: saved quizzes + live in-progress progress across devices
+  useEffect(() => {
+    if (!user) return
+    const ch = supabase.channel(`quiz-saved-${user.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'saved_quizzes', filter: `user_id=eq.${user.id}` }, (p: any) => {
+        setSavedIds(prev => new Set(prev).add(p.new.quiz_id))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'saved_quizzes', filter: `user_id=eq.${user.id}` }, (p: any) => {
+        setSavedIds(prev => { const n = new Set(prev); n.delete(p.old.quiz_id); return n })
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'quiz_progress', filter: `user_id=eq.${user.id}` }, (p: any) => {
+        setProgressMap(prev => ({ ...prev, [p.new.quiz_id]: { current_question: p.new.current_question, selected_answers: p.new.selected_answers || [] } }))
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'quiz_progress', filter: `user_id=eq.${user.id}` }, (p: any) => {
+        setProgressMap(prev => ({ ...prev, [p.new.quiz_id]: { current_question: p.new.current_question, selected_answers: p.new.selected_answers || [] } }))
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'quiz_progress', filter: `user_id=eq.${user.id}` }, (p: any) => {
+        setProgressMap(prev => { const n = { ...prev }; delete n[p.old.quiz_id]; return n })
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [user, supabase])
+
+  const fetchSaved = async () => {
+    if (!user) return
+    const { data } = await supabase.from('saved_quizzes').select('quiz_id').eq('user_id', user.id)
+    if (data) setSavedIds(new Set((data as any[]).map(r => r.quiz_id)))
+  }
+
+  const fetchProgressMap = async () => {
+    if (!user) return
+    const { data } = await supabase.from('quiz_progress').select('quiz_id, current_question, selected_answers').eq('user_id', user.id)
+    if (data) {
+      const m: Record<string, { current_question: number; selected_answers: number[] }> = {}
+      ;(data as any[]).forEach(p => { m[p.quiz_id] = { current_question: p.current_question, selected_answers: p.selected_answers || [] } })
+      setProgressMap(m)
+    }
+  }
+
+  const toggleSave = async (quizId: string) => {
+    if (!user) { toast('Sign in to save quizzes'); return }
+    const isSaved = savedIds.has(quizId)
+    if (isSaved) {
+      const { error } = await supabase.from('saved_quizzes').delete().eq('user_id', user.id).eq('quiz_id', quizId)
+      if (error) return toast(error.message)
+      setSavedIds(prev => { const n = new Set(prev); n.delete(quizId); return n })
+    } else {
+      const { error } = await supabase.from('saved_quizzes').insert({ user_id: user.id, quiz_id: quizId })
+      if (error) return toast(error.message)
+      setSavedIds(prev => new Set(prev).add(quizId))
+    }
+  }
 
   const fetchQuizzes = async () => {
     setLoading(true)
@@ -170,10 +233,36 @@ export default function QuizzesPage() {
   const startQuiz = async (quiz: Quiz) => {
     setSelectedQuiz(quiz); setQuizStarted(true); setCurrentQuestion(0); setSelectedAnswers([]); setQuizComplete(false); setScore(0)
     const { data } = await supabase.from('quiz_questions').select('*').eq('quiz_id', quiz.id).order('created_at')
-    setQuestions((data as QuizQuestion[]) || [])
+    const qs = (data as QuizQuestion[]) || []
+    setQuestions(qs)
+    // Resume in-progress attempt if one exists
+    const saved = progressMap[quiz.id]
+    if (saved && saved.selected_answers.length > 0 && qs.length > 0) {
+      setCurrentQuestion(Math.min(saved.current_question, qs.length - 1))
+      setSelectedAnswers(saved.selected_answers)
+      toast('Resuming your saved progress')
+    }
   }
 
-  const selectAnswer = (oi: number) => { const na = [...selectedAnswers]; na[currentQuestion] = oi; setSelectedAnswers(na) }
+  const saveProgress = async (quiz: Quiz, current: number, answers: number[]) => {
+    if (!user) return
+    const { error } = await supabase.from('quiz_progress').upsert({
+      user_id: user.id, quiz_id: quiz.id, current_question: current, selected_answers: answers, updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,quiz_id' })
+    if (error) return toast('Failed to save progress')
+    setProgressMap(prev => ({ ...prev, [quiz.id]: { current_question: current, selected_answers: answers } }))
+  }
+
+  const clearProgress = async (quizId: string) => {
+    if (!user) return
+    await supabase.from('quiz_progress').delete().eq('user_id', user.id).eq('quiz_id', quizId)
+    setProgressMap(prev => { const n = { ...prev }; delete n[quizId]; return n })
+  }
+
+  const selectAnswer = (oi: number) => {
+    const na = [...selectedAnswers]; na[currentQuestion] = oi; setSelectedAnswers(na)
+    if (selectedQuiz && selectedQuiz.id !== 'random') void saveProgress(selectedQuiz, currentQuestion + 1, na)
+  }
   const submitQuiz = async () => {
     if (!selectedQuiz || !user) return
     if (selectedQuiz.id === 'random') { await submitRandomQuiz(); return }
@@ -184,6 +273,7 @@ export default function QuizzesPage() {
       answers: selectedAnswers.map((a: any, i: number) => ({ question: questions[i]?.question, selected: a, correct: questions[i]?.correct_index })),
     })
     if (error) { console.error('Quiz submission error:', error); toast('Failed to save results') }
+    else await clearProgress(selectedQuiz.id)
     fetchProgress(); fetchLeaderboard(); refreshProfile()
   }
 
@@ -219,6 +309,29 @@ export default function QuizzesPage() {
   }
 
   const closeQuiz = () => { setSelectedQuiz(null); setQuizStarted(false); setQuizComplete(false); setQuestions([]); setSelectedAnswers([]); setAiQuestions(null); setShowAiQuiz(false) }
+
+  // Persist the current AI-generated quiz into the library so it appears in the grid
+  const saveAiQuizToLibrary = async () => {
+    if (!user || !selectedQuiz || questions.length === 0) return toast('Sign in to save quizzes')
+    try {
+      const qs = questions.map(q => ({
+        question: q.question, options: q.options, correct_index: q.correct_index, explanation: q.explanation || '',
+      }))
+      const { data: quizId, error } = await supabase.rpc('save_ai_quiz', {
+        p_title: `${selectedQuiz.title.replace(selectedQuiz.category === 'random' ? 'AI ' : '', '')} Quiz`,
+        p_description: 'AI-generated quiz',
+        p_category: selectedQuiz.category === 'random' ? 'counties' : selectedQuiz.category,
+        p_difficulty: selectedQuiz.difficulty,
+        p_questions: qs,
+      })
+      if (error) throw error
+      toast('Quiz saved to library ✨')
+      setSavedIds(prev => new Set(prev).add(quizId))
+      fetchQuizzes()
+    } catch (e: any) {
+      toast(e.message || 'Failed to save quiz')
+    }
+  }
 
   return (
     <div className="pb-8 animate-fade-in-up">
@@ -259,13 +372,17 @@ export default function QuizzesPage() {
 
       {/* Categories */}
       <div className="flex flex-wrap gap-2 mb-6">
-        <button onClick={() => setActiveCategory(null)} style={{ ...style.tag, ...(!activeCategory ? style.tagActive : {}) }}>All</button>
+        <button onClick={() => setActiveCategory(null)} style={{ ...style.tag, ...(!activeCategory && !savedOnly ? style.tagActive : {}) }}>All</button>
         {categories.map(cat => (
-          <button key={cat.id} onClick={() => setActiveCategory(cat.id === activeCategory ? null : cat.id)}
+          <button key={cat.id} onClick={() => { setSavedOnly(false); setActiveCategory(cat.id === activeCategory ? null : cat.id) }}
             style={{ ...style.tag, ...(activeCategory === cat.id ? style.tagActive : {}) }}>
             <span>{cat.icon}</span> {cat.label}
           </button>
         ))}
+        <button onClick={() => { setSavedOnly(v => !v); setActiveCategory(null) }}
+          style={{ ...style.tag, ...(savedOnly ? style.tagActive : {}) }}>
+          <Bookmark className="w-3 h-3" /> Saved {savedIds.size > 0 ? `(${savedIds.size})` : ''}
+        </button>
       </div>
 
       {/* Earned Badges */}
@@ -288,14 +405,17 @@ export default function QuizzesPage() {
       {/* Quiz Grid */}
       {loading ? (
         <div className="flex justify-center py-12"><div className="animate-spin w-8 h-8 border-2" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent', borderRadius: '50%' }} /></div>
-      ) : quizzes.length === 0 ? (
+      ) : (savedOnly ? quizzes.filter(q => savedIds.has(q.id)) : quizzes).length === 0 ? (
         <div style={style.card} className="text-center py-12">
           <BookOpen className="w-10 h-10 mx-auto mb-3" style={{ color: 'var(--muted)', opacity: 0.5 }} />
-          <p style={{ color: 'var(--muted)' }}>No quizzes found in this category yet.</p>
+          <p style={{ color: 'var(--muted)' }}>{savedOnly ? 'No saved quizzes yet. Tap the bookmark on a quiz to save it.' : 'No quizzes found in this category yet.'}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          {quizzes.map(quiz => (
+          {(savedOnly ? quizzes.filter(q => savedIds.has(q.id)) : quizzes).map(quiz => {
+            const hasProgress = !!progressMap[quiz.id] && progressMap[quiz.id].selected_answers.length > 0
+            const isSaved = savedIds.has(quiz.id)
+            return (
             <div key={quiz.id} style={style.card} className="card-hover feature-card flex flex-col">
               <div className="flex items-start justify-between mb-3">
                 <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold" style={{
@@ -304,8 +424,16 @@ export default function QuizzesPage() {
                 }}>
                   {quiz.difficulty === 'easy' ? 'Easy' : quiz.difficulty === 'medium' ? 'Medium' : 'Hard'}
                 </span>
-                <span className="text-xs font-semibold flex items-center gap-1" style={{ color: 'var(--gold)' }}>
-                  <Star className="w-3 h-3" />+{quiz.heshima_reward}
+                <span className="flex items-center gap-2">
+                  {hasProgress && (
+                    <span className="text-[10px] font-semibold flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ color: 'var(--green)', background: 'color-mix(in oklab, var(--green) 12%, var(--surface))' }}>
+                      <PlayCircle className="w-3 h-3" />Resume
+                    </span>
+                  )}
+                  <button onClick={() => toggleSave(quiz.id)} aria-label={isSaved ? 'Unsave quiz' : 'Save quiz'}
+                    style={{ ...style.btn, padding: '6px', borderRadius: 9, background: isSaved ? 'var(--gold)' : 'var(--raised)', color: isSaved ? 'var(--night)' : 'var(--muted)', fontSize: 11 }}>
+                    <Bookmark className="w-3.5 h-3.5" />
+                  </button>
                 </span>
               </div>
               <h3 className="font-bold text-sm mb-1" style={{ color: 'var(--ink)' }}>{quiz.title}</h3>
@@ -317,10 +445,10 @@ export default function QuizzesPage() {
               <button onClick={() => startQuiz(quiz)} style={{ ...style.btn, ...style.primaryBtn, width: '100%', justifyContent: 'center', fontSize: 12 }}
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = 'var(--card-shadow-hover)' }}
                 onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '' }}>
-                Start Quiz <Sparkles className="w-3.5 h-3.5" />
+                {hasProgress ? <><PlayCircle className="w-3.5 h-3.5" /> Resume Quiz</> : <>Start Quiz <Sparkles className="w-3.5 h-3.5" /></>}
               </button>
             </div>
-          ))}
+          )})}
         </div>
       )}
 
