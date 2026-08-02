@@ -37,15 +37,12 @@ function MessagesInner() {
         if (existing) convId = existing.conversation_id
       }
       if (!convId) {
-        const { data: conv } = await supabase.from('conversations')
-          .insert({ type: 'dm', created_by: user.id }).select('id').single()
-        if (conv) {
-          await supabase.from('conversation_participants').insert([
-            { conversation_id: conv.id, user_id: user.id },
-            { conversation_id: conv.id, user_id: userId },
-          ])
-          convId = conv.id
-        }
+        const { data: conv } = await supabase.rpc('create_conversation', {
+          p_type: 'dm',
+          p_title: null,
+          p_member_ids: [userId],
+        })
+        if (conv) convId = conv
       }
       if (convId) { setConvId(convId); setSidebarOpen(false) }
     } catch { toast('Failed to open conversation') }

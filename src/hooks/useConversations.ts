@@ -224,8 +224,12 @@ export function useMessages(conversationId: string | null) {
     if (!conversationId || !user) return
 
     const channel = supabase.channel(`messages:${conversationId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, (payload: any) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, async (payload: any) => {
         const msg = payload.new as Message
+        if (msg.sender_id !== user.id && !msg.sender) {
+          const { data: prof } = await supabase.from('profiles').select('username, full_name, avatar_url').eq('id', msg.sender_id).maybeSingle()
+          if (prof) msg.sender = prof
+        }
         setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` }, (payload: any) => {
@@ -257,11 +261,15 @@ export function useMessages(conversationId: string | null) {
 
   const sendMessage = useCallback(async (content: string, messageType: string = 'text', metadata: any = {}) => {
     if (!conversationId || !user || !content.trim()) return
+    const replyTo = metadata?.reply_to || null
+    const cleanMeta = { ...metadata }
+    delete cleanMeta.reply_to
     const { error } = await supabase.rpc('send_message', {
       p_conversation_id: conversationId,
       p_content: content.trim(),
       p_message_type: messageType,
-      p_metadata: metadata,
+      p_metadata: cleanMeta,
+      p_reply_to: replyTo,
     })
     if (error) toast(error.message)
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
