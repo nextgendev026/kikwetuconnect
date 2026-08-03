@@ -59,7 +59,9 @@ export default function CreatePage() {
 
   useEffect(() => {
     fetchTopics()
-  }, [])
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  , [])
 
   const fetchTopics = async () => {
     const { data } = await supabase

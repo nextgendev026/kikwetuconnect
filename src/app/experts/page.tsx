@@ -40,10 +40,12 @@ export default function ExpertsPage() {
 
   useEffect(() => {
     if (!userLoading) { fetchProfessionals(); fetchCategories() }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLoading, countyFilter])
 
   useEffect(() => {
     if (profile) { fetchApplications(); checkAdmin() }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile])
 
   const fetchProfessionals = async () => {

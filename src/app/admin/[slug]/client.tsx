@@ -211,7 +211,10 @@ function VerificationPage() {
       if (data) setPros(data); setLoading(false)
     })
   }
-  useEffect(() => { fetchPros() }, [supabase])
+  useEffect(() => {
+    fetchPros()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase])
   const handleVerify = async (userId: string, approve: boolean) => {
     if (approve) {
       const { error } = await supabase.from('professionals').update({ status: 'approved' }).eq('user_id', userId)

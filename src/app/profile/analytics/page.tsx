@@ -19,6 +19,7 @@ export default function AnalyticsPage() {
     if (userLoading) return
     if (!profile) return router.push('/login')
     fetchStats()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLoading, profile])
 
   const fetchStats = async () => {

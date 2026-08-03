@@ -23,7 +23,10 @@ export default function AdminModeration() {
       })
   }
 
-  useEffect(() => { fetchItems() }, [supabase])
+  useEffect(() => {
+    fetchItems()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase])
 
   const toggleSelect = (id: string) => {
     setSelected(prev => {

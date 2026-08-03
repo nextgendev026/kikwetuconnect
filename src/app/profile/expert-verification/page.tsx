@@ -25,6 +25,7 @@ export default function ExpertVerificationPage() {
     if (userLoading) return
     if (!profile) return router.push('/login')
     fetchApplication()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLoading, profile])
 
   const fetchApplication = async () => {

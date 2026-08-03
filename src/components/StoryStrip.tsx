@@ -121,6 +121,7 @@ export default function StoryStrip({ profile }: StoryStripProps) {
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, profile])
 
   const openComposer = () => {

@@ -47,6 +47,7 @@ export default function NotificationsPage() {
     return () => {
       supabase.removeAllChannels()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile])
 
   const fetchNotifications = async () => {

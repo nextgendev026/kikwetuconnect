@@ -57,6 +57,7 @@ export default function SpaceDetailPage() {
   useEffect(() => {
     if (!slug || userLoading) return
     fetchSpace()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, userLoading])
 
   // Realtime: subscribe to space, posts, and member changes
@@ -105,6 +106,7 @@ export default function SpaceDetailPage() {
         })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [space?.id, supabase])
 
   const fetchSpace = async () => {
@@ -188,6 +190,7 @@ export default function SpaceDetailPage() {
       ],
     })
     return () => setConfig(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [space, isMember, setConfig])
 
   const formatTime = (d: string) => {

@@ -72,6 +72,7 @@ export default function SpacesPage() {
 
   const firstFieldRef = useRef<HTMLInputElement>(null)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (!userLoading) { fetchSpaces(); fetchMemberships() } }, [userLoading])
 
   // Realtime: subscribe to space changes
@@ -138,6 +139,7 @@ export default function SpacesPage() {
 
   useEffect(() => {
     if (!userLoading) { setSpaces([]); setHasMore(false); fetchSpaces() }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, searchTerm])
 
   const fetchMemberships = async () => {

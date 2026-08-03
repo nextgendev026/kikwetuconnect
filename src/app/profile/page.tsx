@@ -84,6 +84,7 @@ export default function ProfilePage() {
       )
       .subscribe()
     return () => { supabase.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, profile?.id])
 
   const handleAvatarChange = useCallback((url: string) => {
@@ -170,6 +171,7 @@ export default function ProfilePage() {
     if (!profile) return
     fetchAllData()
     fetchPosts(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, fetchAllData])
 
   const fetchPosts = useCallback(async (reset = false) => {

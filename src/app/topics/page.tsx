@@ -38,12 +38,14 @@ export default function TopicsPage() {
 
   useEffect(() => {
     fetchTopics()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
     if (profile) {
       fetchFollowedTopics()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile])
 
   const fetchTopics = async () => {

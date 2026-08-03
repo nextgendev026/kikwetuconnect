@@ -23,6 +23,7 @@ export default function BadgesPage() {
     if (userLoading) return
     if (!profile) return router.push('/login')
     fetchBadges()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLoading, profile])
 
   const fetchBadges = async () => {

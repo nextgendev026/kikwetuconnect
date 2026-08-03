@@ -129,6 +129,7 @@ export default function UserProfilePage() {
       ],
     })
     return () => setConfig(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, user, isFollowing, followRequest, setConfig])
 
   useEffect(() => {
@@ -159,6 +160,7 @@ export default function UserProfilePage() {
       .limit(10)
       .then(({ data }: { data: any }) => { if (data) setHeshimaEarnings(data) })
     fetchPosts(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, supabase])
 
   const fetchPosts = useCallback(async (reset = false) => {

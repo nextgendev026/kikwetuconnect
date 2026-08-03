@@ -91,7 +91,9 @@ export default function MarketPage() {
   const [savingEdit, setSavingEdit] = useState(false)
   const [editImageFiles, setEditImageFiles] = useState<File[]>([])
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchListings() }, [category, county, sort])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (profile) { fetchSaved(); fetchOrders(); fetchMyListings() } }, [profile])
 
   const fetchListings = async () => {

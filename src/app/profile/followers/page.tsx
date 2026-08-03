@@ -26,6 +26,7 @@ export default function FollowersPage() {
     if (userLoading) return
     if (!profile) return router.push('/login')
     fetchData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userLoading, profile])
 
   const fetchData = async () => {

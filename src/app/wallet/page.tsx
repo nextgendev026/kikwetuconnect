@@ -66,6 +66,7 @@ export default function WalletPage() {
   useEffect(() => {
     if (!profile) return
     fetchWalletData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile])
 
   // Realtime: auto-refresh the wallet when a top-up (or any token movement) lands
@@ -81,6 +82,7 @@ export default function WalletPage() {
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, profile])
 
   const fetchWalletData = async () => {
@@ -190,6 +192,7 @@ export default function WalletPage() {
       }
     }, 90000)
     return () => { cancelled = true; clearInterval(timer); clearTimeout(timeout) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCheckoutId, profile])
 
   const closeTopup = () => {

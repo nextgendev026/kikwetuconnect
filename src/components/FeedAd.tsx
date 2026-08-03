@@ -37,6 +37,7 @@ export default function FeedAd() {
 
   useEffect(() => {
     if (ad && !trackedRef.current) { trackedRef.current = true; track('impression') }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ad])
 
   if (!ad) return null

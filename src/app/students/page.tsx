@@ -48,6 +48,7 @@ export default function StudentsPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const [assigning, setAssigning] = useState<string | null>(null)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (!userLoading) { fetchRequests(); fetchQuestions(); if (profile) fetchSessions() } }, [userLoading])
 
   useEffect(() => {

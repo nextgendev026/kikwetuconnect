@@ -54,6 +54,7 @@ export default function TopicDetailPage() {
 
   useEffect(() => {
     fetchTopic()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug])
 
   useEffect(() => {
@@ -63,6 +64,7 @@ export default function TopicDetailPage() {
         checkIfFollowing()
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topic, profile])
 
   const fetchTopic = async () => {

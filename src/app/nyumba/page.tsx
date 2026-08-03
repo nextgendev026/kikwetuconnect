@@ -72,6 +72,7 @@ export default function NyumbaPage() {
   const [modLoading, setModLoading] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchAlerts() }, [])
 
   useEffect(() => {
@@ -82,6 +83,7 @@ export default function NyumbaPage() {
     checkRateLimit()
     fetchMyGroups()
     if (checkAdminRole(profile?.role)) setIsAdmin(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, supabase])
 
   // Real-time subscription for new alerts

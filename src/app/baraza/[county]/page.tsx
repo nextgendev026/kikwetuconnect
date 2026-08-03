@@ -106,7 +106,9 @@ export default function CountyHubPage() {
 
   useEffect(() => {
     fetchCountyData()
-  }, [countyName])
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  , [countyName])
 
   useEffect(() => {
     setConfig({

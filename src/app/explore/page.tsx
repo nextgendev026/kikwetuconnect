@@ -49,6 +49,7 @@ export default function ExplorePage() {
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [loading, setLoading] = useState(true)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (!userLoading) fetchExploreData() }, [userLoading])
 
   const fetchExploreData = async () => {

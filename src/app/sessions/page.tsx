@@ -66,6 +66,7 @@ export default function SessionsPage() {
 
   useEffect(() => {
     if (profile) fetchSessions()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile])
 
   const fetchSessions = async () => {

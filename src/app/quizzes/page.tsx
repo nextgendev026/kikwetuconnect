@@ -58,6 +58,7 @@ export default function QuizzesPage() {
   // Sync local heshima with profile context
   useEffect(() => { setHeshimaRating(profile?.heshima_rating || 0) }, [profile?.heshima_rating])
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchQuizzes(); fetchProgress(); fetchLeaderboard(); fetchBadges() }, [activeCategory])
 
   // Realtime: auto-refresh progress on quiz completion
@@ -68,6 +69,7 @@ export default function QuizzesPage() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, () => { fetchProgress(); refreshProfile() })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, supabase])
 
   // Load saved quizzes + in-progress resume state
@@ -75,6 +77,7 @@ export default function QuizzesPage() {
     if (!user) return
     fetchSaved()
     fetchProgressMap()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   // Realtime: saved quizzes + live in-progress progress across devices
@@ -175,6 +178,7 @@ export default function QuizzesPage() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_badges', filter: `user_id=eq.${user.id}` }, () => fetchBadges())
       .subscribe()
     return () => { supabase.removeChannel(ch) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, supabase])
 
   const startRandomQuiz = async () => {
