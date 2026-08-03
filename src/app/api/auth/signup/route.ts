@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
           full_name,
           username: username || null,
         },
+        emailRedirectTo: `${new URL(request.url).origin}/auth/callback`,
       },
     })
 
@@ -77,6 +78,19 @@ export async function POST(request: NextRequest) {
       eventType: 'signup',
       metadata: { email },
     }, data.user?.id || null)
+
+    const userId = data.user?.id
+    // Create profile server-side so the client doesn't need an active session cookie
+    if (userId) {
+      const { error: profileError } = await supabase.from('profiles').upsert({
+        id: userId,
+        username: username || null,
+        full_name,
+      })
+      if (profileError) {
+        console.error('Profile upsert error:', profileError)
+      }
+    }
 
     return NextResponse.json({
       user: data.user,
