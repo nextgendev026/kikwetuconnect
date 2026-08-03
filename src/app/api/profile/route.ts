@@ -27,11 +27,11 @@ export async function POST(request: NextRequest) {
         // If already following, unfollow
         if (error.message?.includes('already following')) {
           const { data: existing } = await supabase
-            .from('follows').select('id').eq('follower_id', user.id).eq('following_id', target_user_id).maybeSingle()
+            .from('follows').select('follower_id').eq('follower_id', user.id).eq('following_id', target_user_id).maybeSingle()
 
           if (existing) {
             const { error: delError } = await supabase
-              .from('follows').delete().eq('id', existing.id)
+              .from('follows').delete().eq('follower_id', user.id).eq('following_id', target_user_id)
             if (delError) throw delError
 
             const { error: rpc1 } = await svc.rpc('decrement_follower_count', { user_id: target_user_id })

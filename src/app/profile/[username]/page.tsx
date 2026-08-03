@@ -133,7 +133,7 @@ export default function UserProfilePage() {
 
   useEffect(() => {
     if (!profile || !user) return
-    supabase.from('follows').select('id').eq('follower_id', user.id).eq('following_id', profile.id).maybeSingle()
+    supabase.from('follows').select('follower_id, created_at').eq('follower_id', user.id).eq('following_id', profile.id).maybeSingle()
       .then(({ data }: { data: any }) => {
         setIsFollowing(!!data)
         if (!data) {
