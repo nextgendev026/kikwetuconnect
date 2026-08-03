@@ -92,7 +92,6 @@ function notificationUrl(row: { meta?: Record<string, any> | null; target_type?:
   if (row.target_type === 'answer' && row.target_id) return `/answers/${row.target_id}`
   if (row.target_type === 'session') return '/sessions'
   if (row.target_type === 'message') return '/messages'
-  if (row.target_type === 'story') return '/feed'
   return '/notifications'
 }
 

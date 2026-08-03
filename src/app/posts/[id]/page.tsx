@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, notFound } from 'next/navigation'
 import { ArrowLeft, MessageCircle, TrendingUp, Bookmark, Shield, Star, MoreHorizontal, Edit3, Trash2, EyeOff, Eye, Flag } from 'lucide-react'
 import { Button, Textarea } from '@/components/ui/form'
 import { useUser, useSupabase, toast } from '@/app/providers'
@@ -94,6 +94,7 @@ export default function PostDetailPage() {
       // RPC returns null if not found — handle gracefully
       if (data) {
         setPost(data as unknown as Post)
+        setLoading(false)
         return
       }
     } catch (err: any) {
@@ -301,14 +302,7 @@ export default function PostDetailPage() {
   }
 
   if (!post) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <p className="text-muted mb-4">Post not found</p>
-        <Link href="/feed" className="btn btn-primary">
-          Back to feed
-        </Link>
-      </div>
-    )
+    notFound()
   }
 
   const author = post.profiles as Profile | null

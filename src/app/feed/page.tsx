@@ -6,7 +6,6 @@ import { Virtuoso } from 'react-virtuoso'
 import { useSupabase, useUser, toast } from '@/app/providers'
 import { useQueryClient } from '@tanstack/react-query'
 import FeedAd from '@/components/FeedAd'
-import StoryStrip from '@/components/StoryStrip'
 import { PostCard } from '@/components/PostCard'
 import { COUNTIES, TABS, TYPE_FILTERS } from '@/lib/feed-config'
 import type { TabId, TypeFilter } from '@/lib/feed-config'
@@ -234,11 +233,7 @@ export default function FeedPage() {
         ))}
       </div>
 
-       {/* Stories strip — Facebook-style 24h reels + community shorts */}
-      <StoryStrip profile={profile} />
-
-
-      {/* Composer */}
+       {/* Composer */}
       <div
         onClick={() => openCreateModal()} role="button" tabIndex={0} aria-label="Create a new post"
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCreateModal() } }}

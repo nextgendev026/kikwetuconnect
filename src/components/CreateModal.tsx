@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { X, PenSquare, HelpCircle, BarChart3, ShoppingBag, Shield, Image, Video, Mic, Trash2, Upload, Plus, Minus, Coins, MapPin, Tag, Play, FileText, Bold, Italic, Heading2, List, Link2, Quote } from 'lucide-react'
+import { X, PenSquare, HelpCircle, BarChart3, ShoppingBag, Shield, Image, Video, Mic, Trash2, Upload, Plus, Minus, Coins, MapPin, Tag, FileText, Bold, Italic, Heading2, List, Link2, Quote } from 'lucide-react'
 import imageCompress from 'browser-image-compression'
 import MediaEditor from '@/components/MediaEditor'
 import { countWords } from '@/components/RichText'
@@ -13,7 +13,6 @@ const TYPES = [
   { id: 'poll', label: 'Poll', icon: BarChart3, color: 'var(--blue)' },
   { id: 'listing', label: 'Mtaa listing', icon: ShoppingBag, color: 'var(--earth)' },
   { id: 'alert', label: 'Safety update', icon: Shield, color: 'var(--red)' },
-  { id: 'story', label: 'Idea (24h)', icon: Play, color: 'var(--blue)' },
 ]
 
 const LABELS: Record<string, string> = {
@@ -23,7 +22,6 @@ const LABELS: Record<string, string> = {
   poll: 'What should the community weigh in on?',
   listing: 'What are you offering?',
   alert: 'What useful update should neighbours know?',
-  story: 'Add a caption to your 24h idea',
 }
 
 const PLACEHOLDERS: Record<string, string> = {
@@ -33,7 +31,6 @@ const PLACEHOLDERS: Record<string, string> = {
   poll: 'Ask the community to weigh in...',
   listing: 'Describe what you are selling or offering...',
   alert: 'Describe the safety concern or update...',
-  story: 'Add a caption to your idea (optional)...',
 }
 
 const LISTING_CATEGORIES = ['Produce', 'Services', 'Crafts', 'Livestock', 'Tools', 'Other']
@@ -115,8 +112,8 @@ export default function CreateModal() {
   const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>, mediaType: string) => {
     const files = Array.from(e.target.files || [])
     for (const file of files) {
-      const sizeLimit = type === 'story' ? 50 * 1024 * 1024 : 10 * 1024 * 1024
-      if (file.size > sizeLimit) { toast(`${file.name} is too large (max ${type === 'story' ? 50 : 10}MB)`); continue }
+      const sizeLimit = 10 * 1024 * 1024
+      if (file.size > sizeLimit) { toast(`${file.name} is too large (max 10MB)`); continue }
       try {
         const processed = mediaType === 'image' && file.type.startsWith('image/')
           ? await imageCompress(file, { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true })
@@ -149,16 +146,6 @@ export default function CreateModal() {
       urls.push(publicUrl)
     }
     return urls
-  }
-
-  const uploadStoryMedia = async (m: { file: File; type: string }): Promise<string> => {
-    const ext = (m.file.name.split('.').pop() || 'bin').replace(/[^a-zA-Z0-9]/g, '')
-    const path = `stories/${user!.id}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const bucket = 'stories'
-    const { error: upErr } = await supabase.storage.from(bucket).upload(path, m.file, { upsert: true })
-    if (upErr) throw upErr
-    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path)
-    return publicUrl
   }
 
   const resetForm = () => {
@@ -233,35 +220,6 @@ export default function CreateModal() {
         if (error) throw error
         toast('Alert sent to neighbours!')
         window.location.href = '/nyumba'
-        resetForm()
-        return
-      }
-
-      // Story publishing: single media required, 15s video cap, 24h expiry (via RPC)
-      if (type === 'story') {
-        if (mediaFiles.length === 0) { toast('Add a photo or 15s video for your idea'); return }
-        if (mediaFiles.length > 1) { toast('Stories support a single image or video'); return }
-        const m = mediaFiles[0]
-        const isVideo = m.type.startsWith('video/')
-        const fileSizeMb = m.file.size / (1024 * 1024)
-        if (fileSizeMb > 50) { toast('Story media too large (max 50MB)'); return }
-        if (isVideo && m.duration && m.duration > 15) {
-          toast('Video stories are capped at 15 seconds. Re-trim your clip.')
-          setEditingMedia({ file: m.file, type: 'video' })
-          setMediaFiles(prev => prev.filter(x => x !== m))
-          return
-        }
-        const url = await uploadStoryMedia(m)
-        const { error: storyErr } = await supabase.rpc('create_story', {
-          p_media_url: url,
-          p_media_type: isVideo ? 'video' : 'image',
-          p_caption: text || title || null,
-          p_duration: isVideo ? (m.duration || 15) : null,
-          p_thumbnail_url: null,
-        })
-        if (storyErr) throw storyErr
-        toast('Idea shared! Visible for 24h.')
-        window.location.href = '/feed'
         resetForm()
         return
       }
@@ -354,7 +312,7 @@ export default function CreateModal() {
         {/* Media editor overlay */}
         {editingMedia && (
           <MediaEditor file={editingMedia.file} type={editingMedia.type}
-            maxDuration={type === 'story' && editingMedia.type === 'video' ? 15 : 30}
+            maxDuration={30}
             onComplete={(editedFile, cropData) => {
               const preview = URL.createObjectURL(editedFile)
               const dur = typeof cropData?.duration === 'number'
@@ -498,11 +456,11 @@ export default function CreateModal() {
           </div>
         )}
 
-        {/* Media upload (post, article, question, poll, listing, and 24h stories) */}
-        {['post', 'article', 'question', 'poll', 'listing', 'story'].includes(type) && (
+        {/* Media upload (post, article, question, poll, listing) */}
+        {['post', 'article', 'question', 'poll', 'listing'].includes(type) && (
           <>
             <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-              <input ref={fileInputRef} type="file" accept="image/*" multiple={type !== 'story'} onChange={e => handleMediaSelect(e, 'image')} className="hidden" />
+              <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={e => handleMediaSelect(e, 'image')} className="hidden" />
               <input ref={videoInputRef} type="file" accept="video/*" onChange={e => handleMediaSelect(e, 'video')} className="hidden" />
               <input ref={audioInputRef} type="file" accept="audio/*" onChange={e => handleMediaSelect(e, 'audio')} className="hidden" />
               <button onClick={() => fileInputRef.current?.click()}
@@ -513,12 +471,10 @@ export default function CreateModal() {
                 style={{ padding: '8px 14px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: 'var(--raised)', color: 'var(--muted)', border: '1px solid var(--line)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
                 <Video className="w-3.5 h-3.5" style={{ color: 'var(--blue)' }} /> Video
               </button>
-              {type !== 'story' && (
-                <button onClick={() => audioInputRef.current?.click()}
-                  style={{ padding: '8px 14px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: 'var(--raised)', color: 'var(--muted)', border: '1px solid var(--line)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <Mic className="w-3.5 h-3.5" style={{ color: 'var(--red)' }} /> Audio
-                </button>
-              )}
+              <button onClick={() => audioInputRef.current?.click()}
+                style={{ padding: '8px 14px', borderRadius: 10, fontSize: 11, fontWeight: 600, background: 'var(--raised)', color: 'var(--muted)', border: '1px solid var(--line)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Mic className="w-3.5 h-3.5" style={{ color: 'var(--red)' }} /> Audio
+              </button>
             </div>
 
             {mediaFiles.length > 0 && (
