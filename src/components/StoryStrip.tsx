@@ -216,13 +216,13 @@ export default function StoryStrip({ profile }: StoryStripProps) {
           <div className="flex gap-[10px] overflow-x-auto pb-[6px] pt-[8px] -mx-[12px] px-[12px]">
             <button
               onClick={() => setShowIdeaComposer(true)}
-              className="flex-shrink-0 w-[104px] h-[150px] rounded-[16px] border-2 border-dashed border-[var(--line)] flex flex-col items-center justify-center gap-[8px] text-[var(--muted)] hover:border-gold hover:text-gold transition-colors cursor-pointer"
+              className="flex-shrink-0 w-16 h-16 rounded-full border-2 border-dashed border-[var(--line)] flex items-center justify-center text-[var(--muted)] hover:border-gold hover:text-gold transition-colors cursor-pointer"
               aria-label="Your idea"
+              style={{ background: 'var(--raised)' }}
             >
-              <span className="w-[34px] h-[34px] rounded-full grid place-items-center bg-gold/15">
+              <span className="w-[30px] h-[30px] rounded-full grid place-items-center bg-gold/15">
                 <PlusIcon className="w-[16px] h-[16px] text-gold" />
               </span>
-              <span className="text-[11px] font-bold">Your idea</span>
             </button>
             {myShorts.map(s => (
               <ShortCard key={s.id} short={s} />
@@ -439,32 +439,21 @@ function IdeaComposer({ profile, supabase, onClose, onPublished }: {
 function ShortCard({ short }: { short: Short }) {
   const author = short.profiles
   const isVideo = short.media_type?.startsWith('video/')
-  const fallback = getInitials(author?.full_name || author?.username)
   return (
     <Link
       href={`/posts/${short.id}`}
-      className="relative flex-shrink-0 w-[104px] h-[150px] rounded-[16px] overflow-hidden block group"
+      className="relative flex-shrink-0 w-16 h-16 rounded-full overflow-hidden block group"
       aria-label={`@${author?.username}'s short`}
     >
       {isVideo ? (
         <div className="w-full h-full bg-gradient-to-b from-deep to-night2 grid place-items-center">
-          <span className="w-[30px] h-[30px] rounded-full bg-black/40 flex items-center justify-center">
-            <Play className="w-[13px] h-[13px] text-white fill-white" />
+          <span className="w-[22px] h-[22px] rounded-full bg-black/40 flex items-center justify-center">
+            <Play className="w-[11px] h-[11px] text-white fill-white" />
           </span>
         </div>
       ) : (
         <img src={short.media_url!} alt="" className="w-full h-full object-cover" loading="lazy" />
       )}
-      <div className="absolute inset-x-0 bottom-0 p-[8px] bg-gradient-to-t from-black/70 to-transparent">
-        <p className="text-white text-[10px] font-bold leading-tight line-clamp-2">{short.title || short.content?.slice(0, 60)}</p>
-      </div>
-      <div className="absolute top-[8px] left-[8px]">
-        {author?.avatar_url ? (
-          <img src={author.avatar_url} alt="" className="w-[18px] h-[18px] rounded-full object-cover border-[1.5px] border-gold/60" />
-        ) : (
-          <span className="w-[18px] h-[18px] rounded-full bg-gold text-night grid place-items-center text-[8px] font-extrabold border-[1.5px] border-gold/60">{fallback}</span>
-        )}
-      </div>
     </Link>
   )
 }
