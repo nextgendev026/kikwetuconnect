@@ -5,12 +5,15 @@ import { useGeolocation } from '@/hooks/useGeolocation'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { Bell, MapPin, Download, X, Check, RefreshCw } from 'lucide-react'
 
+const INSTALL_DISMISSED_KEY = 'kikwetu-install-dismissed'
+const INSTALL_ACCEPTED_KEY = 'kikwetu-installed'
+const DISMISS_COOLDOWN_MS = 7 * 24 * 3600 * 1000
+
 export default function PwaSetup() {
   const { profile } = useUser()
   const supabase = useSupabase()
-  const [installable, setInstallable] = useState(false)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
-  const [installed, setInstalled] = useState(false)
+  const [showInstall, setShowInstall] = useState(false)
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [swRegistration, setSwRegistration] = useState<ServiceWorkerRegistration | null>(null)
   const [showPermissionPrompt, setShowPermissionPrompt] = useState(false)
@@ -50,52 +53,67 @@ export default function PwaSetup() {
     }
   }
 
-  // Install prompt
+  // Install prompt handling — consolidated, idempotent, cooldown-aware
   useEffect(() => {
-    const dismissedCount = localStorage.getItem('kikwetu-install-dismissed')
-    if (dismissedCount) {
-      const dismissedAt = parseInt(dismissedCount, 10)
-      if (Date.now() - dismissedAt < 7 * 24 * 3600 * 1000) {
-        setInstallable(false)
-        return
-      }
-      localStorage.removeItem('kikwetu-install-dismissed')
+    if (typeof window === 'undefined') return
+
+    const installedFlag = localStorage.getItem(INSTALL_ACCEPTED_KEY)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    if (installedFlag || isStandalone) return
+
+    const dismissed = localStorage.getItem(INSTALL_DISMISSED_KEY)
+    if (dismissed) {
+      const dismissedAt = parseInt(dismissed, 10)
+      if (!isNaN(dismissedAt) && Date.now() - dismissedAt < DISMISS_COOLDOWN_MS) return
+      localStorage.removeItem(INSTALL_DISMISSED_KEY)
     }
-    const handler = (e: Event) => {
+
+    let deferred: any = null
+
+    const beforeInstallHandler = (e: Event) => {
       e.preventDefault()
+      deferred = e
       setDeferredPrompt(e)
-      setInstallable(true)
+      setShowInstall(true)
     }
-    window.addEventListener('beforeinstallprompt', handler)
-    window.addEventListener('appinstalled', () => {
-      setInstalled(true)
-      setInstallable(false)
+
+    const appInstalledHandler = () => {
+      localStorage.setItem(INSTALL_ACCEPTED_KEY, 'true')
       setDeferredPrompt(null)
-      localStorage.setItem('kikwetu-installed', 'true')
-    })
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setInstalled(true)
-      setInstallable(false)
-      setDeferredPrompt(null)
+      setShowInstall(false)
     }
-    return () => window.removeEventListener('beforeinstallprompt', handler)
+
+    window.addEventListener('beforeinstallprompt', beforeInstallHandler)
+    window.addEventListener('appinstalled', appInstalledHandler)
+
+    setDeferredPrompt(deferred)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', beforeInstallHandler)
+      window.removeEventListener('appinstalled', appInstalledHandler)
+    }
   }, [])
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return
+    if (!deferredPrompt) {
+      toast('Use your browser menu → Add to Home Screen')
+      return
+    }
     deferredPrompt.prompt()
     const { outcome } = await deferredPrompt.userChoice
     if (outcome === 'accepted') {
-      setInstallable(false)
+      localStorage.setItem(INSTALL_ACCEPTED_KEY, 'true')
       setDeferredPrompt(null)
-      localStorage.setItem('kikwetu-installed', 'true')
+      setShowInstall(false)
+    } else {
+      localStorage.setItem(INSTALL_DISMISSED_KEY, Date.now().toString())
+      setShowInstall(false)
     }
   }
 
-  // Don't show install banner if dismissed within 7 days or already installed
   const handleDismissInstall = () => {
-    setInstallable(false)
-    localStorage.setItem('kikwetu-install-dismissed', Date.now().toString())
+    localStorage.setItem(INSTALL_DISMISSED_KEY, Date.now().toString())
+    setShowInstall(false)
   }
 
   // Sync location to profile when position updates
@@ -131,17 +149,6 @@ export default function PwaSetup() {
     localStorage.setItem('kikwetu-perms-dismissed', 'true')
   }
 
-  // Track install status on mount
-  const [isInstalled, setIsInstalled] = useState(false)
-  useEffect(() => {
-    const installedFlag = localStorage.getItem('kikwetu-installed')
-    const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches
-    if (installedFlag || isStandalone || installed) {
-      setIsInstalled(true)
-      setInstallable(false)
-    }
-  }, [installed])
-
   return (
     <>
       {/* Update available banner */}
@@ -165,7 +172,7 @@ export default function PwaSetup() {
       )}
 
       {/* Install banner */}
-      {installable && !isInstalled && (
+      {showInstall && deferredPrompt && (
         <div className="fixed bottom-[88px] left-4 right-4 z-50 animate-rise" style={{ maxWidth: 360, margin: '0 auto' }}>
           <div className="rounded-[16px] p-4 shadow-xl" style={{ background: 'var(--night)', color: 'var(--surface)', border: '1px solid var(--line)' }}>
             <div className="flex items-center gap-3 mb-2">
@@ -181,11 +188,11 @@ export default function PwaSetup() {
                 style={{ background: 'var(--gold)', color: 'var(--night)' }}>
                 Install
               </button>
-                <button onClick={handleDismissInstall}
-                  className="py-2 px-3 rounded-[10px] text-[11px] font-medium border-0 cursor-pointer"
-                  style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
-                  Not now
-                </button>
+              <button onClick={handleDismissInstall}
+                className="py-2 px-3 rounded-[10px] text-[11px] font-medium border-0 cursor-pointer"
+                style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+                Not now
+              </button>
             </div>
           </div>
         </div>
