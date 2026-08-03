@@ -91,7 +91,8 @@ export default function NotificationTray({ onClose }: { onClose: () => void }) {
   const unread = notifications.filter(n => !n.is_read).length
 
   return (
-    <div ref={ref} className="absolute top-full right-0 mt-2 w-[380px] max-w-[95vw] rounded-2xl shadow-lg z-50 overflow-hidden" style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}>
+    <div ref={ref} className="fixed inset-0 flex items-center justify-center z-[50]">
+      <div className="rounded-2xl shadow-lg overflow-hidden" style={{ width: 'min(380px, 95vw)', maxWidth: 'min(380px, 95vw)', background: 'var(--surface)', border: '1px solid var(--line)' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--line)' }}>
         <div>
@@ -132,6 +133,7 @@ export default function NotificationTray({ onClose }: { onClose: () => void }) {
             </div>
           </button>
         ))}
+      </div>
       </div>
     </div>
   )
