@@ -1,55 +1,15 @@
 'use client'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { ArrowUp, MessageCircle, Smile, Globe, Star, Flag, MoreHorizontal, Edit3, Trash2, EyeOff, Eye, Plus, Play } from 'lucide-react'
 import FeedAd from '@/components/FeedAd'
-import ShareMenu from '@/components/ShareMenu'
 import StoryStrip from '@/components/StoryStrip'
-import RichText, { stripMarkdown } from '@/components/RichText'
-import { COUNTIES, TABS, TYPE_FILTERS, EMOJI_REACTIONS } from '@/lib/feed-config'
+import { PostCard } from '@/components/PostCard'
+import { COUNTIES, TABS, TYPE_FILTERS } from '@/lib/feed-config'
 import type { TabId, TypeFilter } from '@/lib/feed-config'
-import { timeAgoShort, getInitials, isVideoType } from '@/lib/utils'
-
-export interface Profile {
-  id: string
-  full_name: string | null
-  username: string
-  avatar_url: string | null
-  heshima_rating: number
-  is_verified_expert: boolean
-  county_hub: string | null
-}
-
-interface VoteRow {
-  target_id: string
-  vote_type: 1 | -1
-}
-
-interface SaveRow {
-  target_id: string
-}
-
-export interface Post {
-  id: string
-  user_id: string
-  post_type: string
-  title: string | null
-  content: string
-  media_url: string | null
-  media_type: string | null
-  county_tag: string | null
-  bounty_tokens: number
-  upvotes_count: number
-  answers_count: number
-  is_pinned: boolean
-  is_hidden: boolean
-  created_at: string
-  category: string
-  profiles: Profile | null
-  user_vote?: 1 | -1 | null
-  user_saved?: boolean
-}
+import { getInitials } from '@/lib/utils'
+import { buildFeedItems, patchPost, toPost } from '@/lib/feedHelpers'
+import type { Post, VoteRow, SaveRow } from '@/lib/feedHelpers'
 
 function SkeletonCard() {
   return (
@@ -110,359 +70,13 @@ function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => voi
   )
 }
 
-function PostCardComponent({
-  post,
-  currentUserId,
-  onVote,
-  onSave,
-  onReact,
-}: {
-  post: Post
-  currentUserId: string | null
-  onVote: (postId: string, voteType: 1 | -1 | null) => void
-  onSave: (postId: string) => void
-  onReact: (postId: string, emoji: string) => void
-}) {
-  const author = post.profiles
-  const initials = getInitials(author?.full_name || author?.username)
-  const [showReactions, setShowReactions] = useState(false)
-  const [reactions, setReactions] = useState<Record<string, number>>({})
-  const [translatedText, setTranslatedText] = useState<string | null>(null)
-  const [loadingTrans, setLoadingTrans] = useState(false)
-  const [showMenu, setShowMenu] = useState(false)
-  const [editing, setEditing] = useState(false)
-  const [editTitle, setEditTitle] = useState(post.title || '')
-  const [editContent, setEditContent] = useState(post.content)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [hidden, setHidden] = useState(post.is_hidden)
-
-  const handleEditSave = async () => {
-    const res = await fetch(`/api/posts/${post.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: editTitle, content: editContent }),
-    })
-    if (!res.ok) { const j = await res.json(); toast(j.error || 'Failed to update'); return }
-    const j = await res.json()
-    post.title = j.post.title
-    post.content = j.post.content
-    toast('Post updated')
-    setEditing(false)
-  }
-
-  const handleDelete = async () => {
-    setDeleting(true)
-    const res = await fetch(`/api/posts/${post.id}`, { method: 'DELETE' })
-    setDeleting(false)
-    if (!res.ok) { const j = await res.json(); toast(j.error || 'Failed to delete'); return }
-    toast('Post deleted')
-    onVote(post.id, null)
-    window.location.reload()
-  }
-
-  const handleHide = async () => {
-    const res = await fetch(`/api/posts/${post.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_hidden: !hidden }),
-    })
-    if (!res.ok) { const j = await res.json(); toast(j.error || 'Failed'); return }
-    setHidden(!hidden)
-    if (!hidden) window.location.reload()
-    toast(hidden ? 'Post unhidden' : 'Post hidden')
-  }
-
-  useEffect(() => {
-    const stored = localStorage.getItem(`reactions-${post.id}`)
-    if (stored) try { setReactions(JSON.parse(stored)) } catch {}
-  }, [post.id])
-
-  const handleReact = (emoji: string) => {
-    const updated = { ...reactions, [emoji]: (reactions[emoji] || 0) + 1 }
-    setReactions(updated)
-    localStorage.setItem(`reactions-${post.id}`, JSON.stringify(updated))
-    onReact(post.id, emoji)
-    setShowReactions(false)
-  }
-
-  const handleTranslate = async () => {
-    if (translatedText) { setTranslatedText(null); return }
-    setLoadingTrans(true)
-    try {
-      const res = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ post_id: post.id, source_type: 'posts', language: 'sw' }),
-      })
-      const j = await res.json()
-      if (j.translated_text) setTranslatedText(j.translated_text)
-      else toast('Translation failed')
-    } catch { toast('Translation error') }
-    finally { setLoadingTrans(false) }
-  }
-
-  const handleReport = async (e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation()
-    try {
-      const res = await fetch('/api/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content_type: 'post', content_id: post.id, reason: 'Reported by user' }),
-      })
-      if (res.ok) toast('Report submitted. Moderators will review.')
-      else toast('Failed to submit report')
-    } catch { toast('Report failed') }
-  }
-
-  return (
-    <div className="bg-night2 border border-[var(--line)] rounded-[16px] p-[18px] mb-[12px] animate-rise card-hover">
-      {/* Header */}
-      <div className="flex items-start gap-3 mb-[12px]">
-        <Link href={`/profile/${author?.username || ''}`} className="flex-shrink-0 relative" aria-label={`View ${author?.full_name || author?.username || 'user'} profile`}>
-          {author?.avatar_url ? (
-            <img src={author.avatar_url} alt="" className="w-[40px] h-[40px] rounded-full object-cover" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.querySelector('.avatar-fallback')?.classList.remove('hidden') }} />
-          ) : null}
-          <div className={`avatar-fallback w-[40px] h-[40px] rounded-full bg-gradient-to-br from-gold to-green flex items-center justify-center text-[12px] font-extrabold text-night ${author?.avatar_url ? 'hidden' : ''}`}>{initials}</div>
-          {author?.is_verified_expert && (
-            <span className="absolute -bottom-1 -right-1 w-[18px] h-[18px] bg-green rounded-full flex items-center justify-center border-2 border-night2">
-              <svg viewBox="0 0 24 24" className="w-[10px] h-[10px] stroke-night fill-none" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
-            </span>
-          )}
-        </Link>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-[6px] flex-wrap">
-            <Link href={`/profile/${author?.username || ''}`} className="text-cream font-bold text-[13px] hover:underline">{author?.full_name || author?.username || 'Unknown'}</Link>
-            {author?.is_verified_expert && <span className="text-[10px] font-bold text-green-accessible">Expert</span>}
-          </div>
-          <div className="flex items-center gap-[8px] mt-[2px]">
-            <span className="text-[var(--muted)] text-[11px]">@{author?.username || 'unknown'}</span>
-            {author && author.heshima_rating > 0 && (
-              <span className="text-[10px] font-semibold text-gold-accessible">{author.heshima_rating} Heshima</span>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span style={{
-            padding: '3px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
-            background: post.post_type === 'inquiry' ? 'color-mix(in oklab, var(--blue) 20%, transparent)' : post.post_type === 'article' ? 'color-mix(in oklab, var(--gold) 20%, transparent)' : 'color-mix(in oklab, var(--green) 20%, transparent)',
-            color: post.post_type === 'inquiry' ? 'var(--blue-text)' : post.post_type === 'article' ? 'var(--gold-text)' : 'var(--green-text)',
-          }}>
-            {post.post_type === 'baraza' ? 'Post' : post.post_type === 'inquiry' ? 'Question' : post.post_type === 'article' ? 'Article' : post.post_type === 'poll' ? 'Poll' : post.post_type}
-          </span>
-          {post.category && post.category !== 'Post' && (
-            <span style={{
-              padding: '3px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700,
-              background: post.category === 'Nairobi' ? 'color-mix(in oklab, var(--earth) 20%, transparent)' : 'color-mix(in oklab, var(--blue) 20%, transparent)',
-              color: post.category === 'Nairobi' ? 'var(--earth)' : 'var(--blue)',
-            }}>
-              {post.category}
-            </span>
-          )}
-          <span className="text-[var(--muted)] text-[11px] whitespace-nowrap">{timeAgoShort(post.created_at)}</span>
-          {currentUserId === post.user_id && (
-            <div className="relative">
-              <button onClick={() => setShowMenu(!showMenu)} className="action-button w-[28px] h-[28px]" aria-label="Post options">
-                <MoreHorizontal className="w-4 h-4" aria-hidden="true" />
-              </button>
-              {showMenu && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                  <div className="absolute right-0 top-full mt-1 min-w-[140px] bg-deep border border-[var(--line)] rounded-lg shadow-xl z-20 animate-rise overflow-hidden">
-                    <button onClick={() => { setShowMenu(false); setEditing(true); setEditTitle(post.title || ''); setEditContent(post.content) }} className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-cream hover:bg-[var(--surface)] transition-colors">
-                      <Edit3 className="w-3.5 h-3.5" /> Edit
-                    </button>
-                    <button onClick={() => { setShowMenu(false); handleHide() }} className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-cream hover:bg-[var(--surface)] transition-colors">
-                      {hidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />} {hidden ? 'Unhide' : 'Hide'}
-                    </button>
-                    <button onClick={() => { setShowMenu(false); setConfirmDelete(true) }} className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-red hover:bg-[var(--surface)] transition-colors">
-                      <Trash2 className="w-3.5 h-3.5" /> Delete
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Title for inquiries/articles */}
-      {post.title && (
-        <Link href={`/posts/${post.id}`} className="block text-cream font-bold text-[15px] mb-[6px] leading-[1.3] hover:text-gold transition-colors">{post.title}</Link>
-      )}
-
-      {/* Content — styled text (rich for articles, clamped in feed) */}
-      <div className="mb-[12px]">
-        {translatedText ? (
-          <p className="text-cream text-[13px] leading-[1.6] whitespace-pre-wrap break-words">
-            {translatedText}
-            <span className="text-[10px] ml-1 opacity-50">(SW)</span>
-          </p>
-        ) : (
-          <>
-            <RichText content={post.content} className="text-[13px]" clamp={stripMarkdown(post.content).length > 220} />
-            {stripMarkdown(post.content).length > 220 && (
-              <Link href={`/posts/${post.id}`} className="inline-block mt-[6px] text-gold-accessible text-[12px] font-bold hover:underline">
-                Read full post ↗
-              </Link>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Media */}
-      {post.media_url && (
-        <Link href={`/posts/${post.id}`} aria-label="View post media" className="mb-[12px] rounded-[12px] overflow-hidden bg-deep border border-[var(--line)] block">
-          {isVideoType(post.media_type) ? (
-            <div className="h-[200px] flex items-center justify-center bg-deep">
-              <span className="text-[40px] opacity-50" aria-hidden="true">🎥</span>
-            </div>
-          ) : (
-            <img src={post.media_url} alt="" aria-hidden="true" className="w-full h-auto max-h-[300px] object-cover" loading="lazy" />
-          )}
-        </Link>
-      )}
-
-      {/* County & Bounty */}
-      <div className="flex flex-wrap items-center gap-[8px] mb-[12px]">
-        {post.county_tag && (
-          <span className="flex items-center gap-1 text-[var(--muted)] text-[11px]">
-            📍 {post.county_tag}
-          </span>
-        )}
-        {post.bounty_tokens > 0 && (
-          <span className="flex items-center gap-1 px-[8px] py-[3px] rounded-full bg-gold/20 text-gold-accessible text-[10px] font-bold">
-            🪙 {post.bounty_tokens}
-          </span>
-        )}
-      </div>
-
-      {/* Action Buttons */}
-      <div className="post-footer pt-[12px] border-t border-[var(--line)]">
-        <div className="action-group">
-          <button
-            onClick={() => onVote(post.id, post.user_vote === 1 ? null : 1)}
-            className={`action-button ${post.user_vote === 1 ? 'active-vote' : ''}`}
-            aria-label={post.user_vote === 1 ? 'Remove upvote' : `Upvote, ${post.upvotes_count || 0} upvotes`}
-          >
-            <ArrowUp className={`w-4 h-4 ${post.user_vote === 1 ? 'text-green' : ''}`} aria-hidden="true" />
-            <span>{post.upvotes_count || 0}</span>
-          </button>
-
-          <Link
-            href={`/posts/${post.id}`}
-            className="action-button feed-action-link"
-            aria-label={post.post_type === 'inquiry' ? `${post.answers_count || 0} answers` : `${post.answers_count || 0} comments`}
-          >
-            <MessageCircle className="w-4 h-4" aria-hidden="true" />
-            <span>{post.answers_count || 0}</span>
-          </Link>
-
-          <div className="relative">
-            <button
-              onClick={() => setShowReactions(!showReactions)}
-              className="action-button"
-              aria-label="React to post"
-            >
-              <Smile className="w-4 h-4" aria-hidden="true" />
-              {Object.keys(reactions).length > 0 && <span className="text-[10px]">{Object.values(reactions).reduce((a, b) => a + b, 0)}</span>}
-            </button>
-            {showReactions && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowReactions(false)} />
-                <div className="absolute bottom-full left-0 mb-1 flex gap-[3px] p-[6px] bg-deep border border-[var(--line)] rounded-full shadow-xl z-20 animate-rise">
-                  {EMOJI_REACTIONS.map(emoji => (
-                    <button key={emoji} onClick={() => handleReact(emoji)} className="w-[30px] h-[30px] flex items-center justify-center hover:scale-125 transition-transform text-[16px]" aria-label={`React with ${emoji}`}>{emoji}</button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="action-group">
-          <ShareMenu url={`/posts/${post.id}`} title={post.title || post.content?.slice(0, 90)} />
-
-          <button
-            onClick={handleTranslate}
-            className={`action-button ${translatedText ? 'active-vote' : ''}`}
-            aria-label={translatedText ? 'Show original' : 'Translate to Swahili'}
-          >
-            {loadingTrans ? <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" aria-hidden="true" /> : <Globe className="w-4 h-4" aria-hidden="true" />}
-          </button>
-
-          <button
-            onClick={() => onSave(post.id)}
-            className={`action-button ${post.user_saved ? 'active-save' : ''}`}
-            aria-label={post.user_saved ? 'Unsave post' : 'Save post'}
-          >
-            <Star className={`w-4 h-4 ${post.user_saved ? 'fill-current text-gold' : ''}`} aria-hidden="true" />
-          </button>
-
-          <button
-            onClick={handleReport}
-            className="action-button"
-            aria-label="Report post"
-          >
-            <Flag className="w-4 h-4" aria-hidden="true" />
-          </button>
-        </div>
-      </div>
-
-      {/* Emoji reaction chips */}
-      {Object.keys(reactions).length > 0 && (
-        <div className="flex flex-wrap gap-[4px] mt-[8px] pt-[8px] border-t border-[var(--line)]">
-          {Object.entries(reactions).map(([emoji, count]) => (
-            <button key={emoji} onClick={() => handleReact(emoji)} aria-label={`React with ${emoji}, ${count} reaction${count === 1 ? '' : 's'}`} className="flex items-center gap-1 px-[8px] py-[3px] rounded-full text-[11px] transition-colors" style={{ background: 'var(--raised)', color: 'var(--faint-accessible)' }} onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.color = 'var(--gold)' }} onMouseLeave={e => { e.currentTarget.style.background = 'var(--raised)'; e.currentTarget.style.color = 'var(--faint-accessible)' }}>
-              <span aria-hidden="true">{emoji}</span>
-              <span className="font-semibold">{count}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Edit modal */}
-      {editing && (
-        <div onClick={(e) => { if (e.target === e.currentTarget) setEditing(false) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(520px, 94%)' }}>
-            <h3 style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink)', margin: '0 0 16px' }}>Edit post</h3>
-            <div style={{ display: 'grid', gap: 12 }}>
-              <input style={{ background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 9, padding: '10px 14px', fontSize: 13, color: 'var(--ink)', outline: 'none' }} placeholder="Title (optional)" value={editTitle} onChange={e => setEditTitle(e.target.value)} />
-              <textarea style={{ background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 9, padding: '10px 14px', fontSize: 13, color: 'var(--ink)', outline: 'none', minHeight: 150, resize: 'vertical' }} placeholder="Write your post..." value={editContent} onChange={e => setEditContent(e.target.value)} />
-            </div>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
-              <button onClick={() => setEditing(false)} style={{ minHeight: 36, borderRadius: 9, padding: '0 14px', background: 'var(--raised)', color: 'var(--ink)', fontSize: 11, fontWeight: 700, border: 0, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleEditSave} style={{ minHeight: 36, borderRadius: 9, padding: '0 14px', background: 'var(--gold)', color: 'var(--night)', fontSize: 11, fontWeight: 700, border: 0, cursor: 'pointer' }}>Save</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete confirmation */}
-      {confirmDelete && (
-        <div onClick={(e) => { if (e.target === e.currentTarget) setConfirmDelete(false) }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 18, padding: 24, width: 'min(360px, 94%)', textAlign: 'center' }}>
-            <h3 style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink)', margin: '0 0 8px' }}>Delete post?</h3>
-            <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 18px' }}>This action cannot be undone.</p>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-              <button onClick={() => setConfirmDelete(false)} style={{ minHeight: 36, borderRadius: 9, padding: '0 14px', background: 'var(--raised)', color: 'var(--ink)', fontSize: 11, fontWeight: 700, border: 0, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleDelete} disabled={deleting} style={{ minHeight: 36, borderRadius: 9, padding: '0 14px', background: 'var(--red)', color: '#fff', fontSize: 11, fontWeight: 700, border: 0, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? .5 : 1 }}>
-                {deleting ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-
 export default function FeedPage() {
   const supabase = useSupabase()
   const { user, profile, loading: userLoading } = useUser()
 
   const [posts, setPosts] = useState<Post[]>([])
+  const postsRef = useRef<Post[]>([])
+  useEffect(() => { postsRef.current = posts }, [posts])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -470,8 +84,8 @@ export default function FeedPage() {
   const [activeTab, setActiveTab] = useState<TabId>('for_you')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [countyFilter, setCountyFilter] = useState<string | null>(null)
-const [showCountyPicker, setShowCountyPicker] = useState(false)
-  const [composerText, setComposerText] = useState('')
+  const [showCountyPicker, setShowCountyPicker] = useState(false)
+  const [newPostsCount, setNewPostsCount] = useState(0)
 
   const composerTypeMap: Record<string, string> = { baraza: 'post', inquiry: 'question', poll: 'poll', article: 'article' }
   const openCreateModal = (type?: string) => {
@@ -597,7 +211,7 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
         }
       }
 
-      const enriched: Post[] = pagePosts.map(p => ({
+      const enriched: Post[] = pagePosts.map(toPost).map(p => ({
         ...p, user_vote: voteMap[p.id] || null, user_saved: saveMap[p.id] || false,
       }))
 
@@ -614,31 +228,39 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
     fetchPosts()
   }, [fetchPosts])
 
+  // Realtime: apply deltas instead of full refetch.
   useEffect(() => {
     if (!profile) return
     let debounceTimer: ReturnType<typeof setTimeout>
     const channel = supabase
       .channel('feed-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
+        // Only surface new posts on tabs where a brand-new post makes sense.
+        if (activeTab === 'following' || activeTab === 'saved') return
+        const own = payload.new && (payload.new as any).user_id === profile.id
+        if (own) return
+        // Skip if the new post wouldn't match the current type/county filters.
+        const p = payload.new as any
+        if (typeFilter !== 'all' && p.post_type !== typeFilter) return
+        if (p.post_type === 'inquiry') return
+        if (countyFilter && activeTab === 'near_you' && p.county_tag !== countyFilter) return
         clearTimeout(debounceTimer)
-        debounceTimer = setTimeout(() => fetchPosts(), 2000)
+        debounceTimer = setTimeout(() => setNewPostsCount(c => c + 1), 250)
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts', filter: `user_id=neq.${profile.id}` }, () => {
-        clearTimeout(debounceTimer)
-        debounceTimer = setTimeout(() => fetchPosts(), 2000)
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: 'is_expert=eq.true' }, () => {
-        clearTimeout(debounceTimer)
-        debounceTimer = setTimeout(() => fetchPosts(), 3000)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts', filter: `user_id=neq.${profile.id}` }, (payload) => {
+        const p = payload.new as any
+        if (!p || !p.id) return
+        // Apply targeted update: patch votes/counts/answers without refetching.
+        setPosts(prev => prev.map(x => x.id === p.id ? { ...x, ...p, profiles: x.profiles } : x))
       })
       .subscribe()
 
     return () => { clearTimeout(debounceTimer); supabase.removeChannel(channel) }
-  }, [supabase, profile, fetchPosts])
+  }, [supabase, profile, activeTab, typeFilter, countyFilter])
 
   const handleVote = useCallback(async (postId: string, voteType: 1 | -1 | null) => {
     if (!profile) { toast('Sign in to vote'); return }
-    const previousPosts = [...posts]
+    const prevPost = postsRef.current.find(p => p.id === postId)
     setPosts(prev => prev.map(p => {
       if (p.id !== postId) return p
       const diff = voteType === 1 ? 1 : p.user_vote === 1 ? -1 : 0
@@ -656,13 +278,13 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
         if (!res.ok) throw new Error('Vote failed')
       }
     } catch {
-      setPosts(previousPosts)
+      if (prevPost) setPosts(prev => patchPost(prev, postId, { user_vote: prevPost.user_vote, upvotes_count: prevPost.upvotes_count }))
     }
-  }, [profile, posts])
+  }, [profile])
 
   const handleSave = useCallback(async (postId: string) => {
     if (!profile) { toast('Sign in to save posts'); return }
-    const previousPosts = [...posts]
+    const prevPost = postsRef.current.find(p => p.id === postId)
     setPosts(prev => prev.map(p => p.id === postId ? { ...p, user_saved: !p.user_saved } : p))
     try {
       const res = await fetch('/api/saves', {
@@ -672,13 +294,15 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
       })
       if (!res.ok) throw new Error('Save failed')
     } catch {
-      setPosts(previousPosts)
+      if (prevPost) setPosts(prev => patchPost(prev, postId, { user_saved: prevPost.user_saved }))
     }
-  }, [profile, posts])
+  }, [profile])
 
   const handleReact = useCallback((_postId: string, _emoji: string) => {
     // Reactions stored locally; could sync to DB later
   }, [])
+
+  const feedItems = useMemo(() => buildFeedItems(posts), [posts])
 
   if (userLoading) {
     return (
@@ -801,6 +425,17 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
         </div>
       </div>
 
+      {/* New posts banner */}
+      {newPostsCount > 0 && (
+        <button
+          onClick={() => { setNewPostsCount(0); fetchPosts() }}
+          className="w-full mb-[12px] px-[14px] py-[9px] rounded-[12px] bg-gold text-night text-[12px] font-bold flex items-center justify-center gap-2 transition-opacity hover:opacity-90"
+        >
+          <span aria-hidden="true">🆕</span>
+          <span>{newPostsCount} new post{newPostsCount === 1 ? '' : 's'} — tap to refresh</span>
+        </button>
+      )}
+
       {/* Type filter chips */}
       <div className="flex gap-[4px] overflow-x-auto pb-[8px] scrollbar-none -mx-[12px] px-[12px]">
         {TYPE_FILTERS.map(f => (
@@ -819,6 +454,7 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
         <div className="relative">
           <button
             onClick={() => setShowCountyPicker(!showCountyPicker)}
+            aria-expanded={showCountyPicker}
             className={`flex-shrink-0 flex items-center gap-1 px-[12px] py-[5px] rounded-full text-[12px] font-semibold transition-all ${
               countyFilter ? 'bg-green/20 text-green border border-green/30' : 'text-[var(--faint-accessible)] border border-[var(--line)] hover:bg-deep hover:text-cream'
             }`}
@@ -829,13 +465,14 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
           {showCountyPicker && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowCountyPicker(false)} />
-              <div className="absolute top-full left-0 mt-1 w-[200px] max-h-[240px] overflow-y-auto bg-night2 border border-[var(--line)] rounded-[12px] p-[6px] shadow-xl z-20 animate-rise">
-                <button onClick={() => { setCountyFilter(null); setShowCountyPicker(false) }} className="w-full text-left px-[10px] py-[6px] rounded-[8px] text-[12px] text-[var(--faint-accessible)] hover:bg-deep transition-colors">All counties</button>
+              <div className="absolute top-full left-0 mt-1 w-[200px] max-h-[240px] overflow-y-auto bg-night2 border border-[var(--line)] rounded-[12px] p-[6px] shadow-xl z-20 animate-rise" role="menu" aria-label="Select county">
+                <button onClick={() => { setCountyFilter(null); setShowCountyPicker(false) }} className="w-full text-left px-[10px] py-[6px] rounded-[8px] text-[12px] text-[var(--faint-accessible)] hover:bg-deep transition-colors" role="menuitem">All counties</button>
                 {COUNTIES.map(c => (
                   <button
                     key={c}
                     onClick={() => { setCountyFilter(c); setShowCountyPicker(false) }}
                     className={`w-full text-left px-[10px] py-[6px] rounded-[8px] text-[12px] transition-colors ${countyFilter === c ? 'bg-gold/20 text-gold font-semibold' : 'text-cream hover:bg-deep'}`}
+                    role="menuitem"
                   >
                     {c}
                   </button>
@@ -861,21 +498,18 @@ const [showCountyPicker, setShowCountyPicker] = useState(false)
         <EmptyState tab={activeTab} hasCountyFilter={!!countyFilter} />
       )}
 
-      {!loading && posts.map((post, idx) => (
-        <div key={post.id}>
-          {idx > 0 && idx % 4 === 0 && <FeedAd />}
-          <PostCardComponent
-            key={post.id}
-            post={post}
-            currentUserId={user?.id || null}
-            onVote={handleVote}
-            onSave={handleSave}
-            onReact={handleReact}
-          />
-        </div>
+      {!loading && feedItems.map((item, idx) => (
+        item.kind === 'ad'
+          ? <FeedAd key={`ad-${idx}`} />
+          : <PostCard
+              key={item.post.id}
+              post={item.post}
+              currentUserId={user?.id || null}
+              onVote={handleVote}
+              onSave={handleSave}
+              onReact={handleReact}
+            />
       ))}
-
-
 
       {/* Load more */}
       {!loading && posts.length > 0 && hasMore && (
