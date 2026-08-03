@@ -14,12 +14,17 @@ export interface PresenceUser {
 
 const HEARTBEAT_MS = 30000
 
+type ChannelState = 'UNSUBSCRIBED' | 'SUBSCRIBING' | 'SUBSCRIBED'
+
+const presenceChannels = new Map<string, { channel: any; state: ChannelState }>()
+
 export function usePresence() {
   const { user, profile } = useUser()
   const supabase = useSupabase()
   const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([])
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set())
-  const channelRef = useRef<any>(null)
+  const localChannelRef = useRef<any>(null)
+  const localStateRef = useRef<ChannelState>('UNSUBSCRIBED')
 
   const syncOnlineUsers = useCallback(async (ids: string[]) => {
     if (ids.length === 0) {
@@ -39,7 +44,7 @@ export function usePresence() {
   }, [supabase])
 
   const refresh = useCallback(() => {
-    const channel = channelRef.current
+    const channel = localChannelRef.current
     if (!channel) return
     const state = channel.presenceState()
     const ids = Object.keys(state).filter(k => k !== user?.id)
@@ -48,25 +53,48 @@ export function usePresence() {
 
   useEffect(() => {
     if (!supabase || !profile) return
-    const channel = supabase.channel('online-presence')
-    channel.on('presence', { event: 'sync' }, () => {
-      const state = channel.presenceState()
-      const ids = Object.keys(state).filter(k => k !== user?.id)
-      void syncOnlineUsers(ids)
-    }).subscribe(async (status: string) => {
-      if (status === 'SUBSCRIBED') {
-        await channel.track({ user_id: profile.id, online_at: new Date().toISOString() })
+
+    const channelName = `online-presence-${profile.id}`
+    let shared = presenceChannels.get(channelName)
+
+    if (!shared) {
+      const channel = supabase.channel(channelName)
+      shared = { channel, state: 'UNSUBSCRIBING' as ChannelState }
+      presenceChannels.set(channelName, shared)
+
+      channel.on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState()
+        const ids = Object.keys(state).filter(k => k !== user?.id)
+        void syncOnlineUsers(ids)
+      })
+
+      channel.subscribe(async (status: string) => {
+        if (status === 'SUBSCRIBED') {
+          shared!.state = 'SUBSCRIBED'
+          await channel.track({ user_id: profile.id, online_at: new Date().toISOString() })
+        }
+      })
+
+      localChannelRef.current = channel
+      localStateRef.current = 'SUBSCRIBING'
+    } else {
+      if (shared.state === 'SUBSCRIBED') {
+        const state = shared.channel.presenceState()
+        const ids = Object.keys(state).filter(k => k !== user?.id)
+        void syncOnlineUsers(ids)
       }
-    })
-    channelRef.current = channel
+      localChannelRef.current = shared.channel
+      localStateRef.current = shared.state
+    }
 
     const heartbeat = setInterval(() => {
-      channel.track({ user_id: profile.id, online_at: new Date().toISOString() }).catch(() => { /* ignore */ })
+      if (localStateRef.current !== 'SUBSCRIBED') return
+      localChannelRef.current.track({ user_id: profile.id, online_at: new Date().toISOString() }).catch(() => { /* ignore */ })
     }, HEARTBEAT_MS)
 
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        channel.track({ user_id: profile.id, online_at: new Date().toISOString() }).catch(() => { /* ignore */ })
+      if (document.visibilityState === 'visible' && localStateRef.current === 'SUBSCRIBED') {
+        localChannelRef.current.track({ user_id: profile.id, online_at: new Date().toISOString() }).catch(() => { /* ignore */ })
       }
     }
     window.addEventListener('visibilitychange', onVisibility)
@@ -74,8 +102,8 @@ export function usePresence() {
     return () => {
       clearInterval(heartbeat)
       window.removeEventListener('visibilitychange', onVisibility)
-      if (channelRef.current) supabase.removeChannel(channelRef.current)
-      channelRef.current = null
+      localChannelRef.current = null
+      localStateRef.current = 'UNSUBSCRIBED'
     }
   }, [supabase, profile, user, syncOnlineUsers])
 

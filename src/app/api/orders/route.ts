@@ -1,12 +1,8 @@
-import { createApiClient } from '@/lib/server-supabase'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/server-supabase'
+import { NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { supabase, user }) => {
   try {
-    const supabase = createApiClient(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const { listing_id, quantity, delivery_address, contact_phone, delivery_notes } = await request.json()
     if (!listing_id || !quantity || !delivery_address || !contact_phone) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -31,14 +27,10 @@ export async function POST(request: NextRequest) {
     console.error('Create order error:', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAuth(async (request, { supabase, user }) => {
   try {
-    const supabase = createApiClient(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const { order_id, status } = await request.json()
     if (!order_id || !status) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
 
@@ -81,4 +73,4 @@ export async function PATCH(request: NextRequest) {
     console.error('Update order error:', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

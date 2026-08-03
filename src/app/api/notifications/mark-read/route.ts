@@ -1,19 +1,8 @@
-import { createApiClient } from '@/lib/server-supabase'
+import { withAuth } from '@/lib/server-supabase'
+import { NextResponse } from 'next/server'
 
-import { NextRequest, NextResponse } from 'next/server'
-
-export async function POST(request: NextRequest) {
-    const supabase = createApiClient(request);
+export const POST = withAuth(async (request, { supabase, user }) => {
   try {
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
     const body = await request.json()
     const { notificationId, markAll } = body
 
@@ -61,4 +50,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

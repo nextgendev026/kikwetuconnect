@@ -1,13 +1,9 @@
-import { createApiClient } from '@/lib/server-supabase'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/server-supabase'
+import { NextResponse } from 'next/server'
 import { stkPush, stkQuery, c2bRegisterURLs, b2cPayment, transactionStatus, accountBalance, normalizePhone } from '@/lib/mpesa'
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { supabase, user }) => {
   try {
-    const supabase = createApiClient(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const body = await request.json()
     const { action } = body
 
@@ -209,4 +205,4 @@ export async function POST(request: NextRequest) {
     console.error('Payment error:', e)
     return NextResponse.json({ error: e.message || 'Payment service error' }, { status: 500 })
   }
-}
+})

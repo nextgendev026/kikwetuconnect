@@ -1,5 +1,5 @@
-import { createApiClient } from '@/lib/server-supabase'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/server-supabase'
+import { NextResponse } from 'next/server'
 
 interface Q {
   question: string; options: string[]; correct_index: number; explanation: string
@@ -121,12 +121,8 @@ const QUESTION_BANK: Record<string, Q[]> = {
 
 const ALL_QUESTIONS = Object.values(QUESTION_BANK).flat()
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { supabase, user }) => {
   try {
-    const supabase = createApiClient(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const { category, difficulty, count = 5 } = await request.json()
 
     let questions: Q[] = []
@@ -162,4 +158,4 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Generation failed' }, { status: 500 })
   }
-}
+})

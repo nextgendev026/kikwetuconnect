@@ -1,12 +1,8 @@
-import { createApiClient } from '@/lib/server-supabase'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/server-supabase'
+import { NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { supabase, user }) => {
   try {
-    const supabase = createApiClient(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const { post_id, source_type = 'nyumba_kumi_alerts', language = 'sw' } = await request.json()
     if (!post_id) return NextResponse.json({ error: 'post_id required' }, { status: 400 })
 
@@ -57,8 +53,8 @@ export async function POST(request: NextRequest) {
       }),
     })
 
-    const body = await resp.json()
-    const translated = body?.choices?.[0]?.message?.content || ''
+    const respBody = await resp.json()
+    const translated = respBody?.choices?.[0]?.message?.content || ''
     if (!translated) return NextResponse.json({ error: 'Translation provider returned empty result' }, { status: 502 })
 
     // Detect title vs content split from translation
@@ -81,4 +77,4 @@ export async function POST(request: NextRequest) {
     console.error('Translate error:', err)
     return NextResponse.json({ error: 'Translation failed' }, { status: 500 })
   }
-}
+})

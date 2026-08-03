@@ -1,21 +1,16 @@
-import { createApiClient, createServiceClient } from '@/lib/server-supabase'
+import { withAuth, createServiceClient } from '@/lib/server-supabase'
 import { trackActivity } from '@/lib/activity'
 import { dispatchPushForNotification } from '@/lib/push-notifications'
 import { checkRateLimit, getRateLimitHeaders } from '@/lib/rate-limit'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { supabase, user }) => {
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
   if (!checkRateLimit('votes-post', ip, 30, 60_000)) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
   }
 
-  const supabase = createApiClient(request)
   const svc = createServiceClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
 
   let body: Record<string, unknown>
   try {
@@ -82,19 +77,14 @@ export async function POST(request: NextRequest) {
   }, user.id)
 
   return NextResponse.json({ vote_type })
-}
+})
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAuth(async (request, { supabase, user }) => {
   const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
   if (!checkRateLimit('votes-delete', ip, 30, 60_000)) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
   }
 
-  const supabase = createApiClient(request)
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
   const { searchParams } = new URL(request.url)
   const target_type = searchParams.get('target_type')
   const target_id = searchParams.get('target_id')
@@ -108,4 +98,4 @@ export async function DELETE(request: NextRequest) {
     .eq('target_type', target_type)
     .eq('target_id', target_id)
   return NextResponse.json({ success: true })
-}
+})

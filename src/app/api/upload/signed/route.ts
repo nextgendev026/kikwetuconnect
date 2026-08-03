@@ -1,12 +1,8 @@
-import { createApiClient } from '@/lib/server-supabase'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/server-supabase'
+import { NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { supabase, user }) => {
   try {
-    const supabase = createApiClient(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     let body: Record<string, unknown>
     try {
       body = await request.json()
@@ -40,4 +36,4 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
   }
-}
+})

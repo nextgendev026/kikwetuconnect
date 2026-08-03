@@ -1,5 +1,5 @@
-import { createApiClient } from '@/lib/server-supabase'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/server-supabase'
+import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 const reviewSchema = z.object({
@@ -9,12 +9,8 @@ const reviewSchema = z.object({
   comment: z.string().max(1000).optional(),
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { supabase, user }) => {
   try {
-    const supabase = createApiClient(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const body = await request.json()
     const parsed = reviewSchema.safeParse(body)
     if (!parsed.success) return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 })
@@ -42,4 +38,4 @@ export async function POST(request: NextRequest) {
     console.error('Review error:', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

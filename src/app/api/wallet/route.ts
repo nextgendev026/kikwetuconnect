@@ -1,19 +1,8 @@
-import { createApiClient } from '@/lib/server-supabase'
+import { withAuth } from '@/lib/server-supabase'
+import { NextResponse } from 'next/server'
 
-import { NextRequest, NextResponse } from 'next/server'
-
-export async function GET(request: NextRequest) {
-    const supabase = createApiClient(request);
+export const GET = withAuth(async (request, { supabase, user }) => {
   try {
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
     // Get total tokens
     const { data: tokenData, error: tokenError } = await supabase
       .from('tokens')
@@ -54,4 +43,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

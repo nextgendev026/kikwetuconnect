@@ -1,19 +1,12 @@
-import { createApiClient } from '@/lib/server-supabase'
+import { withAuth } from '@/lib/server-supabase'
 import { checkRateLimit } from '@/lib/rate-limit'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { supabase, user }) => {
   try {
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
     if (!checkRateLimit('posts-create', ip, 10, 60_000)) {
       return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
-    }
-
-    const supabase = createApiClient(request)
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     let body: Record<string, unknown>
@@ -76,4 +69,4 @@ export async function POST(request: NextRequest) {
     console.error('Create post error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

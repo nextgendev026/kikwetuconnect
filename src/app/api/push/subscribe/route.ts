@@ -1,12 +1,8 @@
-import { createApiClient } from '@/lib/server-supabase'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/server-supabase'
+import { NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { supabase, user }) => {
   try {
-    const supabase = createApiClient(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const { endpoint, p256dhKey, authKey, deviceType, userAgent } = await request.json()
     if (!endpoint || !p256dhKey || !authKey) {
       return NextResponse.json({ error: 'Missing subscription fields' }, { status: 400 })
@@ -28,14 +24,10 @@ export async function POST(request: NextRequest) {
     console.error('Push subscribe error:', e)
     return NextResponse.json({ error: e.message || 'Subscribe failed' }, { status: 500 })
   }
-}
+})
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAuth(async (request, { supabase, user }) => {
   try {
-    const supabase = createApiClient(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const { endpoint } = await request.json().catch(() => ({}))
 
     let query = supabase.from('push_subscriptions').delete().eq('user_id', user.id)
@@ -48,4 +40,4 @@ export async function DELETE(request: NextRequest) {
     console.error('Push unsubscribe error:', e)
     return NextResponse.json({ error: e.message || 'Unsubscribe failed' }, { status: 500 })
   }
-}
+})

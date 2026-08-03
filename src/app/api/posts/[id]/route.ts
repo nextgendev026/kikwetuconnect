@@ -1,14 +1,9 @@
-import { createApiClient } from '@/lib/server-supabase'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/server-supabase'
+import { NextResponse } from 'next/server'
 
-export async function PATCH(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const { id } = await context.params
-  const supabase = createApiClient(request)
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const PATCH = withAuth(async (request, { supabase, user }) => {
+  const url = new URL(request.url)
+  const id = url.pathname.split('/').pop()!
 
   const { data: post } = await supabase.from('posts').select('user_id').eq('id', id).maybeSingle()
   if (!post) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -25,16 +20,11 @@ export async function PATCH(
   const { data: updated, error } = await supabase.from('posts').update(updates).eq('id', id).select().maybeSingle()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ post: updated })
-}
+})
 
-export async function DELETE(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
-  const { id } = await context.params
-  const supabase = createApiClient(request)
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const DELETE = withAuth(async (request, { supabase, user }) => {
+  const url = new URL(request.url)
+  const id = url.pathname.split('/').pop()!
 
   const { data: post } = await supabase.from('posts').select('user_id').eq('id', id).maybeSingle()
   if (!post) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -43,4 +33,4 @@ export async function DELETE(
   const { error } = await supabase.from('posts').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
-}
+})

@@ -1,13 +1,10 @@
-import { createApiClient, createServiceClient } from '@/lib/server-supabase'
+import { withAuth, createServiceClient } from '@/lib/server-supabase'
 import { trackActivity } from '@/lib/activity'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { supabase, user }) => {
   try {
-    const supabase = createApiClient(request)
     const svc = createServiceClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
     const { action } = body
@@ -118,4 +115,4 @@ export async function POST(request: NextRequest) {
     console.error('Profile API error:', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

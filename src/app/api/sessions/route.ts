@@ -1,13 +1,9 @@
-import { createApiClient } from '@/lib/server-supabase'
+import { withAuth } from '@/lib/server-supabase'
 import { dispatchPushForNotification } from '@/lib/push-notifications'
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { supabase, user }) => {
   try {
-    const supabase = createApiClient(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const { request_id } = await request.json()
     if (!request_id) return NextResponse.json({ error: 'Missing request_id' }, { status: 400 })
 
@@ -42,14 +38,10 @@ export async function POST(request: NextRequest) {
     console.error('Create session error:', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAuth(async (request, { supabase, user }) => {
   try {
-    const supabase = createApiClient(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const { session_id, notes } = await request.json()
     if (!session_id) return NextResponse.json({ error: 'Missing session_id' }, { status: 400 })
 
@@ -94,4 +86,4 @@ export async function PATCH(request: NextRequest) {
     console.error('End session error:', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

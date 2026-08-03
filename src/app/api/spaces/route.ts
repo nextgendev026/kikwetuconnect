@@ -1,4 +1,4 @@
-import { createApiClient } from '@/lib/server-supabase'
+import { withAuth, createApiClient } from '@/lib/server-supabase'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -38,12 +38,8 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, { supabase, user }) => {
   try {
-    const supabase = createApiClient(request)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const body = await request.json()
     const { action } = body
 
@@ -59,7 +55,7 @@ export async function POST(request: NextRequest) {
 
       const { data: space, error: createError } = await supabase.from('spaces').insert({
         name: name.trim(), slug, description: description.trim(),
-        icon: icon || '🌍', category: category || 'General', created_by: user.id, member_count: 1,
+        icon: icon || '\u{1F30D}', category: category || 'General', created_by: user.id, member_count: 1,
       }).select().single()
       if (createError) throw createError
 
@@ -109,4 +105,4 @@ export async function POST(request: NextRequest) {
     console.error('Spaces POST error:', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
