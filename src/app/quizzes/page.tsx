@@ -398,7 +398,7 @@ export default function QuizzesPage() {
           <div className="flex flex-wrap gap-2">
             {badges.map((ub: any) => (
               <span key={ub.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-                style={{ background: 'color-mix(in oklab, var(--gold) 12%, var(--surface))', color: 'var(--gold)', border: '1px solid color-mix(in oklab, var(--gold) 25%, transparent)' }}>
+                style={{ background: 'linear-gradient(160deg, color-mix(in oklab, var(--gold) 22%, var(--surface)), color-mix(in oklab, var(--earth) 14%, var(--surface)))', color: 'var(--gold-text)', border: '1px solid color-mix(in oklab, var(--gold) 30%, transparent)' }}>
                 {ub.badges?.icon || '🏅'} {ub.badges?.name || 'Badge'}
               </span>
             ))}

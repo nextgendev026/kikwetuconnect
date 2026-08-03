@@ -13,11 +13,14 @@ interface MediaEditorProps {
 function constrainCrop(w: number, h: number, aspect: 'square' | 'cover', maxSide: number) {
   if (aspect === 'cover') {
     const ratio = 21 / 9
-    let nw = w
-    let nh = w / ratio
-    if (nh > h) { nh = h; nw = h * ratio }
-    const size = Math.max(50, Math.min(Math.min(nw, nh), maxSide))
-    return { w: size, h: size / ratio }
+    let nw: number
+    let nh: number
+    if (w / h >= ratio) { nh = h; nw = h * ratio }
+    else { nw = w; nh = w / ratio }
+    const long = Math.max(nw, nh)
+    const size = Math.min(long, Math.max(maxSide, 50))
+    if (long > size) { const f = size / long; nw *= f; nh *= f }
+    return { w: Math.max(50, nw), h: Math.max(50 / ratio, nh) }
   }
   const size = Math.max(50, Math.min(Math.min(w, h), maxSide))
   return { w: size, h: size }
@@ -43,7 +46,6 @@ export { ImageCropper, VideoTrimmer, AudioTrimmer }
 
 function ImageCropper({ file, onComplete, onCancel, aspect = 'square' }: MediaEditorProps) {
   const imgRef = useRef<HTMLImageElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [imgSrc, setImgSrc] = useState('')
   const [zoom, setZoom] = useState(1)
@@ -76,9 +78,13 @@ function ImageCropper({ file, onComplete, onCancel, aspect = 'square' }: MediaEd
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!dragging || !naturalSize.w) return
-    const dx = (e.clientX - dragStart.x) / zoom
-    const dy = (e.clientY - dragStart.y) / zoom
-    const maxSide = Math.min(window.innerWidth - 48, window.innerHeight - 240, 720)
+    const maxEditor = Math.min(window.innerWidth - 48, window.innerHeight - 240, 720)
+    const ds = Math.min(maxEditor / naturalSize.w, maxEditor / naturalSize.h, 1)
+    const factor = ds * zoom
+    if (!factor) return
+    const dx = (e.clientX - dragStart.x) / factor
+    const dy = (e.clientY - dragStart.y) / factor
+    const maxSide = Math.min(naturalSize.w, naturalSize.h, 720)
     setCrop(prev => {
       let { x, y, w, h } = prev
       if (dragging === 'move') { x += dx; y += dy }
@@ -86,7 +92,7 @@ function ImageCropper({ file, onComplete, onCancel, aspect = 'square' }: MediaEd
       else if (dragging === 'bl') { x += dx; w -= dx; h += dy }
       else if (dragging === 'tr') { y += dy; w += dx; h -= dy }
       else if (dragging === 'tl') { x += dx; y += dy; w -= dx; h -= dy }
-      const { w: nw, h: nh } = constrainCrop(w, h, aspect, maxSide)
+      const { w: nw, h: nh } = constrainCrop(Math.abs(w), Math.abs(h), aspect, maxSide)
       x = Math.max(0, Math.min(x, naturalSize.w - nw))
       y = Math.max(0, Math.min(y, naturalSize.h - nh))
       return { x, y, w: nw, h: nh }
@@ -136,9 +142,9 @@ function ImageCropper({ file, onComplete, onCancel, aspect = 'square' }: MediaEd
           <strong className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{aspect === 'cover' ? 'Cover image' : 'Edit profile photo'}</strong>
           <button onClick={onCancel} className="border-0 bg-none cursor-pointer text-2xl leading-none" style={{ color: 'var(--muted)' }}>×</button>
         </div>
-        <div ref={containerRef} className="relative mx-auto overflow-hidden rounded-xl" style={{ width: Math.min(displayW * scale, maxEditor), height: Math.min(displayH * scale, maxEditor), background: '#222' }}>
-          <img ref={imgRef} src={imgSrc} alt="" className="max-w-none select-none" style={{ width: displayW * scale, height: displayH * scale, transform: `scale(${zoom})`, transformOrigin: 'top left', filter: FILTERS[filter] || 'none', userSelect: 'none' }} />
-          <div className="absolute inset-0" style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)' }}>
+        <div className="relative mx-auto overflow-hidden rounded-xl" style={{ width: Math.min(displayW * scale, maxEditor), height: Math.min(displayH * scale, maxEditor), background: '#222' }}>
+          <div style={{ position: 'absolute', left: 0, top: 0, width: Math.min(displayW * scale, maxEditor), height: Math.min(displayH * scale, maxEditor), transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
+            <img ref={imgRef} src={imgSrc} alt="" className="max-w-none select-none" style={{ width: '100%', height: '100%', display: 'block', filter: FILTERS[filter] || 'none', userSelect: 'none' }} />
             <div style={{
               position: 'absolute', left: crop.x * scale, top: crop.y * scale,
               width: crop.w * scale, height: crop.h * scale,

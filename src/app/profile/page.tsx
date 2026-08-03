@@ -395,7 +395,8 @@ export default function ProfilePage() {
           <h3 className="font-bold text-sm mb-3">Badges</h3>
           <div className="flex flex-wrap gap-3">
             {badges.map(badge => (
-              <div key={badge.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-night2 border border-[var(--line)]">
+              <div key={badge.id} className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                style={{ border: '1px solid color-mix(in oklab, var(--gold) 25%, var(--line))', background: 'linear-gradient(160deg, color-mix(in oklab, var(--gold) 18%, var(--surface)), color-mix(in oklab, var(--earth) 12%, var(--surface)))' }}>
                 <span className="text-xl">{badge.icon}</span>
                 <div>
                   <p className="text-xs font-medium">{badge.name}</p>
@@ -591,7 +592,8 @@ export default function ProfilePage() {
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {badges.map(badge => (
-                      <div key={badge.id} className="text-center p-4 rounded-lg bg-night2 border border-[var(--line)]">
+                      <div key={badge.id} className="text-center p-4 rounded-lg"
+                        style={{ border: '1px solid color-mix(in oklab, var(--gold) 28%, var(--line))', background: 'linear-gradient(160deg, color-mix(in oklab, var(--gold) 22%, var(--surface)) 0%, color-mix(in oklab, var(--earth) 16%, var(--surface)) 55%, color-mix(in oklab, var(--green) 10%, var(--surface)) 100%)' }}>
                         <span className="text-3xl block mb-2">{badge.icon}</span>
                         <p className="text-xs font-medium">{badge.name}</p>
                         <p className="text-[10px] text-muted mt-1">{badge.description}</p>

@@ -6,6 +6,27 @@ import { ArrowLeft, Award, Loader2 } from 'lucide-react'
 
 const s = {
   card: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: 20, boxShadow: 'var(--card-shadow)' },
+  safariCard: {
+    position: 'relative' as const,
+    overflow: 'hidden',
+    borderRadius: 16,
+    padding: '18px 14px',
+    border: '1px solid color-mix(in oklab, var(--gold) 28%, var(--line))',
+    background: 'linear-gradient(160deg, color-mix(in oklab, var(--gold) 22%, var(--surface)) 0%, color-mix(in oklab, var(--earth) 16%, var(--surface)) 55%, color-mix(in oklab, var(--green) 10%, var(--surface)) 100%)',
+    boxShadow: 'var(--card-shadow)',
+  },
+  safariIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: '50%',
+    display: 'grid',
+    placeItems: 'center',
+    margin: '0 auto 10px',
+    fontSize: 30,
+    background: 'color-mix(in oklab, var(--gold) 18%, var(--surface))',
+    border: '1px solid color-mix(in oklab, var(--gold) 35%, transparent)',
+    boxShadow: '0 0 0 3px color-mix(in oklab, var(--gold) 10%, transparent)',
+  },
 }
 
 interface Badge {
@@ -66,8 +87,8 @@ export default function BadgesPage() {
       ) : (
         <div className="grid grid-cols-2 gap-3">
           {badges.map(badge => (
-            <div key={badge.id} style={s.card} className="text-center">
-              <span className="text-4xl block mb-2">{badge.icon}</span>
+            <div key={badge.id} style={s.safariCard} className="text-center">
+              <span style={s.safariIcon}>{badge.icon}</span>
               <p className="text-sm font-bold" style={{ color: 'var(--ink)' }}>{badge.name}</p>
               <p className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{badge.description}</p>
               <p className="text-[10px] mt-2" style={{ color: 'var(--muted)' }}>Earned {new Date(badge.awarded_at).toLocaleDateString()}</p>

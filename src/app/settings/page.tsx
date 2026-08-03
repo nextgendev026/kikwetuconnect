@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, useTheme, toast } from '@/app/providers'
+import { normalizePhone } from '@/lib/mpesa'
 import { useTranslation } from 'react-i18next'
 import {
   User, Globe, Moon, Sun, Eye, Bell, Clock, AlertTriangle, Shield, MapPin,
@@ -143,9 +144,16 @@ export default function SettingsPage() {
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ full_name: fullName, username, county_hub: county, area: area || null, phone: phone || null, bio, preferred_language: language, notif_pref: notifPref, visibility })
+        .update({ full_name: fullName, username, county_hub: county, area: area || null, phone: phone?.trim() ? normalizePhone(phone.trim()) : null, bio, preferred_language: language, notif_pref: notifPref, visibility })
         .eq('id', user.id)
-      if (error) throw error
+      if (error) {
+        if (error.code === '23505' && /phone/i.test(error.message || '')) {
+          toast('That phone number is already in use by another account.')
+        } else {
+          toast(error.message || 'Failed to save')
+        }
+        return
+      }
       await refreshProfile()
       toast('Profile saved')
     } catch (err: any) {

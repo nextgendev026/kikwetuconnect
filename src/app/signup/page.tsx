@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useSupabase } from '@/app/providers'
+import { normalizePhone } from '@/lib/mpesa'
 
 const COUNTIES = ['Nairobi','Mombasa','Kisumu','Uasin Gishu','Kiambu','Nakuru','Eldoret','Kitale','Kericho','Isiolo','Garissa','Lamu','Wajir','Mandera','Kilifi','Kwale','Taita-Taveta','Makueni','Kajiado','Narok','Bomet','Nyamira','Kisii','Homa Bay','Siaya','Bungoma','Busia','Kakamega','Vihiga','Nandi','Baringo','West Pokot','Samburu','Laikipia','Embu','Meru','Tharaka-Nithi','Nyeri',"Murang'a",'Kirinyaga','Machakos','Turkana','Trans Nzoia']
 const SERVICES = [
@@ -137,6 +138,7 @@ function SignupForm() {
     try {
       const device = typeof navigator !== 'undefined' ? `${navigator.platform || ''} ${navigator.userAgent?.match(/Android|iPhone|iPad|Windows|Macintosh|Linux/)?.[0] || ''}`.trim() : ''
       const referrer = typeof document !== 'undefined' ? document.referrer : ''
+      const normalizedPhone = normalizePhone(phone)
       const { error: signUpError, data } = await supabase.auth.signUp({
         email,
         password,
@@ -144,7 +146,7 @@ function SignupForm() {
           data: {
             full_name: `${first} ${last}`,
             username,
-            phone,
+            phone: normalizedPhone,
             county_hub: county,
             area: area || null,
             preferred_language: language,
@@ -170,7 +172,7 @@ function SignupForm() {
         full_name: `${first} ${last}`,
         county_hub: county,
         area: area || null,
-        phone,
+        phone: normalizedPhone,
         bio: bio || null,
         preferred_language: language,
         role: dbRole,
@@ -179,7 +181,14 @@ function SignupForm() {
         visibility,
         interests: topics,
       })
-      if (profileError) { toast(profileError.message); return }
+      if (profileError) {
+        if (profileError.code === '23505' && /phone/i.test(profileError.message || '')) {
+          toast('That phone number is already in use. Use a different number.')
+        } else {
+          toast(profileError.message)
+        }
+        return
+      }
 
       if (services.length > 0) {
         const { error: topicError } = await supabase.from('user_topics').upsert(
