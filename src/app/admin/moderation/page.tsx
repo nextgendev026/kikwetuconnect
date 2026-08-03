@@ -11,6 +11,7 @@ export default function AdminModeration() {
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [notes, setNotes] = useState('')
+  const [bulkJob, setBulkJob] = useState<{ id: string; status: string; processed: number; total: number; succeeded: number; failed: number } | null>(null)
 
   const fetchItems = () => {
     supabase.from('moderation_queue')
@@ -58,17 +59,39 @@ export default function AdminModeration() {
   const bulkAct = async (status: string) => {
     const ids = Array.from(selected)
     if (ids.length === 0) { toast('Select items first'); return }
-    const { error } = await supabase.rpc('admin_bulk_moderate', {
+    const { data: jobId, error } = await supabase.rpc('admin_bulk_moderate', {
       p_admin_id: profile?.id,
       p_item_ids: ids,
       p_status: status,
       p_notes: notes || null,
     })
     if (error) { toast(error.message); return }
-    toast(`${ids.length} items ${status}`)
+    if (!jobId) { toast('Bulk action did not start'); return }
+    setBulkJob({ id: jobId, status: 'running', processed: 0, total: ids.length, succeeded: 0, failed: 0 })
     setSelected(new Set())
     setNotes('')
-    fetchItems()
+    pollBulkJob(jobId, ids.length, status)
+  }
+
+  const pollBulkJob = (jobId: string, total: number, actionStatus: string) => {
+    let attempts = 0
+    const poll = async () => {
+      attempts += 1
+      if (attempts > 40) { setBulkJob(null); toast('Timed out waiting for bulk action'); return }
+      const { data, error } = await supabase.rpc('get_admin_bulk_job', { p_job_id: jobId })
+      if (error || !data) { setBulkJob(null); toast(error?.message || 'Could not read bulk job'); return }
+      const job = data as { status: string; processed: number; total: number; succeeded: number; failed: number }
+      setBulkJob({ id: jobId, ...job })
+      if (job.status === 'completed' || job.processed >= job.total) {
+        setBulkJob(null)
+        if (job.failed > 0) toast(`${job.succeeded} succeeded, ${job.failed} failed`)
+        else toast(`${job.total} items ${actionStatus}`)
+        fetchItems()
+        return
+      }
+      setTimeout(poll, 800)
+    }
+    setTimeout(poll, 500)
   }
 
   const deleteContent = async (item: any) => {
@@ -115,6 +138,16 @@ export default function AdminModeration() {
         <input placeholder="Search queue..." value={search} onChange={e => setSearch(e.target.value)}
           style={{ flex: 1, minWidth: 180, height: 40, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 10, padding: '0 11px', fontSize: 11, color: 'var(--ink)' }} />
       </div>
+
+      {bulkJob && (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 14, padding: 12, background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 12 }}>
+          <span style={{ fontSize: 11, color: 'var(--muted)' }}>Processing {bulkJob.processed}/{bulkJob.total}…</span>
+          <div style={{ flex: 1, height: 6, borderRadius: 99, background: 'var(--line)', overflow: 'hidden' }}>
+            <div style={{ width: `${bulkJob.total > 0 ? Math.round((bulkJob.processed / bulkJob.total) * 100) : 0}%`, height: '100%', borderRadius: 99, background: 'var(--gold)', transition: 'width .4s ease' }} />
+          </div>
+          {bulkJob.failed > 0 && <span style={{ fontSize: 10, color: 'var(--red)' }}>{bulkJob.failed} failed</span>}
+        </div>
+      )}
 
       {selected.size > 0 && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 14, padding: 12, background: 'var(--raised)', border: '1px solid var(--line)', borderRadius: 12 }}>
