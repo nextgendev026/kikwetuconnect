@@ -2,7 +2,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { toast, useSupabase } from '@/app/providers'
+import { toast } from '@/app/providers'
 import { isAdmin, ROLES } from '@/lib/roles'
 import {
   Home, Compass, Search, Grid3X3, GraduationCap, Briefcase,
@@ -54,24 +54,19 @@ const navLinkStyle = (isActive: boolean, collapsed: boolean): React.CSSPropertie
   transition: 'transform .2s var(--ease), background .2s var(--ease)',
 })
 
-export default function Sidebar({ initials, profile, onlineCount = 0, onlineUsers = [], collapsed = false, onToggle }: {
+export default function Sidebar({ initials, profile, following = [], onlineIds = new Set<string>(), collapsed = false, onToggle }: {
   initials: string; profile: any
-  onlineCount?: number; onlineUsers?: any[]
+  following?: any[]; onlineIds?: Set<string>
   collapsed?: boolean; onToggle?: () => void
 }) {
   const path = usePathname()
   const adminUser = isAdmin(profile?.role)
-  const [following, setFollowing] = useState<Set<string>>(new Set())
-  const supabase = useSupabase()
+  const [followingSet, setFollowingSet] = useState<Set<string>>(new Set())
 
-  // Recognize existing follow relationships so the follow buttons reflect real state
+  // Sync heart-button state with the following list passed from AppShell
   useEffect(() => {
-    if (!supabase || !profile?.id) return
-    supabase.from('follows').select('following_id').eq('follower_id', profile.id)
-      .then(({ data }) => {
-        if (data) setFollowing(new Set((data as any[]).map(f => f.following_id)))
-      })
-  }, [supabase, profile?.id])
+    setFollowingSet(new Set(following.map(u => u.id)))
+  }, [following])
 
   const handleFollow = async (userId: string, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation()
@@ -83,10 +78,10 @@ export default function Sidebar({ initials, profile, onlineCount = 0, onlineUser
     if (!res.ok) return toast('Follow failed')
     const d = await res.json()
     if (d.following) {
-      setFollowing(prev => { const n = new Set(prev); n.add(userId); return n })
+      setFollowingSet(prev => { const n = new Set(prev); n.add(userId); return n })
       toast('Following')
     } else {
-      setFollowing(prev => { const n = new Set(prev); n.delete(userId); return n })
+      setFollowingSet(prev => { const n = new Set(prev); n.delete(userId); return n })
       toast('Unfollowed')
     }
   }
@@ -136,59 +131,62 @@ export default function Sidebar({ initials, profile, onlineCount = 0, onlineUser
         )}
       </nav>
 
-      {/* Live users section */}
+      {/* Your network — people you follow, with live presence */}
       <div className="live-users" style={{ marginTop: 12, padding: '0 4px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, padding: '0 8px' }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 6px var(--green)' }} />
-          <span className="live-label" style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em' }}>Live — {onlineCount} online</span>
+          <span className="live-label" style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em' }}>Following — {following.filter(u => onlineIds.has(u.id)).length} online</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 280, overflowY: 'auto' }}>
-          {onlineUsers.length === 0 ? (
-            <small style={{ fontSize: 10, padding: '4px 8px' }}>No one online right now</small>
-          ) : onlineUsers.slice(0, 10).map((u: any) => (
-            <div key={u.id} style={{
-              display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px',
-              borderRadius: 10, transition: 'background .2s',
-            }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--raised)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-              <div style={{ position: 'relative', width: 30, height: 30, flex: 'none' }}>
-                <div className="avatar" style={{ width: 30, height: 30, fontSize: 9, overflow: 'hidden' }}>
-                  {u.avatar_url ? (
-                    <img src={u.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.textContent = (u.full_name || u.username || '?').slice(0, 2).toUpperCase() }} />
-                  ) : (u.full_name || u.username || '?').slice(0, 2).toUpperCase()}
+          {following.length === 0 ? (
+            <small style={{ fontSize: 10, padding: '4px 8px' }}>Follow people to build your community</small>
+          ) : following.slice(0, 12).map((u: any) => {
+            const isOnline = onlineIds.has(u.id)
+            return (
+              <div key={u.id} style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px',
+                borderRadius: 10, transition: 'background .2s',
+              }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'var(--raised)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                <div style={{ position: 'relative', width: 30, height: 30, flex: 'none' }}>
+                  <div className="avatar" style={{ width: 30, height: 30, fontSize: 9, overflow: 'hidden' }}>
+                    {u.avatar_url ? (
+                      <img src={u.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.textContent = (u.full_name || u.username || '?').slice(0, 2).toUpperCase() }} />
+                    ) : (u.full_name || u.username || '?').slice(0, 2).toUpperCase()}
+                  </div>
+                  <span style={{ position: 'absolute', bottom: 0, right: 0, width: 8, height: 8, borderRadius: '50%', background: isOnline ? 'var(--green)' : 'var(--faint)', border: '2px solid var(--surface)' }} />
                 </div>
-                <span style={{ position: 'absolute', bottom: 0, right: 0, width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', border: '2px solid var(--surface)' }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                   <Link href={`/profile/${u.username || u.id}`} style={{ fontWeight: 700, fontSize: 11, color: 'var(--ink)', textDecoration: 'none', display: 'block', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {u.full_name || u.username}
+                  </Link>
+                  <small style={{ fontSize: 9, color: isOnline ? 'var(--green)' : 'var(--muted)' }}>{isOnline ? 'Online' : (u.county_hub || 'Offline')}{u.is_verified_expert ? ' ✓' : ''}</small>
+                </div>
+                <div style={{ display: 'flex', gap: 3, flex: 'none' }}>
+                  <button onClick={(e) => handleFollow(u.id, e)}
+                    style={{
+                      width: 26, height: 26, borderRadius: 7, border: 0, cursor: 'pointer', display: 'grid', placeItems: 'center',
+                      background: followingSet.has(u.id) ? 'var(--gold)' : 'var(--raised)',
+                      color: followingSet.has(u.id) ? 'var(--night)' : 'var(--muted)',
+                      fontSize: 11, transition: 'all .15s',
+                    }}
+                    title={followingSet.has(u.id) ? 'Unfollow' : 'Follow'}>
+                    <Heart className="w-3 h-3" />
+                  </button>
+                  <button onClick={(e) => handleMessage(u.id, e)}
+                    style={{
+                      width: 26, height: 26, borderRadius: 7, border: 0, cursor: 'pointer', display: 'grid', placeItems: 'center',
+                      background: 'var(--raised)', color: 'var(--muted)', fontSize: 11, transition: 'all .15s',
+                    }}
+                    title="Message">
+                    <MessageCircle className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                 <Link href={`/profile/${u.username || u.id}`} style={{ fontWeight: 700, fontSize: 11, color: 'var(--ink)', textDecoration: 'none', display: 'block', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {u.full_name || u.username}
-                </Link>
-                <small style={{ fontSize: 9 }}>{u.county_hub || 'Kenya'}{u.is_verified_expert ? ' ✓' : ''}</small>
-              </div>
-              <div style={{ display: 'flex', gap: 3, flex: 'none' }}>
-                <button onClick={(e) => handleFollow(u.id, e)}
-                  style={{
-                    width: 26, height: 26, borderRadius: 7, border: 0, cursor: 'pointer', display: 'grid', placeItems: 'center',
-                    background: following.has(u.id) ? 'var(--gold)' : 'var(--raised)',
-                    color: following.has(u.id) ? 'var(--night)' : 'var(--muted)',
-                    fontSize: 11, transition: 'all .15s',
-                  }}
-                  title={following.has(u.id) ? 'Unfollow' : 'Follow'}>
-                  <Heart className="w-3 h-3" />
-                </button>
-                <button onClick={(e) => handleMessage(u.id, e)}
-                  style={{
-                    width: 26, height: 26, borderRadius: 7, border: 0, cursor: 'pointer', display: 'grid', placeItems: 'center',
-                    background: 'var(--raised)', color: 'var(--muted)', fontSize: 11, transition: 'all .15s',
-                  }}
-                  title="Message">
-                  <MessageCircle className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 

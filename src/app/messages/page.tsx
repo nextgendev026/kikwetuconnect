@@ -160,8 +160,14 @@ function MessagesInner() {
   }, [searchParams, openConversationWith])
 
   const activeConv = conversations.find(c => c.id === convId)
-  const convTitle = activeConv ? (activeConv.type === 'support' ? 'KikwetuConnect Support' : activeConv.participants.map(p => p?.full_name || p?.username || 'User').join(', ') || 'Conversation') : ''
-  const convAvatar = activeConv?.participants?.[0]
+  const otherUser = activeConv?.participants?.[0]
+  const fallbackSender = messages.find(m => m.sender_id !== user?.id)?.sender
+  const otherUserId = otherUser?.id || messages.find(m => m.sender_id !== user?.id)?.sender_id
+  const otherOnline = !!otherUserId && onlineIds.has(otherUserId)
+  const convTitle = activeConv
+    ? (activeConv.type === 'support' ? 'KikwetuConnect Support' : (otherUser?.full_name || otherUser?.username || fallbackSender?.full_name || fallbackSender?.username || 'Conversation'))
+    : (fallbackSender?.full_name || fallbackSender?.username || '')
+  const convAvatar = otherUser || fallbackSender || undefined
 
   const filteredConvs = conversations.filter(c => {
     const title = c.participants.map(p => p?.full_name || p?.username || 'User').join(' ').toLowerCase()
@@ -325,7 +331,7 @@ function MessagesInner() {
   if (!user) return <div className="flex items-center justify-center min-h-screen" style={{ background: 'var(--bg)' }}><p style={{ color: 'var(--muted)' }}>Sign in to see messages</p></div>
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]" style={{ background: 'var(--bg)' }}>
+    <div className="flex h-[calc(100dvh-4.25rem)] md:h-[calc(100dvh-4.5rem)]" style={{ background: 'var(--bg)' }}>
       {/* Conversation list */}
       <div className={`${sidebarOpen ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-[360px] flex-shrink-0 border-r`}>
 
@@ -431,7 +437,7 @@ function MessagesInner() {
     </div>
 
       {/* Chat pane */}
-      <div className={`${!sidebarOpen ? 'flex' : 'hidden'} md:flex flex-1 flex-col h-[calc(100vh-4rem)]`}>
+      <div className={`${!sidebarOpen ? 'flex' : 'hidden'} md:flex flex-1 flex-col h-full`}>
         {!convId ? (
           <div className="flex-1 flex items-center justify-center flex-col gap-4" style={{ background: 'var(--surface)' }}>
             <div className="text-6xl mb-2">💬</div>
@@ -452,13 +458,15 @@ function MessagesInner() {
               </div>
               <div className="flex-1 min-w-0">
                 <strong className="text-base block truncate" style={{ color: 'var(--ink)' }}>{convTitle}</strong>
-                {activeConv && activeConv.type !== 'support' && (
-                  onlineIds.has(activeConv.participants[0]?.id) ? (
+                {activeConv?.type !== 'support' && otherUserId && (
+                  otherOnline ? (
                     <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--green)' }}>
                       <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: 'var(--green)' }} />Online
                     </span>
                   ) : (
-                    <span className="text-[10px]" style={{ color: 'var(--muted)' }}>Offline</span>
+                    <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--muted)' }}>
+                      <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: 'var(--faint)' }} />Offline
+                    </span>
                   )
                 )}
               </div>

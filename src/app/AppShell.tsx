@@ -10,6 +10,7 @@ import NotificationTray from '@/components/NotificationTray'
 import { ToolbarProvider } from '@/lib/toolbar'
 import { trackActivity } from '@/lib/activity'
 import { usePresence } from '@/hooks/usePresence'
+import { playMessageSound, playNotificationSound } from '@/lib/sound'
 import { Send, MessageSquare, Bell, Sun, Moon } from 'lucide-react'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -34,6 +35,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [chatSending, setChatSending] = useState(false)
   const [showNotifTray, setShowNotifTray] = useState(false)
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
+  const [followingUsers, setFollowingUsers] = useState<any[]>([])
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   useEffect(() => {
@@ -56,8 +58,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!profile || !supabase) return
     supabase.from('follows').select('following_id').eq('follower_id', profile.id)
-      .then(({ data }) => {
-        if (data) setFollowingIds(new Set((data as any[]).map(f => f.following_id)))
+      .then(async ({ data }) => {
+        const rows = (data as any[] | null) || []
+        const ids = rows.map(f => f.following_id).filter(Boolean)
+        setFollowingIds(new Set(ids))
+        if (ids.length === 0) { setFollowingUsers([]); return }
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, username, full_name, avatar_url, county_hub, is_verified_expert')
+          .in('id', ids)
+        setFollowingUsers(profiles || [])
       })
   }, [profile, supabase])
 
@@ -90,6 +100,48 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!profile || !supabase) return
     fetchUnreadCount()
+  }, [profile, supabase, fetchUnreadCount])
+
+  // Live notification + message sounds and badge updates.
+  const shellNotifChannelRef = useRef<any>(null)
+  const shellMsgChannelRef = useRef<any>(null)
+  useEffect(() => {
+    if (!profile || !supabase) return
+
+    const notifChannel = supabase.channel('shell-notifications')
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'notifications',
+        filter: `user_id=eq.${profile.id}`,
+      }, () => fetchUnreadCount())
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'notifications',
+        filter: `user_id=eq.${profile.id}`,
+      }, () => fetchUnreadCount())
+      .subscribe()
+    shellNotifChannelRef.current = notifChannel
+
+    ;(async () => {
+      const { data } = await supabase.from('conversation_participants').select('conversation_id').eq('user_id', profile.id)
+      const ids = (data || []).map(c => c.conversation_id).filter(Boolean)
+      if (ids.length === 0) return
+      const msgChannel = supabase.channel('shell-messages')
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'messages',
+          filter: `conversation_id=in.(${ids.join(',')})`,
+        }, (payload: any) => {
+          const m = payload.new as any
+          if (!m || m.sender_id === profile.id) return
+          playMessageSound()
+          fetchUnreadCount()
+        })
+        .subscribe()
+      shellMsgChannelRef.current = msgChannel
+    })()
+
+    return () => {
+      if (shellNotifChannelRef.current) supabase.removeChannel(shellNotifChannelRef.current)
+      if (shellMsgChannelRef.current) supabase.removeChannel(shellMsgChannelRef.current)
+    }
   }, [profile, supabase, fetchUnreadCount])
 
   useEffect(() => {
@@ -126,6 +178,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   if (!profile) return null
 
   const initials = (profile.full_name || profile.username || 'U').slice(0, 2).toUpperCase()
+  const onlineIdSet = new Set(onlineUsers.map(u => u.id))
+  const onlineFollowing = followingUsers.filter(u => onlineIdSet.has(u.id)).length
   const noLayout = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/welcome'].includes(path) || path.startsWith('/auth')
   if (noLayout) return <>{children}</>
 
@@ -152,7 +206,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <ToolbarProvider>
         <div className={`app${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
           {/* Sidebar */}
-          <Sidebar initials={initials} profile={profile} onlineCount={onlineCount} onlineUsers={onlineUsers} collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+          <Sidebar initials={initials} profile={profile} following={followingUsers} onlineIds={onlineIdSet} collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
 
           {/* Main */}
           <main className="main">
@@ -207,23 +261,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             </header>
 
-            <section className="page active" style={{ paddingTop: 33, paddingBottom: 94, minHeight: 'calc(100vh - 33px)' }}>
+            <section className="page active" style={path === '/messages' ? { padding: 0 } : { paddingTop: 33, paddingBottom: 94, minHeight: 'calc(100vh - 33px)' }}>
               {children}
             </section>
           </main>
 
-          <MobileNav />
+          {path !== '/messages' && <MobileNav />}
 
           {/* Right Panel */}
           <aside className="right-panel">
           <details className="side-section" open>
-            <summary>Community <span style={{ color: 'var(--green)', fontSize: 10, fontWeight: 400 }}>{onlineCount} online</span></summary>
+            <summary>Following <span style={{ color: 'var(--green)', fontSize: 10, fontWeight: 400 }}>{onlineFollowing}/{followingUsers.length} online</span></summary>
             <div className="side-body">
-              {onlineUsers.length === 0 ? (
-                <small className="text-muted">No members online</small>
-              ) : onlineUsers.slice(0, 8).map((p) => {
+              {followingUsers.length === 0 ? (
+                <small className="text-muted">Follow people to build your community</small>
+              ) : followingUsers.slice(0, 10).map((p) => {
                 const name = p.full_name || p.username || 'User'
                 const initials = name.slice(0, 2).toUpperCase()
+                const isOnline = onlineIdSet.has(p.id)
                 return (
                   <div key={p.id} className="list-row" style={{ position: 'relative', cursor: 'pointer' }}
                      onClick={() => window.location.href = `/profile/${p.username || p.id}`}>
@@ -232,11 +287,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         <img src={p.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy"
                           onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.textContent = initials }} />
                       ) : initials}
-                      <span style={{ position: 'absolute', bottom: 0, right: 0, width: 9, height: 9, borderRadius: '50%', background: 'var(--green)', border: '2px solid var(--surface)' }} />
+                      <span style={{ position: 'absolute', bottom: 0, right: 0, width: 9, height: 9, borderRadius: '50%', background: isOnline ? 'var(--green)' : 'var(--faint)', border: '2px solid var(--surface)' }} />
                     </span>
-                    <div className="side-copy"><b style={{ fontSize: 11 }}>{name}</b><small style={{ fontSize: 9 }}>{p.county_hub || 'Online'}</small></div>
+                    <div className="side-copy"><b style={{ fontSize: 11 }}>{name}</b><small style={{ fontSize: 9, color: isOnline ? 'var(--green)' : 'var(--muted)' }}>{isOnline ? 'Online' : (p.county_hub || 'Offline')}</small></div>
                     <div style={{ marginLeft: 'auto', display: 'flex', gap: 2, flex: 'none' }} onClick={e => e.stopPropagation()}>
-                      <button onClick={async (e) => { e.stopPropagation(); const res = await fetch('/api/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'follow', target_user_id: p.id }) }); if (res.ok) { const d = await res.json(); setFollowingIds(prev => { const n = new Set(prev); if (d.following) n.add(p.id); else n.delete(p.id); return n }) } }}
+                      <button onClick={async (e) => { e.stopPropagation(); const res = await fetch('/api/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'follow', target_user_id: p.id }) }); if (res.ok) { const d = await res.json(); setFollowingIds(prev => { const n = new Set(prev); if (d.following) n.add(p.id); else n.delete(p.id); return n }); setFollowingUsers(prev => d.following ? (prev.some(x => x.id === p.id) ? prev : [...prev, p]) : prev.filter(x => x.id !== p.id)) } }}
                         style={{ width: 24, height: 24, borderRadius: 6, border: 0, background: followingIds.has(p.id) ? 'var(--gold)' : 'var(--raised)', color: followingIds.has(p.id) ? 'var(--night)' : 'var(--muted)', cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 12 }}
                         title={followingIds.has(p.id) ? 'Unfollow' : 'Follow'}>{followingIds.has(p.id) ? '♥' : '♡'}</button>
                       <button onClick={() => window.location.href = `/messages?user=${p.id}`}
@@ -332,12 +387,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <button className="chat-close" onClick={() => setChatOpen(false)} aria-label="Close messages">×</button>
             </div>
             <div className="chat-list" style={{ overflowY: 'auto', flex: 1 }}>
-              {onlineUsers.length === 0 ? (
+              {followingUsers.length === 0 ? (
                 <div className="chat-msg">
-                  <div className="bubble" style={{ color: 'var(--muted)' }}>No members online right now. Open a full chat to continue later.</div>
+                  <div className="bubble" style={{ color: 'var(--muted)' }}>You are not following anyone yet. Open a full chat to continue later.</div>
                 </div>
-              ) : onlineUsers.slice(0, 12).map((p: any) => {
+              ) : followingUsers.slice(0, 12).map((p: any) => {
                 const name = p.full_name || p.username || 'User'
+                const isOnline = onlineIdSet.has(p.id)
                 return (
                   <div key={p.id} className="list-row" style={{ cursor: 'pointer' }}
                     onClick={() => window.location.href = `/messages?user=${p.id}`}>
@@ -346,9 +402,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         <img src={p.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy"
                           onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.textContent = name.slice(0, 2).toUpperCase() }} />
                       ) : name.slice(0, 2).toUpperCase()}
-                      <span style={{ position: 'absolute', bottom: 0, right: 0, width: 9, height: 9, borderRadius: '50%', background: 'var(--green)', border: '2px solid var(--surface)' }} />
+                      <span style={{ position: 'absolute', bottom: 0, right: 0, width: 9, height: 9, borderRadius: '50%', background: isOnline ? 'var(--green)' : 'var(--faint)', border: '2px solid var(--surface)' }} />
                     </span>
-                    <div className="side-copy"><b style={{ fontSize: 11 }}>{name}</b><small style={{ fontSize: 9 }}>{p.county_hub || 'Online'}</small></div>
+                    <div className="side-copy"><b style={{ fontSize: 11 }}>{name}</b><small style={{ fontSize: 9, color: isOnline ? 'var(--green)' : 'var(--muted)' }}>{isOnline ? 'Online' : (p.county_hub || 'Offline')}</small></div>
                     <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--gold)', flex: 'none' }}>Message →</span>
                   </div>
                 )

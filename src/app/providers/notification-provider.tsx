@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useState, useCallback, useRef, ty
 import { useUser } from './auth-provider'
 import { createBrowserClient } from '@/lib/supabase'
 import { toast } from './toast-provider'
+import { playNotificationSound } from '@/lib/sound'
 
 interface Notification {
   id: string
@@ -77,6 +78,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         const notif = payload.new as Notification
         setNotifications(prev => [notif, ...prev])
         setUnreadCount(prev => prev + 1)
+        playNotificationSound()
         if (notif.type === 'message') toast(`New message from ${notif.data?.sender_name || 'someone'}`)
         else toast(notif.title)
       })
@@ -94,9 +96,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const channel = supabase.channel('heshima')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'heshima_earnings', filter: `user_id=eq.${user.id}` }, (payload: { new: { amount: number; description?: string } }) => {
         const e = payload.new
+        playNotificationSound()
         toast(`+${e.amount} Heshima${e.description ? ' — ' + e.description : ''}`)
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_badges', filter: `user_id=eq.${user.id}` }, () => {
+        playNotificationSound()
         toast('Badge unlocked!')
       })
       .subscribe()
