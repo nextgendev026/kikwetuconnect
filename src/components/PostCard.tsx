@@ -248,7 +248,7 @@ export const PostCard = memo(function PostCard({
           <button
             onClick={() => onVote(post.id, post.user_vote === 1 ? null : 1)}
             className={`action-button ${post.user_vote === 1 ? 'active-vote' : ''}`}
-            aria-label={post.user_vote === 1 ? 'Remove upvote' : `Upvote, ${post.upvotes_count || 0} upvotes`}
+            aria-label={post.user_vote === 1 ? `Remove upvote, ${post.upvotes_count || 0} upvotes` : `Upvote, ${post.upvotes_count || 0} upvotes`}
             aria-pressed={post.user_vote === 1}
           >
             <ArrowUp className={`w-4 h-4 ${post.user_vote === 1 ? 'text-green' : ''}`} aria-hidden="true" />

@@ -140,11 +140,11 @@ export default function Sidebar({ initials, profile, onlineCount = 0, onlineUser
       <div className="live-users" style={{ marginTop: 12, padding: '0 4px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, padding: '0 8px' }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 6px var(--green)' }} />
-          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.1em' }}>Live — {onlineCount} online</span>
+          <span className="live-label" style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em' }}>Live — {onlineCount} online</span>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxHeight: 280, overflowY: 'auto' }}>
           {onlineUsers.length === 0 ? (
-            <small style={{ fontSize: 10, color: 'var(--faint)', padding: '4px 8px' }}>No one online right now</small>
+            <small style={{ fontSize: 10, padding: '4px 8px' }}>No one online right now</small>
           ) : onlineUsers.slice(0, 10).map((u: any) => (
             <div key={u.id} style={{
               display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px',
@@ -165,7 +165,7 @@ export default function Sidebar({ initials, profile, onlineCount = 0, onlineUser
                  <Link href={`/profile/${u.username || u.id}`} style={{ fontWeight: 700, fontSize: 11, color: 'var(--ink)', textDecoration: 'none', display: 'block', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {u.full_name || u.username}
                 </Link>
-                <small style={{ fontSize: 9, color: 'var(--muted)' }}>{u.county_hub || 'Kenya'}{u.is_verified_expert ? ' ✓' : ''}</small>
+                <small style={{ fontSize: 9 }}>{u.county_hub || 'Kenya'}{u.is_verified_expert ? ' ✓' : ''}</small>
               </div>
               <div style={{ display: 'flex', gap: 3, flex: 'none' }}>
                 <button onClick={(e) => handleFollow(u.id, e)}

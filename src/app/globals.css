@@ -116,7 +116,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .nav a:hover, .nav button:hover { background: color-mix(in oklab, var(--bg) 25%, transparent); color: var(--ink); transform: translateX(3px); }
 [data-theme=dark] .sidebar .nav a:hover, [data-theme=dark] .sidebar .nav button:hover { color: var(--ink); }
 [data-theme=light] .sidebar .nav a:hover, [data-theme=light] .sidebar .nav button:hover { color: oklch(94% .01 91); background: color-mix(in oklab, oklch(96% .01 91) 12%, transparent); }
+.live-users .live-label { color: var(--muted); }
+.live-users small { color: var(--muted); }
 [data-theme=light] .sidebar .nav-label, [data-theme=light] .sidebar .brand small, [data-theme=light] .sidebar .user-mini small, [data-theme=light] .sidebar .user-mini a.icon { color: oklch(62% .02 151); }
+[data-theme=light] .sidebar .live-users .live-label, [data-theme=light] .sidebar .live-users small { color: oklch(62% .02 151); }
+[data-theme=light] .sidebar .brand b { color: oklch(94% .01 91); }
 [data-theme=light] .sidebar .user-mini strong { color: oklch(94% .01 91); }
 .nav a.active, .nav button.active { background: var(--gold); color: var(--night); font-weight: 700; box-shadow: 0 2px 8px color-mix(in oklab, var(--gold) 20%, transparent); }
 .nav .icon { font-size: 15px; width: 15px; height: 15px; flex: none; }

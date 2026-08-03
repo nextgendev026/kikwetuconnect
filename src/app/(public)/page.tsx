@@ -67,7 +67,7 @@ export default function LandingPage() {
         </div>
 
         <div className="lp-hero-text" style={{ position: 'relative', zIndex: 1, maxWidth: 590, alignSelf: 'center' }}>
-          <div className="inline-flex items-center gap-[8px] mb-[20px]" style={{ color: 'oklch(52% .14 151)', fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', fontWeight: 800 }}>
+          <div className="inline-flex items-center gap-[8px] mb-[20px]" style={{ color: 'oklch(40% .13 151)', fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', fontWeight: 800 }}>
             <span style={{ width: 28, height: 2, background: 'oklch(72% .15 84)' }}></span>Kenya's knowledge circle
           </div>
           <h1 style={{ fontSize: 'clamp(3.2rem,7vw,6.3rem)', lineHeight: .96, letterSpacing: '-.08em', color: 'oklch(16% .03 151)', margin: 0, marginBottom: 25, fontFamily: "'Plus Jakarta Sans'" }}>Good questions deserve a home.</h1>
@@ -152,7 +152,7 @@ export default function LandingPage() {
         </div>
         <div className="lp-spaces" style={{ display: 'grid', gridTemplateColumns: '1fr 1.35fr', gap: 70, alignItems: 'center' }}>
           <div style={{ position: 'relative' }}>
-            <div className="inline-flex items-center gap-[8px] mb-[20px]" style={{ color: 'oklch(52% .14 151)', fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', fontWeight: 800 }}>
+            <div className="inline-flex items-center gap-[8px] mb-[20px]" style={{ color: 'oklch(40% .13 151)', fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', fontWeight: 800 }}>
               <span style={{ width: 28, height: 2, background: 'oklch(72% .15 84)' }}></span>The circle is already moving
             </div>
             <h2 style={{ fontSize: 'clamp(2rem,4vw,3.5rem)', letterSpacing: '-.07em', lineHeight: 1.02, margin: '0 0 18px', color: 'oklch(16% .03 151)', fontFamily: "'Plus Jakarta Sans'" }}>From Nairobi tech to Kitale soil health.</h2>

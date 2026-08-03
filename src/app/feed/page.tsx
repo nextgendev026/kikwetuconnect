@@ -51,7 +51,7 @@ function EmptyState({ tab, hasCountyFilter }: { tab: TabId; hasCountyFilter: boo
     <div className="bg-night2 border border-[var(--line)] rounded-[16px] p-[32px_18px] text-center animate-rise">
       <div className="text-[32px] mb-3 opacity-50">🌿</div>
       <p className="text-cream font-semibold text-[14px] mb-1">{m.title}</p>
-      <p className="text-[var(--muted)] text-[12px] mb-4">{m.desc}</p>
+      <p className="text-[var(--faint-accessible)] text-[12px] mb-4">{m.desc}</p>
       {tab !== 'saved' && (
         <button onClick={() => document.getElementById('composer-input')?.focus()} className="bg-gold text-night text-[12px] font-bold px-[18px] py-[10px] rounded-full transition-opacity hover:opacity-90">
           Create your first post
@@ -67,7 +67,7 @@ function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => voi
       <span className="text-red text-[18px]">⚠️</span>
       <div className="flex-1 min-w-0">
         <p className="text-cream text-[13px] font-semibold mb-1">Something went wrong</p>
-        <p className="text-[var(--muted)] text-[11px] mb-2">{message}</p>
+        <p className="text-[var(--faint-accessible)] text-[11px] mb-2">{message}</p>
         <button onClick={onRetry} className="text-[11px] font-bold text-gold hover:underline">Try again</button>
       </div>
     </div>
@@ -206,7 +206,7 @@ export default function FeedPage() {
       <div className="flex items-center justify-between mb-[18px]">
         <div>
           <h1 className="text-cream text-[20px] font-extrabold tracking-[-.03em]" style={{ fontFamily: "'Plus Jakarta Sans'" }}>Baraza</h1>
-          <p className="text-[var(--muted)] text-[11px] mt-[2px]">The people's square</p>
+          <p className="text-[var(--faint-accessible)] text-[11px] mt-[2px]">The people's square</p>
         </div>
         <button
           onClick={() => openCreateModal()}
@@ -257,10 +257,10 @@ export default function FeedPage() {
           ) : (
             <div className="w-[36px] h-[36px] rounded-full bg-deep flex items-center justify-center text-[var(--muted)]">?</div>
           )}
-          <div id="composer-input" className="flex-1 text-[13px] text-[var(--muted)]">What's on your mind, {profile?.full_name?.split(' ')[0] || 'Mwananchi'}?</div>
+          <div id="composer-input" className="flex-1 text-[13px] text-[var(--faint-accessible)]">What's on your mind, {profile?.full_name?.split(' ')[0] || 'Mwananchi'}?</div>
         </div>
         <div className="flex gap-[6px] mt-[12px] pt-[12px] border-t border-[var(--line)] flex-wrap">
-          <span className="text-[10px] text-[var(--muted)] self-center mr-1">Create:</span>
+          <span className="text-[10px] text-[var(--faint-accessible)] self-center mr-1">Create:</span>
           {[
             { label: 'Post', icon: '💬', mode: 'baraza' },
             { label: 'Poll', icon: '📊', mode: 'poll' },
@@ -269,7 +269,7 @@ export default function FeedPage() {
             <button
               key={action.label}
               onClick={(e) => { e.stopPropagation(); openCreateModal(action.mode) }}
-              className="flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-[var(--raised)] hover:text-cream transition-all"
+              className="flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold text-[var(--faint-accessible)] hover:bg-[var(--raised)] hover:text-cream transition-all"
             >
               <span>{action.icon}</span>
               <span>{action.label}</span>
@@ -278,17 +278,17 @@ export default function FeedPage() {
           <span className="w-px h-5 bg-[var(--line)] self-center mx-1"></span>
           <button
             onClick={(e) => { e.stopPropagation(); openCreateModal() }}
-            className="flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-[var(--raised)] hover:text-cream transition-all"
+            className="flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold text-[var(--faint-accessible)] hover:bg-[var(--raised)] hover:text-cream transition-all"
             title="Add image"
           >🖼️ <span className="hidden sm:inline">Image</span></button>
           <button
             onClick={(e) => { e.stopPropagation(); openCreateModal() }}
-            className="flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-[var(--raised)] hover:text-cream transition-all"
+            className="flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold text-[var(--faint-accessible)] hover:bg-[var(--raised)] hover:text-cream transition-all"
             title="Add video"
           >🎥 <span className="hidden sm:inline">Video</span></button>
           <button
             onClick={(e) => { e.stopPropagation(); openCreateModal() }}
-            className="flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold text-[var(--muted)] hover:bg-[var(--raised)] hover:text-cream transition-all"
+            className="flex items-center gap-1 px-[10px] py-[5px] rounded-full text-[11px] font-semibold text-[var(--faint-accessible)] hover:bg-[var(--raised)] hover:text-cream transition-all"
             title="Add audio"
           >🎙️ <span className="hidden sm:inline">Audio</span></button>
           {profile?.county_hub && (
@@ -313,7 +313,7 @@ export default function FeedPage() {
             onClick={() => setTypeFilter(f.id)}
             className={`flex-shrink-0 px-[12px] py-[5px] rounded-full text-[12px] font-semibold transition-all ${
               typeFilter === f.id
-                ? 'bg-cream text-night'
+                ? 'bg-cream text-bg'
                 : 'text-[var(--faint-accessible)] border border-[var(--line)] hover:bg-deep hover:text-cream'
             }`}
           >
@@ -388,7 +388,7 @@ export default function FeedPage() {
                 )}
                 {!hasMore && (
                   <div className="text-center py-[20px]">
-                    <p className="text-[var(--muted)] text-[11px]">You've reached the end... for now</p>
+                    <p className="text-[var(--faint-accessible)] text-[11px]">You've reached the end... for now</p>
                   </div>
                 )}
               </>
