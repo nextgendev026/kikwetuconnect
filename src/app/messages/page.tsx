@@ -331,7 +331,7 @@ function MessagesInner() {
   if (!user) return <div className="flex items-center justify-center min-h-screen" style={{ background: 'var(--bg)' }}><p style={{ color: 'var(--muted)' }}>Sign in to see messages</p></div>
 
   return (
-    <div className="flex h-[calc(100dvh-4.25rem)] md:h-[calc(100dvh-4.5rem)]" style={{ background: 'var(--bg)' }}>
+    <div className="messages-shell flex" style={{ background: 'var(--bg)' }}>
       {/* Conversation list */}
       <div className={`${sidebarOpen ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-[360px] flex-shrink-0 border-r`}>
 
@@ -626,7 +626,7 @@ function MessagesInner() {
             )}
 
             {/* Composer - sticky at bottom */}
-            <div className="flex-shrink-0 sticky bottom-0 border-t z-10" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
+            <div className="flex-shrink-0 border-t z-10" style={{ borderColor: 'var(--line)', background: 'var(--surface)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
               {pendingFiles.length > 0 && (
                 <div className="flex gap-2 px-3 pt-2 pb-1 overflow-x-auto">
                   {pendingFiles.map(p => (

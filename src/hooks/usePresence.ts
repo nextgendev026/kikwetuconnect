@@ -12,20 +12,37 @@ export interface PresenceUser {
   is_verified_expert?: boolean
 }
 
-const HEARTBEAT_MS = 30000
+const HEARTBEAT_MS = 15000
+const REFRESH_MS = 15000
 const PRESENCE_CHANNEL = 'online-presence'
 
 type ChannelState = 'UNSUBSCRIBED' | 'SUBSCRIBING' | 'SUBSCRIBED'
 
-const presenceChannels = new Map<string, { channel: any; state: ChannelState; refs: number }>()
+interface SharedChannel {
+  channel: any
+  state: ChannelState
+  refs: number
+  /** Every usePresence subscriber registers a listener fired on each presence sync. */
+  listeners: Set<() => void>
+  /** Guards so the current user's presence is tracked once across all subscribers. */
+  tracked: boolean
+}
+
+// One realtime channel is shared across all usePresence subscribers on the
+// client (AppShell, Messages, etc.). Each subscriber registers its own sync
+// listener so online/offline changes render in real time everywhere, and the
+// user's presence is only untracked when the LAST subscriber unmounts.
+const presenceChannels = new Map<string, SharedChannel>()
 
 export function usePresence() {
   const { user, profile } = useUser()
   const supabase = useSupabase()
   const [onlineUsers, setOnlineUsers] = useState<PresenceUser[]>([])
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set())
-  const localChannelRef = useRef<any>(null)
-  const localStateRef = useRef<ChannelState>('UNSUBSCRIBED')
+  const userIdRef = useRef<string | undefined>(undefined)
+  const profileIdRef = useRef<string | undefined>(undefined)
+  useEffect(() => { userIdRef.current = user?.id }, [user?.id])
+  useEffect(() => { profileIdRef.current = profile?.id }, [profile?.id])
 
   const syncOnlineUsers = useCallback(async (ids: string[]) => {
     if (ids.length === 0) {
@@ -44,89 +61,92 @@ export function usePresence() {
     } catch { /* presence is non-critical */ }
   }, [supabase])
 
-  const handlePresenceSync = useCallback((channel: any, excludeUserId: string | undefined) => {
+  const readState = useCallback((channel: any) => {
     const state = channel.presenceState()
-    const ids = Object.keys(state).filter(k => k !== excludeUserId)
+    const ids = Object.keys(state).filter(k => k !== userIdRef.current)
     void syncOnlineUsers(ids)
   }, [syncOnlineUsers])
 
-  const refresh = useCallback(() => {
-    const channel = localChannelRef.current
-    if (!channel) return
-    const state = channel.presenceState()
-    const ids = Object.keys(state).filter(k => k !== user?.id)
-    void syncOnlineUsers(ids)
-  }, [user, syncOnlineUsers])
+  const trackMe = useCallback((sc: SharedChannel) => {
+    const pid = profileIdRef.current
+    if (!pid) return
+    if (sc.tracked) return
+    sc.tracked = true
+    sc.channel.track({ user_id: pid, online_at: new Date().toISOString() }).catch(() => { /* ignore */ })
+  }, [])
 
   useEffect(() => {
-    if (!supabase || !profile) return
+    if (!supabase || !profile?.id) return
 
-    const channelName = PRESENCE_CHANNEL
-    let shared = presenceChannels.get(channelName)
-
-    if (!shared) {
-      const channel = supabase.channel(channelName)
-      shared = { channel, state: 'UNSUBSCRIBED' as ChannelState, refs: 0 }
-      presenceChannels.set(channelName, shared)
+    let sc = presenceChannels.get(PRESENCE_CHANNEL)
+    if (!sc) {
+      const channel = supabase.channel(PRESENCE_CHANNEL)
+      sc = { channel, state: 'UNSUBSCRIBED', refs: 0, listeners: new Set(), tracked: false }
+      presenceChannels.set(PRESENCE_CHANNEL, sc)
 
       channel.on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState()
-        const ids = Object.keys(state).filter(k => k !== user?.id)
-        void syncOnlineUsers(ids)
+        for (const fn of sc!.listeners) fn()
       })
 
-      channel.subscribe(async (status: string) => {
+      channel.subscribe((status: string) => {
+        sc!.state = status as ChannelState
         if (status === 'SUBSCRIBED') {
-          shared!.state = 'SUBSCRIBED'
-          await channel.track({ user_id: profile.id, online_at: new Date().toISOString() })
-          const state = channel.presenceState()
-          const ids = Object.keys(state).filter(k => k !== user?.id)
-          void syncOnlineUsers(ids)
+          trackMe(sc!)
+          for (const fn of sc!.listeners) fn()
         }
       })
-
-      localChannelRef.current = channel
-      localStateRef.current = 'SUBSCRIBING'
-    } else {
-      if (shared.state === 'SUBSCRIBED') {
-        const state = shared.channel.presenceState()
-        const ids = Object.keys(state).filter(k => k !== user?.id)
-        void syncOnlineUsers(ids)
-      }
-      localChannelRef.current = shared.channel
-      localStateRef.current = shared.state
     }
-    shared.refs += 1
+
+    const listener = () => readState(sc.channel)
+    sc.listeners.add(listener)
+    sc.refs += 1
+    trackMe(sc)
+
+    if (sc.state === 'SUBSCRIBED') readState(sc.channel)
 
     const heartbeat = setInterval(() => {
-      if (localStateRef.current !== 'SUBSCRIBED') return
-      localChannelRef.current.track({ user_id: profile.id, online_at: new Date().toISOString() }).catch(() => { /* ignore */ })
+      if (sc!.state !== 'SUBSCRIBED') return
+      const pid = profileIdRef.current
+      if (!pid) return
+      sc!.channel.track({ user_id: pid, online_at: new Date().toISOString() }).catch(() => { /* ignore */ })
     }, HEARTBEAT_MS)
 
+    // Backup poll so statuses converge even if a presence sync event is missed.
+    const refreshPoll = setInterval(() => {
+      if (sc!.state === 'SUBSCRIBED') readState(sc!.channel)
+    }, REFRESH_MS)
+
     const onVisibility = () => {
-      if (document.visibilityState === 'visible' && localStateRef.current === 'SUBSCRIBED') {
-        localChannelRef.current.track({ user_id: profile.id, online_at: new Date().toISOString() }).catch(() => { /* ignore */ })
+      if (document.visibilityState === 'visible' && sc!.state === 'SUBSCRIBED') {
+        trackMe(sc!)
       }
     }
+    const onFocus = () => {
+      if (sc!.state === 'SUBSCRIBED') readState(sc!.channel)
+    }
     window.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('focus', onFocus)
 
     return () => {
       clearInterval(heartbeat)
+      clearInterval(refreshPoll)
       window.removeEventListener('visibilitychange', onVisibility)
-      if (localStateRef.current === 'SUBSCRIBED' && localChannelRef.current) {
-        localChannelRef.current.untrack().catch(() => { /* ignore */ })
-      }
-      localChannelRef.current = null
-      localStateRef.current = 'UNSUBSCRIBED'
-
-      if (shared!.refs <= 1) {
-        try { shared!.channel.unsubscribe() } catch { /* ignore */ }
-        presenceChannels.delete(channelName)
-      } else {
-        shared!.refs -= 1
+      window.removeEventListener('focus', onFocus)
+      sc!.listeners.delete(listener)
+      sc!.refs -= 1
+      if (sc!.refs <= 0) {
+        try { sc!.channel.untrack().catch(() => { /* ignore */ }) } catch { /* ignore */ }
+        try { sc!.channel.unsubscribe() } catch { /* ignore */ }
+        presenceChannels.delete(PRESENCE_CHANNEL)
       }
     }
-  }, [supabase, profile, user, syncOnlineUsers])
+  }, [supabase, profile?.id, readState, trackMe])
+
+  const refresh = useCallback(() => {
+    const sc = presenceChannels.get(PRESENCE_CHANNEL)
+    if (!sc || sc.state !== 'SUBSCRIBED') return
+    readState(sc.channel)
+  }, [readState])
 
   return { onlineUsers, onlineIds, onlineCount: onlineUsers.length, refresh }
 }

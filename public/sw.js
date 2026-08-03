@@ -33,29 +33,34 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('push', event => {
   if (!event.data) return
-  try {
-    const data = event.data.json()
-    const { title = 'KikwetuConnect', body = '', icon = '/icons/icon-192x192.png', badge = '/icons/icon-72x72.png', tag, data: extraData, actions, requireInteraction, silent, ...rest } = data
-    event.waitUntil(
-      self.registration.showNotification(title, {
-        body, icon, badge, tag,
-        data: extraData || {},
-        actions,
-        requireInteraction,
-        silent,
-        vibrate: [200, 100, 200],
-        ...rest,
-      })
-    )
-  } catch {
-    event.waitUntil(
-      self.registration.showNotification('KikwetuConnect', {
-        body: event.data.text(),
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-72x72.png',
-      })
-    )
-  }
+
+  // If the app is open and focused, the realtime client already shows in-app
+  // toasts/sounds — skip so we don't duplicate with the native notification.
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+      const anyFocused = clients.some(c => c.focused)
+      if (anyFocused) return
+      try {
+        const data = event.data.json()
+        const { title = 'KikwetuConnect', body = '', icon = '/icons/icon-192x192.png', badge = '/icons/icon-72x72.png', tag, data: extraData, actions, requireInteraction, silent, ...rest } = data
+        return self.registration.showNotification(title, {
+          body, icon, badge, tag,
+          data: extraData || {},
+          actions,
+          requireInteraction,
+          silent,
+          vibrate: [200, 100, 200],
+          ...rest,
+        })
+      } catch {
+        return self.registration.showNotification('KikwetuConnect', {
+          body: event.data.text(),
+          icon: '/icons/icon-192x192.png',
+          badge: '/icons/icon-72x72.png',
+        })
+      }
+    })
+  )
 })
 
 self.addEventListener('notificationclick', event => {

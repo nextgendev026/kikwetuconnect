@@ -4,6 +4,7 @@ import { useUser } from './auth-provider'
 import { createBrowserClient } from '@/lib/supabase'
 import { toast } from './toast-provider'
 import { playNotificationSound } from '@/lib/sound'
+import { showNativeNotification } from '@/lib/browser-notify'
 
 interface Notification {
   id: string
@@ -81,6 +82,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         playNotificationSound()
         if (notif.type === 'message') toast(`New message from ${notif.data?.sender_name || 'someone'}`)
         else toast(notif.title)
+        showNativeNotification({
+          title: notif.type === 'message' ? 'New message' : (notif.title || 'KikwetuConnect'),
+          body: notif.body || '',
+          url: (notif.data?.link as string) || (notif.type === 'message' ? '/messages' : '/notifications'),
+          tag: `notif-${notif.id}`,
+        })
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
         const notif = payload.new as Notification

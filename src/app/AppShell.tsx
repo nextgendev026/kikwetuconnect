@@ -10,7 +10,9 @@ import NotificationTray from '@/components/NotificationTray'
 import { ToolbarProvider } from '@/lib/toolbar'
 import { trackActivity } from '@/lib/activity'
 import { usePresence } from '@/hooks/usePresence'
+import { useKeyboardViewport } from '@/hooks/useKeyboardViewport'
 import { playMessageSound, playNotificationSound } from '@/lib/sound'
+import { showNativeNotification, getSenderName } from '@/lib/browser-notify'
 import { Send, MessageSquare, Bell, Sun, Moon } from 'lucide-react'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -37,6 +39,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
   const [followingUsers, setFollowingUsers] = useState<any[]>([])
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  useKeyboardViewport()
 
   useEffect(() => {
     try {
@@ -105,6 +109,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // Live notification + message sounds and badge updates.
   const shellNotifChannelRef = useRef<any>(null)
   const shellMsgChannelRef = useRef<any>(null)
+  const shellMsgPollRef = useRef<any>(null)
   useEffect(() => {
     if (!profile || !supabase) return
 
@@ -120,27 +125,54 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       .subscribe()
     shellNotifChannelRef.current = notifChannel
 
-    ;(async () => {
+    const onMessage = (payload: any) => {
+      const m = payload.new as any
+      if (!m || m.sender_id === profile.id) return
+      playMessageSound()
+      fetchUnreadCount()
+      getSenderName(supabase, m.sender_id).then(name => {
+        showNativeNotification({
+          title: 'New message',
+          body: `${name}: ${m.content || '📷 Image'}`,
+          url: `/messages?conversation_id=${m.conversation_id}`,
+          tag: `msg-${m.conversation_id}`,
+        })
+      })
+    }
+    const fetchConvIds = async () => {
       const { data } = await supabase.from('conversation_participants').select('conversation_id').eq('user_id', profile.id)
-      const ids = (data || []).map(c => c.conversation_id).filter(Boolean)
+      return (data || []).map(c => c.conversation_id).filter(Boolean) as string[]
+    }
+    const subscribeTo = (ids: string[]) => {
       if (ids.length === 0) return
-      const msgChannel = supabase.channel('shell-messages')
+      if (shellMsgChannelRef.current) supabase.removeChannel(shellMsgChannelRef.current)
+      const msgChannel = supabase.channel(`shell-messages-${ids.length}-${ids[0]}`)
         .on('postgres_changes', {
           event: 'INSERT', schema: 'public', table: 'messages',
           filter: `conversation_id=in.(${ids.join(',')})`,
-        }, (payload: any) => {
-          const m = payload.new as any
-          if (!m || m.sender_id === profile.id) return
-          playMessageSound()
-          fetchUnreadCount()
-        })
+        }, onMessage)
         .subscribe()
       shellMsgChannelRef.current = msgChannel
+    }
+
+    let currentIds: string[] = []
+    ;(async () => {
+      currentIds = await fetchConvIds()
+      subscribeTo(currentIds)
+      shellMsgPollRef.current = setInterval(async () => {
+        const next = await fetchConvIds()
+        const changed = next.length !== currentIds.length || next.some(id => !currentIds.includes(id))
+        if (changed) {
+          currentIds = next
+          subscribeTo(next)
+        }
+      }, 60000)
     })()
 
     return () => {
       if (shellNotifChannelRef.current) supabase.removeChannel(shellNotifChannelRef.current)
       if (shellMsgChannelRef.current) supabase.removeChannel(shellMsgChannelRef.current)
+      if (shellMsgPollRef.current) clearInterval(shellMsgPollRef.current)
     }
   }, [profile, supabase, fetchUnreadCount])
 
