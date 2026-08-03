@@ -163,7 +163,31 @@ export function useConversations() {
     return null
   }, [supabase, user])
 
-  return { conversations, loading, fetchConversations, createConversation }
+  const deleteConversation = useCallback(async (conversationId: string) => {
+    if (!user) return false
+    const { error } = await supabase
+      .from('conversation_participants')
+      .delete()
+      .eq('conversation_id', conversationId)
+      .eq('user_id', user.id)
+    if (error) { toast(error.message); return false }
+    setConversations(prev => prev.filter(c => c.id !== conversationId))
+    return true
+  }, [supabase, user])
+
+  const deleteConversations = useCallback(async (conversationIds: string[]) => {
+    if (!user || conversationIds.length === 0) return false
+    const { error } = await supabase
+      .from('conversation_participants')
+      .delete()
+      .in('conversation_id', conversationIds)
+      .eq('user_id', user.id)
+    if (error) { toast(error.message); return false }
+    setConversations(prev => prev.filter(c => !conversationIds.includes(c.id)))
+    return true
+  }, [supabase, user])
+
+  return { conversations, loading, fetchConversations, createConversation, deleteConversation, deleteConversations }
 }
 
 export function useMessages(conversationId: string | null) {

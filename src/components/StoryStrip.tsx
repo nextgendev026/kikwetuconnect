@@ -1,8 +1,8 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { useSupabase, toast } from '@/app/providers'
-import { Play, Plus, PlusIcon } from 'lucide-react'
+import { useSupabase, useUser, toast } from '@/app/providers'
+import { Play, Plus, PlusIcon, X, Image, Send } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
 
 interface Story {
@@ -124,14 +124,27 @@ export default function StoryStrip({ profile }: StoryStripProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, profile])
 
-  const openComposer = () => {
-    document.dispatchEvent(new CustomEvent('open-create-modal', { detail: { type: 'story' } }))
-  }
+  const [showStoryComposer, setShowStoryComposer] = useState(false)
+  const [showIdeaComposer, setShowIdeaComposer] = useState(false)
+  const [ideaText, setIdeaText] = useState('')
 
-  if (loading && stories.length === 0 && !myStory && shorts.length === 0) return null
-
-  const openIdeaComposer = () => {
-    document.dispatchEvent(new CustomEvent('open-create-modal', { detail: { type: 'post' } }))
+  if (loading && stories.length === 0 && !myStory && shorts.length === 0) {
+    return (
+      <div className="mb-[14px]">
+        <div className="flex items-center justify-between mb-[10px]">
+          <h2 className="flex items-center gap-[6px] text-[13px] font-extrabold tracking-[-.01em]" style={{ fontFamily: "'Plus Jakarta Sans'" }}>
+            <Play className="w-[14px] h-[14px] text-gold fill-gold" />
+            <span className="text-cream">My ideas</span>
+            <span className="text-[var(--muted)] font-semibold text-[11px]">24-hour photos & short videos</span>
+          </h2>
+        </div>
+        <div className="flex gap-[10px] overflow-x-auto pb-[6px] scrollbar-none -mx-[12px] px-[12px]">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="flex-shrink-0 w-[90px] h-[130px] rounded-[16px] bg-[var(--raised)] animate-pulse" />
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -148,7 +161,7 @@ export default function StoryStrip({ profile }: StoryStripProps) {
         <div className="flex gap-[10px] overflow-x-auto pb-[6px] scrollbar-none -mx-[12px] px-[12px]">
           {/* Create story */}
           <button
-            onClick={openComposer}
+            onClick={() => setShowStoryComposer(true)}
             className="flex-shrink-0 w-[90px] h-[130px] rounded-[16px] border-2 border-dashed border-[var(--line)] flex flex-col items-center justify-center gap-[8px] text-[var(--muted)] hover:border-gold hover:text-gold transition-colors cursor-pointer"
             aria-label="My ideas"
             style={{ background: 'linear-gradient(135deg, color-mix(in oklab, var(--gold) 10%, var(--surface)), var(--surface))' }}
@@ -178,7 +191,7 @@ export default function StoryStrip({ profile }: StoryStripProps) {
         {shorts.length > 0 && (
           <div className="flex gap-[10px] overflow-x-auto pb-[6px] pt-[8px] border-t border-[var(--line)] mt-[8px] -mx-[12px] px-[12px]">
             <button
-              onClick={openIdeaComposer}
+              onClick={() => setShowIdeaComposer(true)}
               className="flex-shrink-0 w-[104px] h-[150px] rounded-[16px] border-2 border-dashed border-[var(--line)] flex flex-col items-center justify-center gap-[8px] text-[var(--muted)] hover:border-gold hover:text-gold transition-colors cursor-pointer"
               aria-label="Your idea"
             >
@@ -194,11 +207,199 @@ export default function StoryStrip({ profile }: StoryStripProps) {
         )}
       </div>
 
-      {/* Story viewer */}
-      {openStory && (
-        <StoryViewer story={openStory} onClose={() => setOpenStory(null)} supabase={supabase} />
-      )}
-    </>
+       {/* Story viewer */}
+       {openStory && (
+         <StoryViewer story={openStory} onClose={() => setOpenStory(null)} supabase={supabase} />
+       )}
+
+       {/* Inline 24h idea composer */}
+       {showStoryComposer && (
+         <StoryComposer
+           profile={profile}
+           supabase={supabase}
+           onClose={() => setShowStoryComposer(false)}
+           onPublished={() => { setShowStoryComposer(false); window.location.href = '/feed' }}
+         />
+       )}
+
+       {/* Inline idea composer */}
+       {showIdeaComposer && (
+         <IdeaComposer
+           profile={profile}
+           supabase={supabase}
+           onClose={() => setShowIdeaComposer(false)}
+           onPublished={() => { setShowIdeaComposer(false); window.location.href = '/feed' }}
+         />
+       )}
+     </>
+   )
+ }
+
+function StoryComposer({ profile, supabase, onClose, onPublished }: {
+  profile: { id: string; username: string; full_name: string | null; avatar_url: string | null } | null
+  supabase: any
+  onClose: () => void
+  onPublished: () => void
+}) {
+  const { user } = useUser()
+  const [text, setText] = useState('')
+  const [file, setFile] = useState<File | null>(null)
+  const [preview, setPreview] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    if (f) { setFile(f); setPreview(URL.createObjectURL(f)) }
+    e.target.value = ''
+  }
+
+  const handlePublish = async () => {
+    if (!user || !supabase) { toast('Sign in required'); return }
+    if (!file) { toast('Add a photo or 15s video'); return }
+    if (file.size > 50 * 1024 * 1024) { toast('Max 50MB'); return }
+
+    setUploading(true)
+    try {
+      const ext = (file.name.split('.').pop() || 'bin').replace(/[^a-zA-Z0-9]/g, '')
+      const path = `stories/${user.id}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { error: upErr } = await supabase.storage.from('stories').upload(path, file, { upsert: true })
+      if (upErr) throw upErr
+      const { data: { publicUrl } } = supabase.storage.from('stories').getPublicUrl(path)
+
+      const isVideo = file.type.startsWith('video/')
+      const { error: storyErr } = await supabase.rpc('create_story', {
+        p_media_url: publicUrl,
+        p_media_type: isVideo ? 'video' : 'image',
+        p_caption: text || null,
+        p_duration: null,
+        p_thumbnail_url: null,
+      })
+      if (storyErr) throw storyErr
+
+      toast('Idea shared! Visible for 24h.')
+      onPublished()
+    } catch (e: any) { toast(e?.message || 'Failed to share idea') }
+    finally { setUploading(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end" onClick={onClose}>
+      <div className="w-full max-w-md mx-auto mb-safe pb-safe bg-[var(--surface)] border-t border-[var(--line)] rounded-t-[20px] p-4" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold" style={{ color: 'var(--ink)' }}>Create Idea (24h)</h3>
+          <button onClick={onClose} className="w-6 h-6 rounded-full grid place-items-center text-[var(--muted)] hover:bg-[var(--raised)]" style={{ background: 'var(--raised)' }}>
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {preview ? (
+          <img src={preview} alt="" className="w-full h-[140px] object-cover rounded-[12px] mb-3" />
+        ) : (
+          <button onClick={() => fileRef.current?.click()}
+            className="w-full h-[140px] rounded-[12px] border-2 border-dashed border-[var(--line)] flex flex-col items-center justify-center gap-2 text-[var(--muted)] hover:border-gold hover:text-gold transition-colors cursor-pointer mb-3"
+            style={{ background: 'var(--raised)' }}>
+            <Image className="w-6 h-6" />
+            <span className="text-[11px] font-bold">Add photo or video</span>
+          </button>
+        )}
+        <input ref={fileRef} type="file" accept="image/*,video/*" onChange={handleFile} className="hidden" />
+        {file && (
+          <button onClick={() => { setFile(null); setPreview(null) }}
+            className="text-[10px] text-[var(--muted)] hover:text-[var(--red)] underline mb-2">
+            Remove media
+          </button>
+        )}
+
+        <textarea value={text} onChange={e => setText(e.target.value)}
+          placeholder="Add a caption (optional)..." rows={2}
+          className="w-full rounded-[10px] px-3 py-2 text-sm outline-none resize-none mb-3"
+          style={{ background: 'var(--raised)', border: '1px solid var(--line)', color: 'var(--ink)' }} />
+
+        <button onClick={handlePublish} disabled={uploading || !file}
+          className="w-full h-[40px] rounded-[10px] font-bold text-sm border-0 cursor-pointer flex items-center justify-center gap-2"
+          style={{
+            background: uploading || !file ? 'var(--raised)' : '#0F625B',
+            color: uploading || !file ? 'var(--faint)' : '#FFFFFF',
+            opacity: uploading || !file ? 0.7 : 1,
+          }}>
+          {uploading ? 'Sharing...' : 'Share Idea'}
+          <Send className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function IdeaComposer({ profile, supabase, onClose, onPublished }: {
+  profile: { id: string; username: string; full_name: string | null; avatar_url: string | null } | null
+  supabase: any
+  onClose: () => void
+  onPublished: () => void
+}) {
+  const { user } = useUser()
+  const [text, setText] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const handlePublish = async () => {
+    if (!user || !supabase) { toast('Sign in required'); return }
+    if (!text.trim()) { toast('Add something first'); return }
+
+    setUploading(true)
+    try {
+      const { error } = await supabase.from('posts').insert({
+        user_id: user.id,
+        post_type: 'baraza',
+        content: text.trim(),
+        title: text.trim().split('\n')[0].slice(0, 100),
+        media_url: null,
+        media_type: null,
+        category: 'Post',
+        county_tag: null,
+        baraza_id: null,
+        space_id: null,
+        bounty_tokens: 0,
+      })
+      if (error) throw error
+      toast('Idea published!')
+      onPublished()
+    } catch (e: any) { toast(e?.message || 'Failed to publish') }
+    finally { setUploading(false) }
+  }
+
+  useEffect(() => {
+    textareaRef.current?.focus()
+  }, [])
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end" onClick={onClose}>
+      <div className="w-full max-w-md mx-auto mb-safe pb-safe bg-[var(--surface)] border-t border-[var(--line)] rounded-t-[20px] p-4" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold" style={{ color: 'var(--ink)' }}>New Idea</h3>
+          <button onClick={onClose} className="w-6 h-6 rounded-full grid place-items-center text-[var(--muted)] hover:bg-[var(--raised)]" style={{ background: 'var(--raised)' }}>
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <textarea ref={textareaRef} value={text} onChange={e => setText(e.target.value)}
+          placeholder="Share a useful thought, update, or local insight..."
+          rows={3}
+          className="w-full rounded-[10px] px-3 py-2 text-sm outline-none resize-none mb-3"
+          style={{ background: 'var(--raised)', border: '1px solid var(--line)', color: 'var(--ink)' }} />
+
+        <button onClick={handlePublish} disabled={uploading || !text.trim()}
+          className="w-full h-[40px] rounded-[10px] font-bold text-sm border-0 cursor-pointer flex items-center justify-center gap-2"
+          style={{
+            background: uploading || !text.trim() ? 'var(--raised)' : 'var(--gold)',
+            color: uploading || !text.trim() ? 'var(--faint)' : 'var(--night)',
+            opacity: uploading || !text.trim() ? 0.7 : 1,
+          }}>
+          {uploading ? 'Publishing...' : 'Publish'}
+          <Send className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
   )
 }
 

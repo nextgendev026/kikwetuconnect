@@ -52,6 +52,15 @@ export default function PwaSetup() {
 
   // Install prompt
   useEffect(() => {
+    const dismissedCount = localStorage.getItem('kikwetu-install-dismissed')
+    if (dismissedCount) {
+      const dismissedAt = parseInt(dismissedCount, 10)
+      if (Date.now() - dismissedAt < 7 * 24 * 3600 * 1000) {
+        setInstallable(false)
+        return
+      }
+      localStorage.removeItem('kikwetu-install-dismissed')
+    }
     const handler = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e)
@@ -62,7 +71,13 @@ export default function PwaSetup() {
       setInstalled(true)
       setInstallable(false)
       setDeferredPrompt(null)
+      localStorage.setItem('kikwetu-installed', 'true')
     })
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setInstalled(true)
+      setInstallable(false)
+      setDeferredPrompt(null)
+    }
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
 
@@ -73,7 +88,14 @@ export default function PwaSetup() {
     if (outcome === 'accepted') {
       setInstallable(false)
       setDeferredPrompt(null)
+      localStorage.setItem('kikwetu-installed', 'true')
     }
+  }
+
+  // Don't show install banner if dismissed within 7 days or already installed
+  const handleDismissInstall = () => {
+    setInstallable(false)
+    localStorage.setItem('kikwetu-install-dismissed', Date.now().toString())
   }
 
   // Sync location to profile when position updates
@@ -109,9 +131,16 @@ export default function PwaSetup() {
     localStorage.setItem('kikwetu-perms-dismissed', 'true')
   }
 
-  // Track install status
-  const [isInstalled, setIsInstalled] = useState(installed)
-  useEffect(() => { if (!installed && typeof window !== 'undefined') { setIsInstalled(window.matchMedia?.('(display-mode: standalone)').matches) } }, [installed])
+  // Track install status on mount
+  const [isInstalled, setIsInstalled] = useState(false)
+  useEffect(() => {
+    const installedFlag = localStorage.getItem('kikwetu-installed')
+    const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches
+    if (installedFlag || isStandalone || installed) {
+      setIsInstalled(true)
+      setInstallable(false)
+    }
+  }, [installed])
 
   return (
     <>
@@ -152,11 +181,11 @@ export default function PwaSetup() {
                 style={{ background: 'var(--gold)', color: 'var(--night)' }}>
                 Install
               </button>
-              <button onClick={() => setInstallable(false)}
-                className="py-2 px-3 rounded-[10px] text-[11px] font-medium border-0 cursor-pointer"
-                style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
-                Not now
-              </button>
+                <button onClick={handleDismissInstall}
+                  className="py-2 px-3 rounded-[10px] text-[11px] font-medium border-0 cursor-pointer"
+                  style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+                  Not now
+                </button>
             </div>
           </div>
         </div>

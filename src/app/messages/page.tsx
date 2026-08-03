@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useUser, useSupabase, toast } from '@/app/providers'
 import { useConversations, useMessages, Message } from '@/hooks/useConversations'
 import { usePresence } from '@/hooks/usePresence'
+import { Trash2, X } from 'lucide-react'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -12,7 +13,7 @@ function MessagesInner() {
   const searchParams = useSearchParams()
   const { user, profile } = useUser()
   const supabase = useSupabase()
-  const { conversations, loading: convsLoading, fetchConversations } = useConversations()
+  const { conversations, loading: convsLoading, fetchConversations, deleteConversation, deleteConversations } = useConversations()
   const { onlineIds, onlineCount } = usePresence()
 
   const [convId, setConvId] = useState<string | null>(null)
@@ -22,6 +23,8 @@ function MessagesInner() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null)
   const [replyTo, setReplyTo] = useState<{ id: string; content: string } | null>(null)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedConvs, setSelectedConvs] = useState<Set<string>>(new Set())
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
@@ -110,6 +113,16 @@ function MessagesInner() {
     setShowEmojiPicker(null)
   }
 
+  const handleDeleteSelected = async () => {
+    if (selectedConvs.size === 0) return
+    if (!confirm(`Delete ${selectedConvs.size} conversation(s)? This cannot be undone.`)) return
+    const ids = Array.from(selectedConvs)
+    await deleteConversations(ids)
+    setSelectedConvs(new Set())
+    setSelectMode(false)
+    if (ids.includes(convId || '')) setConvId(null)
+  }
+
   const formatTime = (d: string) => {
     const date = new Date(d); const now = new Date(); const diff = now.getTime() - date.getTime()
     if (diff < 60000) return 'now'
@@ -153,15 +166,33 @@ function MessagesInner() {
         <div className="flex items-center justify-between mb-2">
           <h1 className="font-extrabold text-lg m-0" style={{ color: 'var(--ink)' }}>Chats</h1>
           <div className="flex items-center gap-1.5">
-            <button onClick={() => setOnlineOnly(o => !o)} aria-label="Toggle online users only"
-              className="text-xs border-0 cursor-pointer px-2 h-[28px] rounded-lg font-semibold"
-              style={{ background: onlineOnly ? 'var(--green)' : 'var(--raised)', color: onlineOnly ? 'var(--surface)' : 'var(--ink)' }}>
-              <span className="inline-block w-1.5 h-1.5 rounded-full mr-1" style={{ background: onlineOnly ? 'var(--surface)' : 'var(--green)' }} />
-              Online {onlineCount > 0 ? `(${onlineCount})` : ''}
-            </button>
-            <button onClick={() => setConvId(null)} aria-label="Create new message" className="text-xs border-0 cursor-pointer p-1.5 rounded-lg" style={{ background: 'var(--raised)', color: 'var(--ink)' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
+            {selectMode ? (
+              <>
+                <button onClick={() => { setSelectedConvs(new Set()); setSelectMode(false) }}
+                  className="text-xs border-0 cursor-pointer p-1.5 rounded-lg" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+                  <X className="w-4 h-4" />
+                </button>
+                <button onClick={handleDeleteSelected} disabled={selectedConvs.size === 0}
+                  className="text-xs border-0 cursor-pointer p-1.5 rounded-lg font-semibold" style={{ background: 'var(--red)', color: '#fff', opacity: selectedConvs.size === 0 ? 0.5 : 1 }}>
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => setOnlineOnly(o => !o)} aria-label="Toggle online users only"
+                  className="text-xs border-0 cursor-pointer px-2 h-[28px] rounded-lg font-semibold"
+                  style={{ background: onlineOnly ? 'var(--green)' : 'var(--raised)', color: onlineOnly ? 'var(--surface)' : 'var(--ink)' }}>
+                  <span className="inline-block w-1.5 h-1.5 rounded-full mr-1" style={{ background: onlineOnly ? 'var(--surface)' : 'var(--green)' }} />
+                  Online {onlineCount > 0 ? `(${onlineCount})` : ''}
+                </button>
+                <button onClick={() => setConvId(null)} aria-label="Create new message" className="text-xs border-0 cursor-pointer p-1.5 rounded-lg" style={{ background: 'var(--raised)', color: 'var(--ink)' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <button onClick={() => setSelectMode(true)} aria-label="Select conversations" className="text-xs border-0 cursor-pointer p-1.5 rounded-lg" style={{ background: 'var(--raised)', color: 'var(--ink)' }}>
+                  <input type="checkbox" className="w-[14px] h-[14px] cursor-pointer" style={{ accentColor: 'var(--gold)' }} readOnly />
+                </button>
+              </>
+            )}
           </div>
         </div>
         <input placeholder="Search conversations..." value={search} onChange={e => setSearch(e.target.value)}
@@ -183,7 +214,31 @@ function MessagesInner() {
         ) : filteredConvs.map(c => {
           const avatar = c.participants?.[0]
           const isOnline = c.type !== 'support' && c.participants.some(p => onlineIds.has(p.id))
-          return (
+          return selectMode ? (
+            <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl mb-1" style={{ background: selectedConvs.has(c.id) ? 'var(--raised)' : 'none' }}>
+              <button
+                onClick={() => {
+                  const newSel = new Set(selectedConvs)
+                  if (newSel.has(c.id)) newSel.delete(c.id)
+                  else newSel.add(c.id)
+                  setSelectedConvs(newSel)
+                }}
+                className="w-[20px] h-[20px] rounded border border-[var(--line)] flex-shrink-0 grid place-items-center cursor-pointer"
+                style={{ background: selectedConvs.has(c.id) ? 'var(--gold)' : 'var(--raised)', borderColor: selectedConvs.has(c.id) ? 'var(--gold)' : 'var(--line)' }}
+              >
+                {selectedConvs.has(c.id) && <span style={{ color: 'var(--night)', fontSize: 10 }}>✓</span>}
+              </button>
+              <div className="w-[42px] h-[42px] rounded-full flex-shrink-0 grid place-items-center text-sm font-bold overflow-hidden relative" style={{ background: avatar?.avatar_url ? 'none' : 'var(--gold)', color: avatar?.avatar_url ? 'none' : 'var(--night)' }}>
+                {avatar?.avatar_url ? <img src={avatar.avatar_url} alt="" className="w-full h-full object-cover" /> : (avatar?.full_name?.[0] || '?')}
+                {isOnline && <span className="absolute bottom-0 right-0 w-[10px] h-[10px] rounded-full" style={{ background: 'var(--green)', border: '2px solid var(--surface)' }} />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <strong className="text-sm block truncate" style={{ color: 'var(--ink)' }}>{c.type === 'support' ? 'KikwetuConnect Support' : avatar?.full_name || avatar?.username || 'User'}</strong>
+                <span className="text-xs truncate block" style={{ color: c.unread_count > 0 ? 'var(--ink)' : 'var(--muted)', fontWeight: c.unread_count > 0 ? 600 : 400 }}>{c.last_message || 'Start chatting'}</span>
+              </div>
+              {c.unread_count > 0 && <span className="ml-1 min-w-[16px] h-[16px] rounded-full flex items-center justify-center text-[8px] font-bold" style={{ background: 'var(--gold)', color: 'var(--night)' }}>{c.unread_count > 99 ? '99+' : c.unread_count}</span>}
+            </div>
+          ) : (
             <button key={c.id} onClick={() => { setConvId(c.id); setSidebarOpen(false) }}
               className="w-full flex items-center gap-3 p-3 rounded-xl text-left border-0 cursor-pointer mb-0.5 transition-colors"
               style={{ background: convId === c.id ? 'var(--raised)' : 'none' }}>
