@@ -38,7 +38,7 @@ begin
     return new;
   end if;
 
-  v_url := 'https://kikwetu-v2.vercel.app/api/webhooks/supabase';
+  v_url := 'https://kikwetuconnect.vercel.app/api/webhooks/supabase';
 
   v_body := jsonb_build_object(
     'type', 'message',
