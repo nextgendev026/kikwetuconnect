@@ -89,9 +89,34 @@ export default function PostDetailPage() {
         .rpc('get_post_by_id', { p_post_id: postId })
 
       if (error) throw error
-      setPost(data as unknown as Post)
-    } catch (err) {
-      console.error('Error fetching post:', err)
+
+      // RPC returns null if not found — handle gracefully
+      if (data) {
+        setPost(data as unknown as Post)
+        return
+      }
+    } catch (err: any) {
+      // If the RPC is unavailable (e.g. migration not applied) or fails,
+      // fall back to a direct table query using RLS (posts are public).
+      console.error('get_post_by_id RPC failed, falling back:', err?.message || err)
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('id, title, content, post_type, user_id, media_url, media_type, upvotes_count, answers_count, bounty_tokens, county_tag, is_hidden, created_at, profiles:user_id(id, full_name, username, heshima_rating, is_verified_expert)')
+        .eq('id', postId)
+        .maybeSingle()
+
+      if (error) {
+        console.error('Error fetching post via fallback:', error?.message || error)
+        setPost(null)
+        return
+      }
+      setPost((data as unknown as Post) || null)
+    } catch (err: any) {
+      console.error('Error fetching post:', err?.message || err)
+      setPost(null)
     } finally {
       setLoading(false)
     }
