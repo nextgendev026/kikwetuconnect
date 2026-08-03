@@ -172,7 +172,7 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
                   height: '10px',
                   borderRadius: '50%',
                   background: lime,
-                  display: 'inline-block',
+                  display: 'block',
                 }}
               />
               Ask. Share. Earn.
