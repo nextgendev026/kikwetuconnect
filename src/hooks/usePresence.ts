@@ -13,10 +13,11 @@ export interface PresenceUser {
 }
 
 const HEARTBEAT_MS = 30000
+const PRESENCE_CHANNEL = 'online-presence'
 
 type ChannelState = 'UNSUBSCRIBED' | 'SUBSCRIBING' | 'SUBSCRIBED'
 
-const presenceChannels = new Map<string, { channel: any; state: ChannelState }>()
+const presenceChannels = new Map<string, { channel: any; state: ChannelState; refs: number }>()
 
 export function usePresence() {
   const { user, profile } = useUser()
@@ -43,6 +44,12 @@ export function usePresence() {
     } catch { /* presence is non-critical */ }
   }, [supabase])
 
+  const handlePresenceSync = useCallback((channel: any, excludeUserId: string | undefined) => {
+    const state = channel.presenceState()
+    const ids = Object.keys(state).filter(k => k !== excludeUserId)
+    void syncOnlineUsers(ids)
+  }, [syncOnlineUsers])
+
   const refresh = useCallback(() => {
     const channel = localChannelRef.current
     if (!channel) return
@@ -54,12 +61,12 @@ export function usePresence() {
   useEffect(() => {
     if (!supabase || !profile) return
 
-    const channelName = `online-presence-${profile.id}`
+    const channelName = PRESENCE_CHANNEL
     let shared = presenceChannels.get(channelName)
 
     if (!shared) {
       const channel = supabase.channel(channelName)
-      shared = { channel, state: 'UNSUBSCRIBING' as ChannelState }
+      shared = { channel, state: 'UNSUBSCRIBED' as ChannelState, refs: 0 }
       presenceChannels.set(channelName, shared)
 
       channel.on('presence', { event: 'sync' }, () => {
@@ -72,6 +79,9 @@ export function usePresence() {
         if (status === 'SUBSCRIBED') {
           shared!.state = 'SUBSCRIBED'
           await channel.track({ user_id: profile.id, online_at: new Date().toISOString() })
+          const state = channel.presenceState()
+          const ids = Object.keys(state).filter(k => k !== user?.id)
+          void syncOnlineUsers(ids)
         }
       })
 
@@ -86,6 +96,7 @@ export function usePresence() {
       localChannelRef.current = shared.channel
       localStateRef.current = shared.state
     }
+    shared.refs += 1
 
     const heartbeat = setInterval(() => {
       if (localStateRef.current !== 'SUBSCRIBED') return
@@ -102,8 +113,18 @@ export function usePresence() {
     return () => {
       clearInterval(heartbeat)
       window.removeEventListener('visibilitychange', onVisibility)
+      if (localStateRef.current === 'SUBSCRIBED' && localChannelRef.current) {
+        localChannelRef.current.untrack().catch(() => { /* ignore */ })
+      }
       localChannelRef.current = null
       localStateRef.current = 'UNSUBSCRIBED'
+
+      if (shared!.refs <= 1) {
+        try { shared!.channel.unsubscribe() } catch { /* ignore */ }
+        presenceChannels.delete(channelName)
+      } else {
+        shared!.refs -= 1
+      }
     }
   }, [supabase, profile, user, syncOnlineUsers])
 

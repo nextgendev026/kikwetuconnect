@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useSupabase, useUser, toast } from '@/app/providers'
 import { Play, Plus, PlusIcon, X, Image, Send } from 'lucide-react'
-import { getInitials } from '@/lib/utils'
+import { getInitials, isVideoType } from '@/lib/utils'
 
 interface Story {
   id: string
@@ -436,13 +436,12 @@ function IdeaComposer({ profile, supabase, onClose, onPublished }: {
 }
 
 function ShortCard({ short }: { short: Short }) {
-  const author = short.profiles
-  const isVideo = short.media_type?.startsWith('video/')
+  const isVideo = isVideoType(short.media_type)
   return (
     <Link
       href={`/posts/${short.id}`}
       className="relative flex-shrink-0 w-16 h-16 rounded-full overflow-hidden block group"
-      aria-label={`@${author?.username}'s short`}
+      aria-label={`@${short.profiles?.username}'s short`}
     >
       {isVideo ? (
         <div className="w-full h-full bg-gradient-to-b from-deep to-night2 grid place-items-center">

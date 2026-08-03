@@ -8,6 +8,7 @@ import { Button, Textarea } from '@/components/ui/form'
 import { useUser, useSupabase, toast } from '@/app/providers'
 import ShareMenu from '@/components/ShareMenu'
 import RichText from '@/components/RichText'
+import { isVideoType } from '@/lib/utils'
 
 interface Profile {
   id: string
@@ -386,7 +387,7 @@ export default function PostDetailPage() {
         {/* Title and Content */}
         {post.media_url && (
           <div className="mb-4 rounded-[12px] overflow-hidden" style={{ background: 'var(--raised)' }}>
-            {post.media_type?.startsWith('video/') ? (
+            {isVideoType(post.media_type) ? (
               <div className="h-[240px] flex items-center justify-center">
                 <span className="text-[48px] opacity-50">🎥</span>
               </div>

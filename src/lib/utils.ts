@@ -54,3 +54,11 @@ export function truncate(text: string, length: number): string {
 export function cn(...classes: (string | boolean | undefined | null)[]): string {
   return classes.filter(Boolean).join(' ')
 }
+
+/** True when a media_type value represents a video. Handles both bare
+ *  'video' (what CreateModal stores) and MIME strings like 'video/mp4'. */
+export function isVideoType(mediaType: string | null | undefined): boolean {
+  if (!mediaType) return false
+  const t = mediaType.toLowerCase()
+  return t === 'video' || t.startsWith('video/')
+}

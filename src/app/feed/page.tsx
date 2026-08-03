@@ -9,7 +9,7 @@ import StoryStrip from '@/components/StoryStrip'
 import RichText, { stripMarkdown } from '@/components/RichText'
 import { COUNTIES, TABS, TYPE_FILTERS, EMOJI_REACTIONS } from '@/lib/feed-config'
 import type { TabId, TypeFilter } from '@/lib/feed-config'
-import { timeAgoShort, getInitials } from '@/lib/utils'
+import { timeAgoShort, getInitials, isVideoType } from '@/lib/utils'
 
 export interface Profile {
   id: string
@@ -313,7 +313,7 @@ function PostCardComponent({
       {/* Media */}
       {post.media_url && (
         <Link href={`/posts/${post.id}`} aria-label="View post media" className="mb-[12px] rounded-[12px] overflow-hidden bg-deep border border-[var(--line)] block">
-          {post.media_type?.startsWith('video/') ? (
+          {isVideoType(post.media_type) ? (
             <div className="h-[200px] flex items-center justify-center bg-deep">
               <span className="text-[40px] opacity-50" aria-hidden="true">🎥</span>
             </div>

@@ -63,12 +63,29 @@ export function useConversations() {
 
   const fetchUnreadCounts = useCallback(async () => {
     if (!user) return {}
-    const { data } = await supabase.rpc('unread_message_count')
-    if (!Array.isArray(data)) return {}
-    return (data as Array<{ conversation_id: string; count: number }>).reduce((acc: Record<string, number>, r: any) => {
-      if (r?.conversation_id) acc[r.conversation_id] = r.count || 0
-      return acc
-    }, {})
+    const { data } = await supabase
+      .from('conversation_participants')
+      .select('conversation_id, last_read_at')
+      .eq('user_id', user.id)
+    if (!data) return {}
+    const convIds = data.map(r => r.conversation_id)
+    if (convIds.length === 0) return {}
+
+    const { data: unread } = await supabase
+      .from('messages')
+      .select('conversation_id, id, created_at')
+      .in('conversation_id', convIds)
+      .neq('sender_id', user.id)
+      .is('read_at', null)
+
+    const lastRead = new Map(data.map(r => [r.conversation_id, r.last_read_at]))
+    const acc: Record<string, number> = {}
+    for (const m of unread || []) {
+      const lr = lastRead.get(m.conversation_id)
+      if (lr && new Date(m.created_at).getTime() <= new Date(lr).getTime()) continue
+      acc[m.conversation_id] = (acc[m.conversation_id] || 0) + 1
+    }
+    return acc
   }, [supabase, user])
 
   const fetchConversations = useCallback(async () => {
