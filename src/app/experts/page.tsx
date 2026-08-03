@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { MapPin, Star, Shield, Clock, Search, Filter, Briefcase, BookOpen, Zap, Check, X, ChevronDown, Upload, FileText, Plus } from 'lucide-react'
+import { MapPin, Star, Shield, Clock, Search, Filter, Briefcase, BookOpen, Zap, X, ChevronDown, Upload, FileText, Plus } from 'lucide-react'
 import { useSupabase, useUser, toast } from '@/app/providers'
 
 interface Professional {
@@ -36,7 +36,6 @@ export default function ExpertsPage() {
   const [showApplyForm, setShowApplyForm] = useState(false)
   const [appForm, setAppForm] = useState({ category_id: '', title: '', qualifications: '', experience: '', certs: '' })
   const [submitting, setSubmitting] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     if (!userLoading) { fetchProfessionals(); fetchCategories() }
@@ -44,7 +43,7 @@ export default function ExpertsPage() {
   }, [userLoading, countyFilter])
 
   useEffect(() => {
-    if (profile) { fetchApplications(); checkAdmin() }
+    if (profile) { fetchApplications() }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile])
 
@@ -69,12 +68,6 @@ export default function ExpertsPage() {
     if (data) setApplications(data as unknown as Application[])
   }
 
-  const checkAdmin = async () => {
-    if (!profile) return
-    const { data } = await supabase.from('profiles').select('is_expert').eq('id', profile.id).maybeSingle()
-    if (data?.is_expert) setIsAdmin(true)
-  }
-
   const handleApply = async () => {
     if (!profile) { toast('Sign in to apply'); return }
     if (!appForm.category_id || !appForm.title.trim() || !appForm.qualifications.trim() || !appForm.experience.trim()) { toast('All fields required'); return }
@@ -89,21 +82,6 @@ export default function ExpertsPage() {
       toast('Application submitted! An admin will review it.'); setShowApplyForm(false)
       setAppForm({ category_id: '', title: '', qualifications: '', experience: '', certs: '' }); fetchApplications()
     } catch (err: any) { toast(err.message || 'Failed') } finally { setSubmitting(false) }
-  }
-
-  const handleReview = async (appId: string, status: 'approved' | 'declined', notes: string = '') => {
-    if (!profile) return
-    try {
-      await supabase.from('expert_applications').update({ status, reviewed_by: profile.id, reviewed_at: new Date().toISOString(), admin_notes: notes || null }).eq('id', appId)
-      if (status === 'approved') {
-        const app = applications.find(a => a.id === appId)
-        if (app) {
-          await supabase.from('profiles').update({ is_expert: true, is_verified_expert: true, expert_since: new Date().toISOString() }).eq('id', app.user_id)
-          await supabase.from('professionals').upsert({ user_id: app.user_id, title: app.title, expertise: app.categories ? [app.categories.name] : [], status: 'approved' })
-        }
-      }
-      toast(`Application ${status}`); fetchApplications(); fetchProfessionals()
-    } catch { toast('Failed to update') }
   }
 
   const getInitials = (name: string) => name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'
@@ -240,17 +218,6 @@ export default function ExpertsPage() {
                     </span>
                   </div>
                   {app.admin_notes && <p className="text-[10px] mt-2 p-2 rounded-[8px]" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>Admin: {app.admin_notes}</p>}
-                  {/* Admin review controls */}
-                  {isAdmin && app.status === 'pending' && (
-                    <div className="flex gap-2 mt-3 pt-3" style={{ borderTop: '1px solid var(--line)' }}>
-                      <button onClick={() => handleReview(app.id, 'approved')} style={{ ...s.btn, padding: '6px 12px', fontSize: 10, background: 'color-mix(in oklab, var(--green) 20%, var(--surface))', color: 'var(--green)' }}>
-                        <Check className="w-3 h-3" /> Approve
-                      </button>
-                      <button onClick={() => handleReview(app.id, 'declined')} style={{ ...s.btn, padding: '6px 12px', fontSize: 10, background: 'color-mix(in oklab, var(--red) 20%, var(--surface))', color: 'var(--red)' }}>
-                        <X className="w-3 h-3" /> Decline
-                      </button>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>

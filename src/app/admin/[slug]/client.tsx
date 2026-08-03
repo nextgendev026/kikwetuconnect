@@ -203,78 +203,124 @@ function HealthPage() {
 function VerificationPage() {
   const supabase = useSupabase()
   const { profile } = useUser()
-  const [pros, setPros] = useState<any[]>([])
+  const [apps, setApps] = useState<any[]>([])
+  const [notes, setNotes] = useState<Record<string, string>>({})
+  const [busy, setBusy] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const fetchPros = () => {
+  const fetchApps = () => {
     if (typeof supabase?.from !== 'function') return
-    supabase.from('professionals').select('*, profiles(id, full_name, username, avatar_url, heshima_rating)').order('created_at', { ascending: false }).then(({ data }: { data: any }) => {
-      if (data) setPros(data); setLoading(false)
+    supabase.from('expert_applications').select('*, profiles:user_id(id, full_name, username, avatar_url, heshima_rating), categories:category_id(name, icon)').order('created_at', { ascending: false }).then(({ data }: { data: any }) => {
+      if (data) setApps(data); setLoading(false)
     })
   }
   useEffect(() => {
-    fetchPros()
+    fetchApps()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase])
-  const handleVerify = async (userId: string, approve: boolean) => {
-    if (approve) {
-      const { error } = await supabase.from('professionals').update({ status: 'approved' }).eq('user_id', userId)
-      if (error) { toast(error.message); return }
-      const { error: pErr } = await supabase.from('profiles').update({ is_verified_expert: true }).eq('id', userId)
-      if (pErr) { toast(pErr.message); return }
-      toast('Expert approved')
-    } else {
-      const { error } = await supabase.from('professionals').update({ status: 'rejected' }).eq('user_id', userId)
-      if (error) { toast(error.message); return }
-      toast('Expert rejected')
-    }
-    fetchPros()
+  const handleReview = async (appId: string, approve: boolean) => {
+    setBusy(appId)
+    try {
+      const { error } = await supabase.rpc('admin_review_expert_application', {
+        p_app_id: appId,
+        p_approve: approve,
+        p_notes: notes[appId] || null,
+      })
+      if (error) throw error
+      toast(approve ? 'Expert approved' : 'Application declined')
+      setNotes(prev => ({ ...prev, [appId]: '' }))
+      fetchApps()
+    } catch (e: any) {
+      toast(e.message || 'Failed to update')
+    } finally { setBusy(null) }
   }
   if (loading) return s.spinner()
-  const pending = pros.filter(p => p.status === 'pending')
+  const pending = apps.filter(a => a.status === 'pending')
   return (
     <>
       <PageHeader slug="verification" meta={PAGE_META.verification}
         extra={<span style={{ ...s.badge('red'), fontSize: 10 }}>{pending.length} pending</span>} />
-      <div style={s.card({ padding: 0, overflow: 'hidden' })}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid var(--line)' }}>
-              <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Expert</th>
-              <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Title</th>
-              <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Heshima</th>
-              <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Status</th>
-              <th style={{ padding: '12px 14px', textAlign: 'right', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pros.length === 0 ? (
-              <tr><td colSpan={5} style={{ padding: 30, textAlign: 'center', color: 'var(--muted)' }}>No experts yet</td></tr>
-            ) : pros.map((p: any) => (
-              <tr key={p.id} style={{ borderBottom: '1px solid var(--line)', opacity: p.status === 'rejected' ? 0.5 : 1 }}>
-                <td style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div className="avatar" style={{ width: 28, height: 28, fontSize: 8, overflow: 'hidden' }}>{(p.profiles?.full_name || p.profiles?.username || '?').slice(0, 2).toUpperCase()}</div>
-                  <div><b style={{ color: 'var(--ink)', fontSize: 11 }}>{p.profiles?.full_name || p.profiles?.username}</b><small style={{ display: 'block', color: 'var(--muted)', fontSize: 9 }}>@{p.profiles?.username}</small></div>
-                </td>
-                <td style={{ padding: '12px 14px', color: 'var(--ink)' }}>{p.title}</td>
-                <td style={{ padding: '12px 14px', color: 'var(--muted)' }}>{p.profiles?.heshima_rating || 0}</td>
-                <td style={{ padding: '12px 14px' }}><span style={s.tag(p.status === 'approved' ? true : false)}>{p.status}</span></td>
-                <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                  {p.status === 'pending' ? (
-                    <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                      <button onClick={() => handleVerify(p.user_id, true)} style={s.btn('var(--green)', '#fff')}>Approve</button>
-                      <button onClick={() => handleVerify(p.user_id, false)} style={s.btn('var(--raised)', 'var(--muted)')}>Reject</button>
+      {apps.length === 0 ? (
+        <div style={s.card({ textAlign: 'center', padding: 40 })}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>No applications yet</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)' }}>Expert applications submitted by members will appear here for review.</div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {apps.map((app: any) => {
+            const isPending = app.status === 'pending'
+            const approved = app.status === 'approved'
+            const declined = app.status === 'declined'
+            return (
+              <div key={app.id} style={s.card()}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 12, minWidth: 220 }}>
+                    <div className="avatar" style={{ width: 34, height: 34, fontSize: 10, flexShrink: 0 }}>{(app.profiles?.full_name || app.profiles?.username || '?').slice(0, 2).toUpperCase()}</div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <b style={{ color: 'var(--ink)', fontSize: 12 }}>{app.profiles?.full_name || app.profiles?.username}</b>
+                        <span style={s.tag(approved)}>{app.status}</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--gold)', marginTop: 2 }}>{app.title}</div>
+                      <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1 }}>{app.categories?.icon} {app.categories?.name || 'No category'} · {new Date(app.created_at).toLocaleDateString()}</div>
+                      <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 1 }}>Heshima: {app.profiles?.heshima_rating || 0} · @{app.profiles?.username}</div>
                     </div>
-                  ) : p.status === 'approved' ? (
-                    <button onClick={() => handleVerify(p.user_id, false)} style={s.btn('var(--raised)', 'var(--muted)')}>Revoke</button>
-                  ) : (
-                    <button onClick={() => handleVerify(p.user_id, true)} style={s.btn('var(--raised)', 'var(--muted)')}>Restore</button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 14 }}>
+                  <div style={{ background: 'var(--raised)', borderRadius: 10, padding: 12 }}>
+                    <div style={{ ...s.label, margin: 0 }}>Qualifications</div>
+                    <div style={{ fontSize: 11, color: 'var(--ink)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{app.qualifications}</div>
+                  </div>
+                  <div style={{ background: 'var(--raised)', borderRadius: 10, padding: 12 }}>
+                    <div style={{ ...s.label, margin: 0 }}>Experience</div>
+                    <div style={{ fontSize: 11, color: 'var(--ink)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{app.experience}</div>
+                  </div>
+                </div>
+                {app.certification_urls?.length > 0 && (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ ...s.label, margin: 0 }}>Certification(s)</div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {app.certification_urls.map((u: string, i: number) => (
+                        <a key={i} href={u} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: 'var(--green)' }}>{u}</a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {app.admin_notes && (
+                  <div style={{ marginTop: 10, fontSize: 10, color: 'var(--muted)' }}>
+                    <b style={{ color: 'var(--ink)' }}>Notes: </b>{app.admin_notes}
+                  </div>
+                )}
+                {!isPending && app.reviewed_at && (
+                  <div style={{ marginTop: 10, fontSize: 10, color: 'var(--muted)' }}>
+                    Reviewed {new Date(app.reviewed_at).toLocaleDateString()}
+                  </div>
+                )}
+                {isPending && (
+                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+                    <input
+                      value={notes[app.id] || ''}
+                      onChange={e => setNotes(prev => ({ ...prev, [app.id]: e.target.value }))}
+                      placeholder="Review notes (optional) — sent to the applicant..."
+                      style={{ ...s.input(), marginBottom: 10 }}
+                    />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button disabled={busy === app.id} onClick={() => handleReview(app.id, true)}
+                        style={{ ...s.btn('var(--green)', '#fff'), opacity: busy === app.id ? 0.6 : 1 }}>
+                        {busy === app.id ? '...' : '✓'} Approve
+                      </button>
+                      <button disabled={busy === app.id} onClick={() => handleReview(app.id, false)}
+                        style={{ ...s.btn('var(--raised)', 'var(--muted)'), opacity: busy === app.id ? 0.6 : 1 }}>
+                        {busy === app.id ? '...' : '×'} Decline
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </>
   )
 }
