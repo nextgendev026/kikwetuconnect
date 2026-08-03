@@ -58,7 +58,7 @@ function ImageCropper({ file, onComplete, onCancel, aspect = 'square' }: MediaEd
     setImgSrc(url)
     const img = new Image()
     img.onload = () => {
-      const maxLen = Math.min(window.innerWidth, 520) - 40
+      const maxLen = Math.min(window.innerWidth, 720) - 48
       const s = Math.min(img.width, img.height, maxLen)
       const { w: cw, h: ch } = constrainCrop(s, s, aspect, maxLen)
       setCrop({ x: (img.width - cw) / 2, y: (img.height - ch) / 2, w: cw, h: ch })
@@ -78,7 +78,7 @@ function ImageCropper({ file, onComplete, onCancel, aspect = 'square' }: MediaEd
     if (!dragging || !naturalSize.w) return
     const dx = (e.clientX - dragStart.x) / zoom
     const dy = (e.clientY - dragStart.y) / zoom
-    const maxSide = Math.min(window.innerWidth - 40, window.innerHeight - 200, 520)
+    const maxSide = Math.min(window.innerWidth - 48, window.innerHeight - 240, 720)
     setCrop(prev => {
       let { x, y, w, h } = prev
       if (dragging === 'move') { x += dx; y += dy }
@@ -106,8 +106,8 @@ function ImageCropper({ file, onComplete, onCancel, aspect = 'square' }: MediaEd
     const canvas = canvasRef.current
     const img = imgRef.current
     if (!canvas || !img) return
-    const outW = aspect === 'cover' ? 1280 : 800
-    const outH = aspect === 'cover' ? 548 : 800
+    const outW = aspect === 'cover' ? 1920 : 1024
+    const outH = aspect === 'cover' ? 824 : 1024
     canvas.width = outW
     canvas.height = outH
     const ctx = canvas.getContext('2d')
@@ -126,35 +126,35 @@ function ImageCropper({ file, onComplete, onCancel, aspect = 'square' }: MediaEd
 
   const displayW = naturalSize.w || 400
   const displayH = naturalSize.h || 400
-  const maxEditor = Math.min(window.innerWidth - 40, window.innerHeight - 200, 520)
+  const maxEditor = Math.min(window.innerWidth - 48, window.innerHeight - 240, 720)
   const scale = Math.min(maxEditor / displayW, maxEditor / displayH, 1)
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center modal-center-scroll" style={{ background: 'rgba(0,0,0,0.85)' }}>
-      <div className="rounded-2xl p-4 max-w-[90vw] max-h-[90vh] overflow-y-auto" style={{ background: 'var(--surface)' }}>
-        <div className="flex justify-between items-center mb-3">
-          <strong className="text-sm" style={{ color: 'var(--ink)' }}>{aspect === 'cover' ? 'Cover image' : 'Edit image'}</strong>
-          <button onClick={onCancel} className="border-0 bg-none cursor-pointer text-lg" style={{ color: 'var(--muted)' }}>×</button>
+      <div className="rounded-2xl p-5 max-w-[95vw] max-h-[95vh] overflow-y-auto" style={{ background: 'var(--surface)', maxWidth: '780px' }}>
+        <div className="flex justify-between items-center mb-4">
+          <strong className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{aspect === 'cover' ? 'Cover image' : 'Edit profile photo'}</strong>
+          <button onClick={onCancel} className="border-0 bg-none cursor-pointer text-2xl leading-none" style={{ color: 'var(--muted)' }}>×</button>
         </div>
         <div ref={containerRef} className="relative mx-auto overflow-hidden rounded-xl" style={{ width: Math.min(displayW * scale, maxEditor), height: Math.min(displayH * scale, maxEditor), background: '#222' }}>
-          <img ref={imgRef} src={imgSrc} alt="" className="max-w-none" style={{ width: displayW * scale, height: displayH * scale, transform: `scale(${zoom})`, transformOrigin: 'top left', filter: FILTERS[filter] || 'none' }} />
+          <img ref={imgRef} src={imgSrc} alt="" className="max-w-none select-none" style={{ width: displayW * scale, height: displayH * scale, transform: `scale(${zoom})`, transformOrigin: 'top left', filter: FILTERS[filter] || 'none', userSelect: 'none' }} />
           <div className="absolute inset-0" style={{ boxShadow: '0 0 0 9999px rgba(0,0,0,0.5)' }}>
             <div style={{
               position: 'absolute', left: crop.x * scale, top: crop.y * scale,
               width: crop.w * scale, height: crop.h * scale,
-              boxShadow: '0 0 0 1px rgba(255,255,255,0.7)',
+              boxShadow: '0 0 0 2px rgba(255,255,255,0.8), 0 0 0 9999px rgba(0,0,0,0.5)',
               cursor: 'move',
             }} onMouseDown={e => handleMouseDown(e, 'move')}>
               {['tl', 'tr', 'bl', 'br'].map(h => (
                 <div key={h} onMouseDown={e => handleMouseDown(e, h as any)}
-                  className="absolute w-[12px] h-[12px] rounded-sm cursor-nw-resize"
-                  style={{ background: 'white', [h.includes('t') ? 'top' : 'bottom']: -6, [h.includes('l') ? 'left' : 'right']: -6 }} />
+                  className="absolute w-[14px] h-[14px] rounded-sm cursor-nw-resize border border-white"
+                  style={{ background: 'white', [h.includes('t') ? 'top' : 'bottom']: -7, [h.includes('l') ? 'left' : 'right']: -7, boxShadow: '0 0 2px rgba(0,0,0,0.5)' }} />
               ))}
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
-          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full">
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1">
             {Object.keys(FILTERS).map(f => (
               <button key={f} onClick={() => setFilter(f)}
                 className="px-2.5 h-[30px] rounded-[9px] text-[10px] font-semibold border whitespace-nowrap cursor-pointer transition-all"
@@ -166,15 +166,15 @@ function ImageCropper({ file, onComplete, onCancel, aspect = 'square' }: MediaEd
             ))}
           </div>
         </div>
-        <div className="flex items-center justify-between mt-3">
+        <div className="flex items-center justify-between mt-4">
           <div className="flex items-center gap-2">
-            <span className="text-[10px]" style={{ color: 'var(--muted)' }}>Zoom</span>
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>Zoom</span>
             <input type="range" min="1" max="3" step="0.1" value={zoom} onChange={e => setZoom(Number(e.target.value))} className="w-[100px]" />
-            <span className="text-[10px]" style={{ color: 'var(--muted)' }}>{naturalSize.w ? Math.round((crop.w / naturalSize.w) * 100) : 0}%</span>
+            <span className="text-xs" style={{ color: 'var(--muted)' }}>{naturalSize.w ? Math.round((crop.w / naturalSize.w) * 100) : 0}%</span>
           </div>
           <div className="flex gap-2">
-            <button onClick={onCancel} className="px-4 h-[34px] rounded-[10px] text-xs border cursor-pointer" style={{ borderColor: 'var(--line)', background: 'none', color: 'var(--ink)' }}>Cancel</button>
-            <button onClick={handleApply} className="px-4 h-[34px] rounded-[10px] text-xs font-bold border-0 cursor-pointer" style={{ background: 'var(--gold)', color: 'var(--night)' }}>Apply</button>
+            <button onClick={onCancel} className="px-5 h-[38px] rounded-[10px] text-sm border cursor-pointer" style={{ borderColor: 'var(--line)', background: 'none', color: 'var(--ink)' }}>Cancel</button>
+            <button onClick={handleApply} className="px-5 h-[38px] rounded-[10px] text-sm font-bold border-0 cursor-pointer" style={{ background: 'var(--gold)', color: 'var(--night)' }}>Apply</button>
           </div>
         </div>
         <canvas ref={canvasRef} className="hidden" />

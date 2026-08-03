@@ -196,7 +196,7 @@ export default function LandingPage() {
           <a href="/legal/privacy">Privacy</a>
           <a href="/legal/community-guidelines">Guidelines</a>
           <a href="/legal/about">About</a>
-          <a href="/baraza">Barazas</a>
+          <Link href="/baraza">Barazas</Link>
         </nav>
       </footer>
     </div>

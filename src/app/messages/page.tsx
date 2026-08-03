@@ -326,7 +326,7 @@ function MessagesInner() {
 
             {/* Reply preview bar */}
             {replyTo && (
-              <div className="flex items-center gap-2 px-3 py-1.5 border-t" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
+              <div className="flex-shrink-0 sticky bottom-[64px] flex items-center gap-2 px-3 py-1.5 border-t z-10" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
                 <div className="flex-1">
                   <div className="text-[9px] font-bold" style={{ color: 'var(--gold)' }}>Replying</div>
                   <div className="text-xs truncate" style={{ color: 'var(--muted)' }}>{replyTo.content}</div>
@@ -335,8 +335,8 @@ function MessagesInner() {
               </div>
             )}
 
-            {/* Composer */}
-            <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-t" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
+            {/* Composer - sticky at bottom */}
+            <div className="flex-shrink-0 sticky bottom-0 flex items-center gap-2 px-3 py-2 border-t z-10" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
               <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFileSelect(e, 'image/*')} />
               <input ref={fileInputRef} type="file" className="hidden" onChange={e => handleFileSelect(e, 'file')} />
               <button onClick={() => imageInputRef.current?.click()} aria-label="Upload image" className="w-[34px] h-[34px] rounded-full grid place-items-center text-sm flex-shrink-0 border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
