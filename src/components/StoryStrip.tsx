@@ -161,7 +161,7 @@ export default function StoryStrip({ profile }: StoryStripProps) {
         </div>
         <div className="flex gap-[10px] overflow-x-auto pb-[6px] scrollbar-none -mx-[12px] px-[12px]">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="flex-shrink-0 w-[90px] h-[130px] rounded-[16px] bg-[var(--raised)] animate-pulse" />
+            <div key={i} className="flex-shrink-0 w-16 h-16 rounded-full bg-[var(--raised)] animate-pulse" />
           ))}
         </div>
       </div>
@@ -183,14 +183,13 @@ export default function StoryStrip({ profile }: StoryStripProps) {
           {/* Create story */}
           <button
             onClick={() => setShowStoryComposer(true)}
-            className="flex-shrink-0 w-[90px] h-[130px] rounded-[16px] border-2 border-dashed border-[var(--line)] flex flex-col items-center justify-center gap-[8px] text-[var(--muted)] hover:border-gold hover:text-gold transition-colors cursor-pointer"
+            className="flex-shrink-0 w-16 h-16 rounded-full border-2 border-dashed border-[var(--line)] flex items-center justify-center text-[var(--muted)] hover:border-gold hover:text-gold transition-colors cursor-pointer"
             aria-label="My ideas"
             style={{ background: 'linear-gradient(135deg, color-mix(in oklab, var(--gold) 10%, var(--surface)), var(--surface))' }}
           >
             <span className="w-[30px] h-[30px] rounded-full grid place-items-center bg-gold/15">
               <Plus className="w-[16px] h-[16px] text-gold" />
             </span>
-            <span className="text-[11px] font-bold">My ideas</span>
           </button>
 
           {/* Your own stories */}
@@ -459,38 +458,21 @@ function ShortCard({ short }: { short: Short }) {
 }
 
 function StoryCard({ story, isOwn = false, onClick }: { story: Story; isOwn?: boolean; onClick: () => void }) {
-  const hasVerifiedBadge = story.profiles?.is_verified_expert
   return (
     <button
       onClick={onClick}
-      className="relative flex-shrink-0 w-[90px] h-[130px] rounded-[16px] overflow-hidden group cursor-pointer"
+      className="relative flex-shrink-0 w-16 h-16 rounded-full overflow-hidden flex items-center justify-center cursor-pointer"
       aria-label={`@${story.profiles?.username}'s story`}
     >
       {story.media_type === 'video' ? (
         <video src={story.thumbnail_url || story.media_url} autoPlay muted loop playsInline
-          className="w-full h-full object-cover" />
+          className="w-full h-full object-cover object-center" />
       ) : (
-        <img src={story.media_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+        <img src={story.media_url} alt="" className="w-full h-full object-cover object-center" loading="lazy" />
       )}
       {!isOwn && (
-        <span className="absolute inset-0 rounded-[16px]"
-          style={{ boxShadow: 'inset 0 0 0 2px color-mix(in oklab, var(--gold) 0%, transparent)' }} />
+        <span className="absolute inset-0 rounded-full border-2 border-gold/70 pointer-events-none" />
       )}
-      <div className="absolute top-[6px] left-[6px] flex items-center gap-[3px]">
-        {story.profiles?.avatar_url ? (
-          <img src={story.profiles.avatar_url} alt="" className="w-[16px] h-[16px] rounded-full object-cover border-[1.5px] border-gold/60" />
-        ) : (
-          <span className="w-[16px] h-[16px] rounded-full bg-gold text-[5px] font-extrabold grid place-items-center border-[1.5px] border-gold/60">
-            {story.profiles?.username?.slice(0, 2).toUpperCase() || '??'}
-          </span>
-        )}
-        {hasVerifiedBadge && <span className="text-[8px]">✓</span>}
-      </div>
-      <div className="absolute bottom-[6px] left-0 right-0 text-center">
-        <span className="text-[8px] font-bold text-white/90 drop-shadow-[0_1px_2px_rgba(0,0,0,.8)]">
-          {isOwn ? 'Tap to view' : story.profiles?.full_name || story.profiles?.username}
-        </span>
-      </div>
     </button>
   )
 }
