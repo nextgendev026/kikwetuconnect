@@ -144,97 +144,102 @@ function MessagesInner() {
   if (!user) return <div className="flex items-center justify-center min-h-screen" style={{ background: 'var(--bg)' }}><p style={{ color: 'var(--muted)' }}>Sign in to see messages</p></div>
 
   return (
-    <div className="flex h-screen" style={{ background: 'var(--bg)' }}>
+    <div className="flex h-[calc(100vh-4rem)]" style={{ background: 'var(--bg)' }}>
       {/* Conversation list */}
-      <div className={`${sidebarOpen ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-[360px] flex-shrink-0 border-r`} style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
-        <div className="p-4 pb-2">
-          <div className="flex items-center justify-between mb-3">
-            <h1 className="font-extrabold text-lg m-0" style={{ color: 'var(--ink)' }}>Chats</h1>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setOnlineOnly(o => !o)} aria-label="Toggle online users only"
-                className="text-xs border-0 cursor-pointer px-2.5 h-[30px] rounded-lg font-semibold"
-                style={{ background: onlineOnly ? 'var(--gold)' : 'var(--raised)', color: onlineOnly ? 'var(--night)' : 'var(--ink)' }}>
-                <span className="inline-block w-1.5 h-1.5 rounded-full mr-1" style={{ background: onlineOnly ? 'var(--night)' : 'var(--green)' }} />
-                Online {onlineCount > 0 ? `(${onlineCount})` : ''}
-              </button>
-              <button onClick={() => setConvId(null)} aria-label="Create new message" className="text-xs border-0 cursor-pointer p-2 rounded-lg" style={{ background: 'var(--raised)', color: 'var(--ink)' }}>+ New</button>
-            </div>
+      <div className={`${sidebarOpen ? 'flex' : 'flex'} md:flex flex-col w-full md:w-[360px] flex-shrink-0 border-r`}>
+
+      {/* Sidebar header */}
+      <div className="p-3 pb-2 border-b" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="font-extrabold text-lg m-0" style={{ color: 'var(--ink)' }}>Chats</h1>
+          <div className="flex items-center gap-1.5">
+            <button onClick={() => setOnlineOnly(o => !o)} aria-label="Toggle online users only"
+              className="text-xs border-0 cursor-pointer px-2 h-[28px] rounded-lg font-semibold"
+              style={{ background: onlineOnly ? 'var(--green)' : 'var(--raised)', color: onlineOnly ? 'var(--surface)' : 'var(--ink)' }}>
+              <span className="inline-block w-1.5 h-1.5 rounded-full mr-1" style={{ background: onlineOnly ? 'var(--surface)' : 'var(--green)' }} />
+              Online {onlineCount > 0 ? `(${onlineCount})` : ''}
+            </button>
+            <button onClick={() => setConvId(null)} aria-label="Create new message" className="text-xs border-0 cursor-pointer p-1.5 rounded-lg" style={{ background: 'var(--raised)', color: 'var(--ink)' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
           </div>
-          <input placeholder="Search conversations..." value={search} onChange={e => setSearch(e.target.value)}
-            className="w-full h-[38px] rounded-[10px] px-3 text-[12px] outline-none" style={{ border: '1px solid var(--line)', background: 'var(--raised)', color: 'var(--ink)' }} />
         </div>
-        <div className="flex-1 overflow-y-auto px-2 pb-2">
-          {convsLoading ? Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 rounded-xl mb-1">
-              <div className="w-[48px] h-[48px] rounded-full" style={{ background: 'var(--raised)' }} />
-              <div className="flex-1"><div className="h-3 w-24 rounded mb-2" style={{ background: 'var(--raised)' }} /><div className="h-2 w-32 rounded" style={{ background: 'var(--raised)' }} /></div>
-            </div>
-          )          ) : filteredConvs.length === 0 ? (
-            <div className="text-center py-10" style={{ color: 'var(--muted)' }}>
-              <div className="text-3xl mb-2">\uD83D\uDCAC</div>
-              <p className="text-xs">{onlineOnly ? 'No online conversations right now' : 'No conversations yet'}</p>
-              <p className="text-[10px] mt-1">Message someone from their profile</p>
-            </div>
-          ) : filteredConvs.map(c => {
-            const avatar = c.participants?.[0]
-            const isOnline = c.type !== 'support' && c.participants.some(p => onlineIds.has(p.id))
-            return (
-              <button key={c.id} onClick={() => { setConvId(c.id); setSidebarOpen(false) }}
-                className="w-full flex items-center gap-3 p-3 rounded-xl text-left border-0 cursor-pointer mb-0.5 transition-colors"
-                style={{ background: convId === c.id ? 'var(--raised)' : 'none' }}>
-                <div className="w-[48px] h-[48px] rounded-full flex-shrink-0 grid place-items-center text-sm font-bold overflow-hidden relative" style={{ background: avatar?.avatar_url ? 'none' : 'var(--gold)', color: avatar?.avatar_url ? 'none' : 'var(--night)' }}>
-                  {avatar?.avatar_url ? <img src={avatar.avatar_url} alt="" className="w-full h-full object-cover" /> : (avatar?.full_name?.[0] || '?')}
-                  {isOnline && <span className="absolute bottom-0 right-0 w-[11px] h-[11px] rounded-full" style={{ background: 'var(--green)', border: '2px solid var(--surface)' }} />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center gap-2">
-                    <strong className="text-sm truncate" style={{ color: 'var(--ink)' }}>{c.type === 'support' ? 'KikwetuConnect Support' : avatar?.full_name || avatar?.username || 'User'}</strong>
-                    <span className="text-[10px] whitespace-nowrap" style={{ color: 'var(--muted)' }}>{c.last_message_at ? formatTime(c.last_message_at) : ''}</span>
-                  </div>
-                  <div className="flex justify-between items-center mt-0.5">
-                    <span className="text-xs truncate flex-1" style={{ color: c.unread_count > 0 ? 'var(--ink)' : 'var(--muted)', fontWeight: c.unread_count > 0 ? 600 : 400 }}>{c.last_message || 'Start chatting'}</span>
-                    {c.unread_count > 0 && <span className="ml-2 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-bold px-1" style={{ background: 'var(--gold)', color: 'var(--night)' }}>{c.unread_count > 99 ? '99+' : c.unread_count}</span>}
-                  </div>
-                </div>
-              </button>
-            )
-          })}
-        </div>
+        <input placeholder="Search conversations..." value={search} onChange={e => setSearch(e.target.value)}
+          className="w-full h-[34px] rounded-[8px] px-3 text-[11px] outline-none" style={{ border: '1px solid var(--line)', background: 'var(--raised)', color: 'var(--ink)' }} />
       </div>
 
+      <div className="flex-1 overflow-y-auto px-2 pb-2">
+        {convsLoading ? Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 p-3 rounded-xl mb-1">
+            <div className="w-[48px] h-[48px] rounded-full" style={{ background: 'var(--raised)' }} />
+            <div className="flex-1"><div className="h-3 w-24 rounded mb-2" style={{ background: 'var(--raised)' }} /><div className="h-2 w-32 rounded" style={{ background: 'var(--raised)' }} /></div>
+          </div>
+        )) : filteredConvs.length === 0 ? (
+          <div className="text-center py-10" style={{ color: 'var(--muted)' }}>
+            <div className="text-3xl mb-2">💬</div>
+            <p className="text-xs">{onlineOnly ? 'No online conversations right now' : 'No conversations yet'}</p>
+            <p className="text-[10px] mt-1">Message someone from their profile</p>
+          </div>
+        ) : filteredConvs.map(c => {
+          const avatar = c.participants?.[0]
+          const isOnline = c.type !== 'support' && c.participants.some(p => onlineIds.has(p.id))
+          return (
+            <button key={c.id} onClick={() => { setConvId(c.id); setSidebarOpen(false) }}
+              className="w-full flex items-center gap-3 p-3 rounded-xl text-left border-0 cursor-pointer mb-0.5 transition-colors"
+              style={{ background: convId === c.id ? 'var(--raised)' : 'none' }}>
+              <div className="w-[48px] h-[48px] rounded-full flex-shrink-0 grid place-items-center text-sm font-bold overflow-hidden relative" style={{ background: avatar?.avatar_url ? 'none' : 'var(--gold)', color: avatar?.avatar_url ? 'none' : 'var(--night)' }}>
+                {avatar?.avatar_url ? <img src={avatar.avatar_url} alt="" className="w-full h-full object-cover" /> : (avatar?.full_name?.[0] || '?')}
+                {isOnline && <span className="absolute bottom-0 right-0 w-[11px] h-[11px] rounded-full" style={{ background: 'var(--green)', border: '2px solid var(--surface)' }} />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center gap-2">
+                  <strong className="text-sm truncate" style={{ color: 'var(--ink)' }}>{c.type === 'support' ? 'KikwetuConnect Support' : avatar?.full_name || avatar?.username || 'User'}</strong>
+                  <span className="text-[10px] whitespace-nowrap" style={{ color: 'var(--muted)' }}>{c.last_message_at ? formatTime(c.last_message_at) : ''}</span>
+                </div>
+                <div className="flex justify-between items-center mt-0.5">
+                  <span className="text-xs truncate flex-1" style={{ color: c.unread_count > 0 ? 'var(--ink)' : 'var(--muted)', fontWeight: c.unread_count > 0 ? 600 : 400 }}>{c.last_message || 'Start chatting'}</span>
+                  {c.unread_count > 0 && <span className="ml-2 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-bold px-1" style={{ background: 'var(--gold)', color: 'var(--night)' }}>{c.unread_count > 99 ? '99+' : c.unread_count}</span>}
+                </div>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+
       {/* Chat pane */}
-      <div className={`${!sidebarOpen ? 'flex' : 'hidden'} md:flex flex-1 flex-col`}>
+      <div className={`${!sidebarOpen ? 'flex' : 'hidden'} md:flex flex-1 flex-col h-[calc(100vh-4rem)]`}>
         {!convId ? (
-          <div className="flex-1 flex items-center justify-center flex-col gap-3" style={{ background: 'var(--surface)' }}>
-            <div className="text-5xl mb-2">\uD83D\uDCAC</div>
-            <h2 className="font-extrabold text-lg m-0" style={{ color: 'var(--ink)' }}>KikwetuChat</h2>
-            <p className="text-xs" style={{ color: 'var(--muted)' }}>Select a conversation or start a new one</p>
-            <button onClick={() => router.push('/feed')} className="px-4 h-[38px] rounded-[10px] text-xs font-bold border-0 cursor-pointer" style={{ background: 'var(--gold)', color: 'var(--night)' }}>Browse the feed</button>
+          <div className="flex-1 flex items-center justify-center flex-col gap-4" style={{ background: 'var(--surface)' }}>
+            <div className="text-6xl mb-2">💬</div>
+            <h2 className="font-extrabold text-2xl m-0" style={{ color: 'var(--ink)' }}>KikwetuChat</h2>
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>Select a conversation or start a new one</p>
+            <button onClick={() => router.push('/feed')} className="px-6 h-[42px] rounded-[10px] text-sm font-bold border-0 cursor-pointer" style={{ background: 'var(--gold)', color: 'var(--night)' }}>Browse the feed</button>
           </div>
         ) : (
           <>
             {/* Chat header */}
-            <div className="flex items-center gap-3 px-4 h-[64px] border-b flex-shrink-0" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
-              <button onClick={() => setSidebarOpen(true)} aria-label="Back to conversations" className="md:hidden bg-none border-0 text-lg cursor-pointer" style={{ color: 'var(--muted)' }}>\u2190</button>
-              <div className="w-[40px] h-[40px] rounded-full flex-shrink-0 grid place-items-center text-sm font-bold overflow-hidden" style={{ background: convAvatar?.avatar_url ? 'none' : 'var(--gold)', color: convAvatar?.avatar_url ? 'none' : 'var(--night)' }}>
+            <div className="flex items-center gap-3 px-4 h-[60px] border-b flex-shrink-0" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
+              <button onClick={() => setSidebarOpen(true)} aria-label="Back to conversations" className="md:hidden bg-none border-0 text-xl cursor-pointer" style={{ color: 'var(--ink)' }}>←</button>
+              <div className="w-[46px] h-[46px] rounded-full flex-shrink-0 grid place-items-center text-sm font-bold overflow-hidden" style={{ background: convAvatar?.avatar_url ? 'none' : 'var(--gold)', color: convAvatar?.avatar_url ? 'none' : 'var(--night)' }}>
                 {convAvatar?.avatar_url ? <img src={convAvatar.avatar_url} alt="" className="w-full h-full object-cover" /> : (convAvatar?.full_name?.[0] || '?')}
               </div>
               <div className="flex-1 min-w-0">
-                <strong className="text-sm block truncate" style={{ color: 'var(--ink)' }}>{convTitle}</strong>
-                {typingUsers.length > 0 ? (
-                  <span className="text-[10px]" style={{ color: 'var(--green)' }}>{typingUsers.map(t => t.full_name || t.username).join(', ')} typing...</span>
-                ) : (
-                  activeConv && activeConv.type !== 'support' && activeConv.participants.some(p => onlineIds.has(p.id)) && (
+                <strong className="text-base block truncate" style={{ color: 'var(--ink)' }}>{convTitle}</strong>
+                {activeConv && activeConv.type !== 'support' && (
+                  onlineIds.has(activeConv.participants[0]?.id) ? (
                     <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--green)' }}>
                       <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: 'var(--green)' }} />Online
                     </span>
+                  ) : (
+                    <span className="text-[10px]" style={{ color: 'var(--muted)' }}>Offline</span>
                   )
                 )}
               </div>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-3" style={{ background: 'var(--bg)' }}>
+            <div className="flex-1 overflow-y-auto px-3 py-3" style={{ background: 'var(--bg)' }}>
               {msgsLoading ? (
                 <div className="flex justify-center py-10"><div className="w-[24px] h-[24px] rounded-full animate-spin" style={{ border: '2px solid var(--gold)', borderTopColor: 'transparent' }} /></div>
               ) : messages.length === 0 ? (
@@ -242,47 +247,45 @@ function MessagesInner() {
                   <p className="text-xs" style={{ color: 'var(--muted)' }}>No messages yet. Say hello!</p>
                 </div>
               ) : (
-                <div className="max-w-[680px] mx-auto">
+                <div className="flex flex-col">
                   {messages.map((msg, idx) => (
                     <div key={msg.id}>
                       {shouldShowDate(idx) && (
-                        <div className="flex justify-center my-4">
-                          <span className="text-[10px] px-3 py-1 rounded-full" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>{formatDateSeparator(msg.created_at)}</span>
+                        <div className="flex justify-center my-3">
+                          <span className="text-[9px] px-3 py-1 rounded-full" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>{formatDateSeparator(msg.created_at)}</span>
                         </div>
                       )}
-                      <div className={`flex mb-1.5 group ${isOwn(msg.sender_id) ? 'justify-end' : 'justify-start'} items-end`}>
+                      <div className={`mb-1 ${isOwn(msg.sender_id) ? 'flex justify-end' : 'flex justify-start'}`}>
                         {!isOwn(msg.sender_id) && (
-                          <div className={`flex-shrink-0 mr-1.5 w-[22px] ${isLastInGroup(idx) ? '' : 'invisible'}`}>
+                          <div className={`mr-1.5 w-[26px] ${isLastInGroup(idx) ? '' : 'invisible'}`}>
                             {msg.sender?.avatar_url ? (
-                              <img src={msg.sender.avatar_url} alt="" className="w-[22px] h-[22px] rounded-full object-cover" />
+                              <img src={msg.sender.avatar_url} alt="" className="w-[26px] h-[26px] rounded-full object-cover" />
                             ) : (
-                              <div className="w-[22px] h-[22px] rounded-full grid place-items-center text-[9px] font-bold" style={{ background: 'var(--gold)', color: 'var(--night)' }}>
+                              <div className="w-[26px] h-[26px] rounded-full grid place-items-center text-[9px] font-bold" style={{ background: 'var(--gold)', color: 'var(--night)' }}>
                                 {msg.sender?.full_name?.[0] || '?'}
                               </div>
                             )}
                           </div>
                         )}
-                        <div className={`relative max-w-[75%] ${isOwn(msg.sender_id) ? 'order-1' : 'order-1'}`}>
-                          {/* Reply preview */}
+                        <div className="relative max-w-[75%]">
                           {msg.reply_to && (
-                            <div className="px-3 pt-2 pb-1 rounded-t-lg text-[10px] border-l-2 mb-0.5" style={{ background: isOwn(msg.sender_id) ? 'rgba(255,255,255,0.15)' : 'var(--raised)', borderLeftColor: 'var(--gold)', color: 'var(--muted)' }}>
+                            <div className="px-2.5 pt-1.5 pb-1 rounded-t-xl text-[10px] border-l-2 mb-0.5" style={{ background: isOwn(msg.sender_id) ? 'rgba(255,255,255,0.15)' : 'var(--raised)', borderLeftColor: 'var(--gold)', color: 'var(--muted)' }}>
                               {msg.metadata?.reply_content || 'Replied to a message'}
                             </div>
                           )}
-                          {/* Message bubble */}
-                          <div className={`px-3 py-2 rounded-2xl text-sm leading-relaxed ${isOwn(msg.sender_id) ? 'rounded-br-md' : 'rounded-bl-md'}`}
+                          <div className={`px-3 py-1.5 rounded-2xl text-sm ${isOwn(msg.sender_id) ? 'rounded-br-md' : 'rounded-bl-md'}`}
                             style={{
-                              background: isOwn(msg.sender_id) ? 'var(--gold)' : 'var(--surface)',
-                              color: isOwn(msg.sender_id) ? 'var(--night)' : 'var(--ink)',
-                              borderBottomRightRadius: isOwn(msg.sender_id) ? '4px' : '16px',
-                              borderBottomLeftRadius: isOwn(msg.sender_id) ? '16px' : '4px',
+                              background: isOwn(msg.sender_id) ? '#0F625B' : 'var(--surface)',
+                              color: isOwn(msg.sender_id) ? '#FFFFFF' : 'var(--ink)',
+                              borderBottomRightRadius: isOwn(msg.sender_id) ? '6px' : '18px',
+                              borderBottomLeftRadius: isOwn(msg.sender_id) ? '18px' : '6px',
                             }}>
                             {msg.message_type === 'image' && msg.metadata?.url && (
-                              <img src={msg.metadata.url} alt="" className="max-w-full rounded-lg mb-1.5 max-h-[300px] object-cover cursor-pointer" onClick={() => window.open(msg.metadata.url)} />
+                              <img src={msg.metadata.url} alt="" className="max-w-[240px] rounded-lg mb-1 max-h-[250px] object-cover cursor-pointer" onClick={() => window.open(msg.metadata.url)} />
                             )}
                             {msg.message_type === 'file' && msg.metadata?.url && (
-                              <div className="flex items-center gap-2 p-2 rounded-lg mb-1" style={{ background: isOwn(msg.sender_id) ? 'rgba(0,0,0,0.1)' : 'var(--raised)' }}>
-                                <span>\uD83D\uDCCE</span>
+                              <div className="flex items-center gap-2 p-1.5 rounded-lg mb-1" style={{ background: isOwn(msg.sender_id) ? 'rgba(0,0,0,0.15)' : 'var(--raised)' }}>
+                                <span>📎</span>
                                 <div className="min-w-0">
                                   <span className="text-xs truncate block">{msg.metadata?.name || 'File'}</span>
                                   <span className="text-[10px]">{msg.metadata?.size ? `${(msg.metadata.size / 1024).toFixed(0)} KB` : ''}</span>
@@ -291,63 +294,29 @@ function MessagesInner() {
                             )}
                             {msg.content && <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>}
                           </div>
-                          {/* Reactions */}
-                          {msg.reactions && msg.reactions.length > 0 && (
-                            <div className={`flex gap-0.5 -mt-1.5 ${isOwn(msg.sender_id) ? 'justify-end' : 'justify-start'}`}>
-                              {Object.entries(
-                                msg.reactions.reduce((acc: Record<string, string[]>, r: any) => {
-                                  if (!acc[r.emoji]) acc[r.emoji] = []
-                                  acc[r.emoji].push(r.user_id)
-                                  return acc
-                                }, {})
-                              ).map(([emoji]) => (
-                                <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} aria-label={`React with ${emoji}`}
-                                  className={`text-xs px-1.5 py-0.5 rounded-full border cursor-pointer ${msg.reactions?.some(r => r.user_id === user?.id && r.emoji === emoji) ? 'border' : ''}`}
-                                  style={{ background: msg.reactions?.some(r => r.user_id === user?.id && r.emoji === emoji) ? 'var(--gold)' : 'var(--surface)', borderColor: 'var(--line)' }}>
-                                  <span aria-hidden="true">{emoji}</span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                          {/* Metadata row */}
-                          <div className={`flex items-center gap-1 mt-0.5 ${isOwn(msg.sender_id) ? 'justify-end' : 'justify-start'}`}>
-                            <span className="text-[9px]" style={{ color: 'var(--faint)' }}>{formatTime(msg.created_at)}</span>
+                          <div className={`flex items-center gap-0.5 mt-0.5 text-[8px]`} style={{ color: 'var(--faint)', marginLeft: isOwn(msg.sender_id) ? 'auto' : '0' }}>
+                            <span>{formatTime(msg.created_at)}</span>
                             {isOwn(msg.sender_id) && msg.status !== 'sending' && (
-                              <span className="relative inline-block w-[18px] h-[12px]" style={{ color: msg.status === 'read' ? '#53bdeb' : 'var(--faint)' }}>
-                                <svg width="18" height="12" viewBox="0 0 18 12" fill="none" className="absolute left-0 top-0">
-                                  <path d="M1 6.5L5 10.5L14.5 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                              <span style={{ color: msg.status === 'read' ? '#53bdeb' : 'var(--faint)' }}>
+                                <svg width="10" height="7" viewBox="0 0 18 12" fill="none">
+                                  <path d="M1 6.5L5 10.5L14.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                                 {(msg.status === 'delivered' || msg.status === 'read') && (
-                                  <svg width="18" height="12" viewBox="0 0 18 12" fill="none" className="absolute left-[3px] top-0">
-                                    <path d="M1 6.5L5 10.5L14.5 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                  <svg width="10" height="7" viewBox="0 0 18 12" fill="none" style={{ marginLeft: -3 }}>
+                                    <path d="M1 6.5L5 10.5L14.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                   </svg>
                                 )}
                               </span>
                             )}
                           </div>
-                          {/* Actions on hover */}
-                          <div className={`absolute top-0 ${isOwn(msg.sender_id) ? 'left-0 -translate-x-full pr-1' : 'right-0 translate-x-full pl-1'} opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5`}>
-                            <button onClick={() => { setReplyTo({ id: msg.id, content: msg.content?.slice(0, 80) || '' }); (document.querySelector('.composer-input') as HTMLInputElement)?.focus() }}
-                              className="w-[28px] h-[28px] rounded-full grid place-items-center text-xs border-0 cursor-pointer" style={{ background: 'var(--surface)', color: 'var(--muted)' }} aria-label="Reply to message">\u21A9</button>
-                            <button onClick={() => setShowEmojiPicker(showEmojiPicker === msg.id ? null : msg.id)}
-                              className="w-[28px] h-[28px] rounded-full grid place-items-center text-xs border-0 cursor-pointer" style={{ background: 'var(--surface)', color: 'var(--muted)' }} aria-label="Add reaction">\uD83D\uDE00</button>
-                          </div>
-                          {/* Inline emoji picker */}
-                          {showEmojiPicker === msg.id && (
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex gap-1 p-1.5 rounded-xl z-10" style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}>
-                              {['\uD83D\uDC4D', '\uD83D\uDC4E', '\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDE0A', '\uD83D\uDE22', '\uD83D\uDE21', '\uD83D\uDE4F'].map(e => (
-                                <button key={e} onClick={() => handleReaction(msg.id, e)} aria-label={`React with ${e}`} className="text-lg border-0 bg-none cursor-pointer hover:scale-125 transition-transform">{e}</button>
-                              ))}
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
                   ))}
                   {typingUsers.length > 0 && (
-                    <div className="flex items-center gap-2 py-2 text-xs" style={{ color: 'var(--muted)' }}>
-                      <div className="flex gap-0.5"><span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--muted)', animationDelay: '0ms' }} /><span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--muted)', animationDelay: '150ms' }} /><span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: 'var(--muted)', animationDelay: '300ms' }} /></div>
-                      {typingUsers.map(t => t.full_name || t.username).join(', ')} typing...
+                    <div className="flex items-center gap-1.5 py-1.5 text-xs" style={{ color: 'var(--muted)' }}>
+                      <div className="flex gap-0.5"><span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--muted)', animationDelay: '0ms' }} /><span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--muted)', animationDelay: '150ms' }} /><span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--muted)', animationDelay: '300ms' }} /></div>
+                      <i>{typingUsers.map(t => t.full_name || t.username).join(', ')} typing...</i>
                     </div>
                   )}
                   <div ref={messagesEndRef} />
@@ -357,36 +326,33 @@ function MessagesInner() {
 
             {/* Reply preview bar */}
             {replyTo && (
-              <div className="flex items-center gap-2 px-4 py-2 border-t" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
+              <div className="flex items-center gap-2 px-3 py-1.5 border-t" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
                 <div className="flex-1">
-                  <div className="text-[10px] font-bold" style={{ color: 'var(--gold)' }}>Replying</div>
+                  <div className="text-[9px] font-bold" style={{ color: 'var(--gold)' }}>Replying</div>
                   <div className="text-xs truncate" style={{ color: 'var(--muted)' }}>{replyTo.content}</div>
                 </div>
-                <button onClick={() => setReplyTo(null)} aria-label="Cancel reply" className="bg-none border-0 cursor-pointer text-sm" style={{ color: 'var(--muted)' }}>\u2715</button>
+                <button onClick={() => setReplyTo(null)} aria-label="Cancel reply" className="bg-none border-0 cursor-pointer text-sm" style={{ color: 'var(--muted)' }}>✕</button>
               </div>
             )}
 
             {/* Composer */}
-            <div className="flex items-center gap-2 px-4 py-3 border-t" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
-              <button onClick={() => imageInputRef.current?.click()} aria-label="Upload image" className="w-[36px] h-[36px] rounded-full grid place-items-center text-sm flex-shrink-0 border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              </button>
-              <button onClick={() => fileInputRef.current?.click()} aria-label="Attach file" className="w-[36px] h-[36px] rounded-full grid place-items-center text-sm flex-shrink-0 border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-              </button>
+            <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-t" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
               <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFileSelect(e, 'image/*')} />
               <input ref={fileInputRef} type="file" className="hidden" onChange={e => handleFileSelect(e, 'file')} />
+              <button onClick={() => imageInputRef.current?.click()} aria-label="Upload image" className="w-[34px] h-[34px] rounded-full grid place-items-center text-sm flex-shrink-0 border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </button>
               <div className="flex-1 relative">
                 <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
                   placeholder="Type a message..." rows={1}
-                  className="composer-input w-full rounded-2xl px-4 py-2.5 text-sm outline-none resize-none"
+                  className="composer-input w-full rounded-2xl px-3 py-2 text-sm outline-none resize-none"
                   style={{ background: 'var(--raised)', border: '1px solid var(--line)', color: 'var(--ink)', maxHeight: 120 }}
                   onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px' }} />
               </div>
               <button onClick={handleSend} disabled={!input.trim()} aria-label="Send message"
-                className="w-[42px] h-[42px] rounded-full grid place-items-center border-0 cursor-pointer transition-opacity flex-shrink-0"
-                style={{ background: input.trim() ? 'var(--gold)' : 'var(--raised)', color: input.trim() ? 'var(--night)' : 'var(--faint)', opacity: input.trim() ? 1 : 0.9 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                className="w-[40px] h-[40px] rounded-full grid place-items-center border-0 cursor-pointer flex-shrink-0"
+                style={{ background: input.trim() ? '#0F625B' : 'var(--raised)', color: input.trim() ? '#FFFFFF' : 'var(--faint)', opacity: input.trim() ? 1 : 0.9 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
               </button>
             </div>
           </>
