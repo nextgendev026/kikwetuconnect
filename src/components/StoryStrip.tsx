@@ -46,9 +46,10 @@ function timeLeft(exp: string) {
 
 export default function StoryStrip({ profile }: StoryStripProps) {
   const supabase = useSupabase()
-  const [stories, setStories] = useState<Story[]>([])
-  const [myStory, setMyStory] = useState<Story | null>(null)
-  const [shorts, setShorts] = useState<Short[]>([])
+  const [myStories, setMyStories] = useState<Story[]>([])
+  const [myShorts, setMyShorts] = useState<Short[]>([])
+  const [communityStories, setCommunityStories] = useState<Story[]>([])
+  const [communityShorts, setCommunityShorts] = useState<Short[]>([])
   const [loading, setLoading] = useState(true)
   const [openStory, setOpenStory] = useState<Story | null>(null)
 
@@ -58,16 +59,29 @@ export default function StoryStrip({ profile }: StoryStripProps) {
     ;(async () => {
       try {
         const now = new Date().toISOString()
-        const { data: mine } = await supabase
+        const yesterday = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+
+        // My own stories (24h)
+        const { data: myStoriesData } = await supabase
           .from('stories')
           .select('id, user_id, media_url, media_type, thumbnail_url, caption, view_count, expires_at, created_at, profiles:user_id(id, full_name, username, avatar_url, is_verified_expert)')
           .eq('user_id', profile?.id || '')
           .gt('expires_at', now)
           .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
 
-        const { data: theirs } = await supabase
+        // My own posts (shorts from last 24h)
+        const { data: myShortsData } = await supabase
+          .from('posts')
+          .select('id, user_id, post_type, title, content, media_url, media_type, created_at, upvotes_count, answers_count, profiles:user_id(id, full_name, username, avatar_url, is_verified_expert)')
+          .eq('user_id', profile?.id || '')
+          .not('media_url', 'is', null)
+          .is('space_id', null)
+          .neq('post_type', 'inquiry')
+          .gte('created_at', yesterday)
+          .order('created_at', { ascending: false })
+
+        // Community stories (excluding my own)
+        const { data: communityStoriesData } = await supabase
           .from('stories')
           .select('id, user_id, media_url, media_type, thumbnail_url, caption, view_count, expires_at, created_at, profiles:user_id(id, full_name, username, avatar_url, is_verified_expert)')
           .gt('expires_at', now)
@@ -75,20 +89,23 @@ export default function StoryStrip({ profile }: StoryStripProps) {
           .order('created_at', { ascending: false })
           .limit(30)
 
-        const { data: communityShorts } = await supabase
+        // Community shorts (excluding my own, last 24h)
+        const { data: communityShortsData } = await supabase
           .from('posts')
           .select('id, user_id, post_type, title, content, media_url, media_type, created_at, upvotes_count, answers_count, profiles:user_id(id, full_name, username, avatar_url, is_verified_expert)')
+          .not('user_id', 'eq', profile?.id || '')
           .not('media_url', 'is', null)
           .is('space_id', null)
           .neq('post_type', 'inquiry')
-          .gte('created_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString())
+          .gte('created_at', yesterday)
           .order('created_at', { ascending: false })
           .limit(18)
 
         if (!cancelled) {
-          if (mine) setMyStory(mine as any)
-          setStories((theirs || []) as any)
-          setShorts((communityShorts || []) as any)
+          setMyStories((myStoriesData || []) as any)
+          setMyShorts((myShortsData || []) as any)
+          setCommunityStories((communityStoriesData || []) as any)
+          setCommunityShorts((communityShortsData || []) as any)
         }
       } catch {} finally {
         if (!cancelled) setLoading(false)
@@ -101,34 +118,38 @@ export default function StoryStrip({ profile }: StoryStripProps) {
         const s = payload.new as any
         if (new Date(s.expires_at).getTime() <= Date.now()) return
         if (s.user_id === profile?.id) {
-          setMyStory(s as any)
+          setMyStories(prev => (prev.some(i => i.id === s.id) ? prev : [s as any, ...prev]).slice(0, 10))
         } else {
-          setStories(prev => (prev.some(i => i.id === s.id) ? prev : [s as any, ...prev]).slice(0, 30))
+          setCommunityStories(prev => (prev.some(i => i.id === s.id) ? prev : [s as any, ...prev]).slice(0, 30))
         }
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'stories' }, (payload: any) => {
         const s = payload.new as any
         if (s.user_id === profile?.id) {
-          if (myStory?.id === s.id) setMyStory(s as any)
+          setMyStories(prev => prev.map(i => (i.id === s.id ? (s as any) : i)))
         } else {
-          setStories(prev => prev.map(i => (i.id === s.id ? (s as any) : i)))
+          setCommunityStories(prev => prev.map(i => (i.id === s.id ? (s as any) : i)))
         }
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload: any) => {
         const p = payload.new as any
         if (!p.media_url || p.space_id || p.post_type === 'inquiry') return
-        setShorts(prev => (prev.some(i => i.id === p.id) ? prev : [p as any, ...prev]).slice(0, 18))
+        const yesterday = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+        if (new Date(p.created_at).getTime() < new Date(yesterday).getTime()) return
+        if (p.user_id === profile?.id) {
+          if (p.media_url) setMyShorts(prev => (prev.some(i => i.id === p.id) ? prev : [p as any, ...prev]).slice(0, 10))
+        } else {
+          setCommunityShorts(prev => (prev.some(i => i.id === p.id) ? prev : [p as any, ...prev]).slice(0, 18))
+        }
       })
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase, profile])
 
   const [showStoryComposer, setShowStoryComposer] = useState(false)
   const [showIdeaComposer, setShowIdeaComposer] = useState(false)
-  const [ideaText, setIdeaText] = useState('')
 
-  if (loading && stories.length === 0 && !myStory && shorts.length === 0) {
+  if (loading && myStories.length === 0 && communityStories.length === 0 && myShorts.length === 0 && communityShorts.length === 0) {
     return (
       <div className="mb-[14px]">
         <div className="flex items-center justify-between mb-[10px]">
@@ -172,13 +193,16 @@ export default function StoryStrip({ profile }: StoryStripProps) {
             <span className="text-[11px] font-bold">My ideas</span>
           </button>
 
-          {/* Your existing (unexpired) story */}
-          {myStory && (
-            <StoryCard story={myStory} isOwn onClick={() => setOpenStory(myStory)} />
-          )}
+          {/* Your own stories */}
+          {myStories.map(s => (
+            <StoryCard key={s.id} story={s} isOwn onClick={() => {
+              void supabase.rpc('view_story', { p_story_id: s.id })
+              setOpenStory(s)
+            }} />
+          ))}
 
-          {/* Community 24h stories */}
-          {stories.map(s => (
+          {/* Community stories */}
+          {communityStories.map(s => (
             <StoryCard key={s.id} story={s} onClick={() => {
               if (profile?.id && s.user_id === profile.id) return
               void supabase.rpc('view_story', { p_story_id: s.id })
@@ -187,9 +211,9 @@ export default function StoryStrip({ profile }: StoryStripProps) {
           ))}
         </div>
 
-        {/* Community shorts — "New idea" / short-form reels from the last 24h */}
-        {shorts.length > 0 && (
-          <div className="flex gap-[10px] overflow-x-auto pb-[6px] pt-[8px] border-t border-[var(--line)] mt-[8px] -mx-[12px] px-[12px]">
+        {/* Your own shorts - 24h posts with media */}
+        {myShorts.length > 0 && (
+          <div className="flex gap-[10px] overflow-x-auto pb-[6px] pt-[8px] -mx-[12px] px-[12px]">
             <button
               onClick={() => setShowIdeaComposer(true)}
               className="flex-shrink-0 w-[104px] h-[150px] rounded-[16px] border-2 border-dashed border-[var(--line)] flex flex-col items-center justify-center gap-[8px] text-[var(--muted)] hover:border-gold hover:text-gold transition-colors cursor-pointer"
@@ -200,7 +224,16 @@ export default function StoryStrip({ profile }: StoryStripProps) {
               </span>
               <span className="text-[11px] font-bold">Your idea</span>
             </button>
-            {shorts.map(s => (
+            {myShorts.map(s => (
+              <ShortCard key={s.id} short={s} />
+            ))}
+          </div>
+        )}
+
+        {/* Community shorts */}
+        {communityShorts.length > 0 && (
+          <div className="flex gap-[10px] overflow-x-auto pb-[6px] pt-[8px] border-t border-[var(--line)] mt-[8px] -mx-[12px] px-[12px]">
+            {communityShorts.map(s => (
               <ShortCard key={s.id} short={s} />
             ))}
           </div>
