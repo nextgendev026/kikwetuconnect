@@ -1,6 +1,7 @@
 'use client'
 import { memo, useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { toast } from '@/app/providers'
 import { ArrowUp, MessageCircle, Smile, Globe, Flag, Star, MoreHorizontal, Edit3, Trash2, EyeOff, Eye } from 'lucide-react'
 import ShareMenu from '@/components/ShareMenu'
@@ -125,7 +126,7 @@ export const PostCard = memo(function PostCard({
       <div className="flex items-start gap-3 mb-[12px]">
         <Link href={`/profile/${author?.username || ''}`} className="flex-shrink-0 relative" aria-label={`View ${author?.full_name || author?.username || 'user'} profile`}>
           {author?.avatar_url ? (
-            <img src={author.avatar_url} alt="" className="w-[40px] h-[40px] rounded-full object-cover" loading="lazy" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.querySelector('.avatar-fallback')?.classList.remove('hidden') }} />
+            <Image src={author.avatar_url} alt="" width={40} height={40} className="w-[40px] h-[40px] rounded-full object-cover" loading="lazy" unoptimized={author.avatar_url.startsWith('data:')} onError={e => { (e.target as HTMLElement).style.display = 'none'; (e.target as HTMLElement).parentElement!.querySelector('.avatar-fallback')?.classList.remove('hidden') }} />
           ) : null}
           <div className={`avatar-fallback w-[40px] h-[40px] rounded-full bg-gradient-to-br from-gold to-green flex items-center justify-center text-[12px] font-extrabold text-night ${author?.avatar_url ? 'hidden' : ''}`}>{initials}</div>
           {author?.is_verified_expert && (
@@ -222,7 +223,7 @@ export const PostCard = memo(function PostCard({
               <span className="text-[40px] opacity-50" aria-hidden="true">🎥</span>
             </div>
           ) : (
-            <img src={post.media_url} alt="" aria-hidden="true" className="w-full h-auto max-h-[300px] object-cover" loading="lazy" />
+            <Image src={post.media_url} alt="" width={640} height={300} className="w-full h-auto max-h-[300px] object-cover" loading="lazy" unoptimized={post.media_url.startsWith('data:')} />
           )}
         </Link>
       )}

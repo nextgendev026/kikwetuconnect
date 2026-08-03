@@ -42,6 +42,17 @@ export type FeedRow =
   | { kind: 'ad' }
   | { kind: 'post'; post: Post }
 
+export interface FeedParams {
+  activeTab: string
+  typeFilter: string
+  countyFilter: string | null
+}
+
+/** React Query key for the feed. Mutations + realtime deltas match on ['feed', params]. */
+export function feedKey(params: FeedParams) {
+  return ['feed', params] as const
+}
+
 const AD_EVERY = 4
 
 /** Interleave FeedAd placeholders between posts (every 4th slot). */

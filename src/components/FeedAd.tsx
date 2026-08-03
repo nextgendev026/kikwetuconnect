@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
+import Image from 'next/image'
 import { useSupabase, useUser } from '@/app/providers'
 
 interface Ad {
@@ -46,7 +47,7 @@ export default function FeedAd() {
     <a href={ad.link_url} target="_blank" rel="noopener noreferrer" onClick={() => track('click')}
       className="block rounded-2xl overflow-hidden mb-4 no-underline transition-transform hover:scale-[1.01]"
       style={{ border: '1px solid var(--line)', background: 'var(--surface)' }}>
-      {ad.image_url && <img src={ad.image_url} alt="" className="w-full h-[140px] object-cover" loading="lazy" />}
+      {ad.image_url && <Image src={ad.image_url} alt="" width={640} height={140} className="w-full h-[140px] object-cover" loading="lazy" />}
       <div className="p-3 flex items-center gap-2">
         <div className="flex-1">
           <strong className="text-sm block" style={{ color: 'var(--ink)' }}>{ad.title}</strong>

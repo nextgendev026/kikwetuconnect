@@ -1,15 +1,19 @@
 'use client'
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
+import { Virtuoso } from 'react-virtuoso'
 import { useSupabase, useUser, toast } from '@/app/providers'
+import { useQueryClient } from '@tanstack/react-query'
 import FeedAd from '@/components/FeedAd'
 import StoryStrip from '@/components/StoryStrip'
 import { PostCard } from '@/components/PostCard'
 import { COUNTIES, TABS, TYPE_FILTERS } from '@/lib/feed-config'
 import type { TabId, TypeFilter } from '@/lib/feed-config'
 import { getInitials } from '@/lib/utils'
-import { buildFeedItems, patchPost, toPost } from '@/lib/feedHelpers'
-import type { Post, VoteRow, SaveRow } from '@/lib/feedHelpers'
+import { buildFeedItems, feedKey } from '@/lib/feedHelpers'
+import { useFeed } from '@/hooks/useFeed'
+import { useVoteAction, useSaveAction } from '@/hooks/usePostActions'
 
 function SkeletonCard() {
   return (
@@ -72,20 +76,25 @@ function ErrorBanner({ message, onRetry }: { message: string; onRetry: () => voi
 
 export default function FeedPage() {
   const supabase = useSupabase()
+  const queryClient = useQueryClient()
   const { user, profile, loading: userLoading } = useUser()
 
-  const [posts, setPosts] = useState<Post[]>([])
-  const postsRef = useRef<Post[]>([])
-  useEffect(() => { postsRef.current = posts }, [posts])
-  const [loading, setLoading] = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [hasMore, setHasMore] = useState(true)
   const [activeTab, setActiveTab] = useState<TabId>('for_you')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
   const [countyFilter, setCountyFilter] = useState<string | null>(null)
   const [showCountyPicker, setShowCountyPicker] = useState(false)
-  const [newPostsCount, setNewPostsCount] = useState(0)
+
+  const params = { activeTab, typeFilter, countyFilter }
+  const feedQuery = useFeed(params)
+  const voteAction = useVoteAction(params)
+  const saveAction = useSaveAction(params)
+
+  const posts = useMemo(() => feedQuery.data?.pages.flatMap(p => p.posts) ?? [], [feedQuery.data])
+  const feedItems = useMemo(() => buildFeedItems(posts), [posts])
+  const loading = feedQuery.isLoading
+  const loadingMore = feedQuery.isFetchingNextPage
+  const error = feedQuery.error ? (feedQuery.error as Error).message : null
+  const hasMore = feedQuery.hasNextPage ?? false
 
   const composerTypeMap: Record<string, string> = { baraza: 'post', inquiry: 'question', poll: 'poll', article: 'article' }
   const openCreateModal = (type?: string) => {
@@ -106,203 +115,74 @@ export default function FeedPage() {
     }
   }, [])
 
-  const fetchPosts = useCallback(async (cursor?: string | null) => {
-    const isReset = !cursor
-    if (isReset) { setLoading(true); setError(null) } else { setLoadingMore(true) }
-    try {
-      const limit = 25
-
-      // For you tab uses personalized algorithm
-      if (activeTab === 'for_you' && profile && isReset) {
-        try {
-          const res = await fetch(`/api/feed/recommended?limit=${limit}&offset=0`, { cache: 'no-store' })
-          if (res.ok) {
-            const json = await res.json()
-            const rawPosts = (json.posts || []).map((p: any) => ({
-              ...p,
-              is_hidden: false,
-              profiles: {
-                id: p.author_id,
-                full_name: p.author_name,
-                username: p.author_username,
-                avatar_url: p.author_avatar,
-                heshima_rating: p.author_heshima,
-              },
-              content: p.content,
-              title: p.title,
-            }))
-            const postIds = rawPosts.map((p: any) => p.id)
-            let voteMap: Record<string, 1 | -1 | null> = {}
-            let saveMap: Record<string, boolean> = {}
-            if (postIds.length > 0) {
-              const { data: votes } = await supabase
-                .from('votes').select('target_id, vote_type')
-                .eq('user_id', profile.id).eq('target_type', 'post').in('target_id', postIds)
-              if (votes) votes.forEach((v: VoteRow) => { voteMap[v.target_id] = v.vote_type })
-              const { data: saves } = await supabase
-                .from('saves').select('target_id')
-                .eq('user_id', profile.id).eq('target_type', 'post').in('target_id', postIds)
-              if (saves) saves.forEach((s: SaveRow) => { saveMap[s.target_id] = true })
-            }
-            setPosts(rawPosts.map((p: any) => ({ ...p, user_vote: voteMap[p.id] || null, user_saved: saveMap[p.id] || false })))
-            setHasMore(rawPosts.length >= limit)
-            setLoading(false)
-            return
-          }
-        } catch { /* fall through */ }
-      }
-
-      let query = supabase
-        .from('posts')
-        .select(`
-          *,
-          profiles:user_id (
-            id, full_name, username, avatar_url, heshima_rating, is_verified_expert, county_hub
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(limit + 1)
-
-      if (cursor) query = query.lt('created_at', cursor)
-
-      if (typeFilter !== 'all') query = query.eq('post_type', typeFilter)
-      query = query.neq('post_type', 'inquiry')
-
-
-      if (activeTab === 'following' && profile) {
-        const { data: following } = await supabase.from('follows').select('following_id').eq('follower_id', profile.id)
-        const ids = following?.map((f: { following_id: string }) => f.following_id) || []
-        if (ids.length > 0) { query = query.in('user_id', ids) }
-        else { setPosts([]); setLoading(false); return }
-      }
-
-      if (activeTab === 'near_you' && countyFilter) query = query.eq('county_tag', countyFilter)
-      else if (activeTab === 'near_you' && profile?.county_hub) query = query.eq('county_tag', profile.county_hub)
-      if (countyFilter && activeTab !== 'near_you') query = query.eq('county_tag', countyFilter)
-
-      if (activeTab === 'saved' && profile) {
-        const { data: savedPosts } = await supabase.from('saves').select('target_id').eq('user_id', profile.id).eq('target_type', 'post')
-        const ids = savedPosts?.map((s: { target_id: string }) => s.target_id) || []
-        if (ids.length > 0) { query = query.in('id', ids) }
-        else { setPosts([]); setLoading(false); return }
-      }
-
-      query = query.is('space_id', null)
-
-      if (profile?.id) query = query.or(`is_hidden.neq.true,user_id.eq.${profile.id}`)
-      else query = query.neq('is_hidden', true)
-
-      const { data, error: fetchError } = await query
-      if (fetchError) throw new Error(fetchError.message)
-
-      const rawPosts = (data || []) as any[]
-      const pagePosts = rawPosts.slice(0, limit)
-      setHasMore(rawPosts.length > limit)
-
-      let voteMap: Record<string, 1 | -1 | null> = {}
-      let saveMap: Record<string, boolean> = {}
-      if (profile) {
-        const postIds = pagePosts.map(p => p.id)
-        if (postIds.length > 0) {
-          const { data: votes } = await supabase.from('votes').select('target_id, vote_type').eq('user_id', profile.id).eq('target_type', 'post').in('target_id', postIds)
-          if (votes) votes.forEach((v: VoteRow) => { voteMap[v.target_id] = v.vote_type })
-          const { data: saves } = await supabase.from('saves').select('target_id').eq('user_id', profile.id).eq('target_type', 'post').in('target_id', postIds)
-          if (saves) saves.forEach((s: SaveRow) => { saveMap[s.target_id] = true })
-        }
-      }
-
-      const enriched: Post[] = pagePosts.map(toPost).map(p => ({
-        ...p, user_vote: voteMap[p.id] || null, user_saved: saveMap[p.id] || false,
-      }))
-
-      if (isReset) setPosts(enriched)
-      else setPosts(prev => [...prev, ...enriched])
-    } catch (err: any) {
-      setError(err.message || 'Failed to load posts')
-    } finally {
-      setLoading(false); setLoadingMore(false)
-    }
-  }, [supabase, profile, activeTab, typeFilter, countyFilter])
-
-  useEffect(() => {
-    fetchPosts()
-  }, [fetchPosts])
-
-  // Realtime: apply deltas instead of full refetch.
+  // Realtime: apply deltas to the React Query cache instead of full refetch.
   useEffect(() => {
     if (!profile) return
-    let debounceTimer: ReturnType<typeof setTimeout>
     const channel = supabase
       .channel('feed-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, (payload) => {
-        // Only surface new posts on tabs where a brand-new post makes sense.
-        if (activeTab === 'following' || activeTab === 'saved') return
-        const own = payload.new && (payload.new as any).user_id === profile.id
-        if (own) return
-        // Skip if the new post wouldn't match the current type/county filters.
         const p = payload.new as any
-        if (typeFilter !== 'all' && p.post_type !== typeFilter) return
+        if (!p?.id) return
+        if (p.user_id === profile.id) return
         if (p.post_type === 'inquiry') return
-        if (countyFilter && activeTab === 'near_you' && p.county_tag !== countyFilter) return
-        clearTimeout(debounceTimer)
-        debounceTimer = setTimeout(() => setNewPostsCount(c => c + 1), 250)
+        if (typeFilter !== 'all' && p.post_type !== typeFilter) return
+        if (activeTab === 'near_you' && countyFilter && p.county_tag !== countyFilter) return
+        queryClient.setQueriesData({ queryKey: ['feed'], type: 'active' }, (old: any) => {
+          if (!old?.pages) return old
+          const first = old.pages[0]?.posts ?? []
+          if (first.some((x: any) => x.id === p.id)) return old
+          const fresh = { ...p, profiles: p.profiles || null, user_vote: null, user_saved: false }
+          const pages = [{ ...old.pages[0], posts: [fresh, ...first] }, ...old.pages.slice(1)]
+          return { ...old, pages }
+        })
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts', filter: `user_id=neq.${profile.id}` }, (payload) => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, (payload) => {
         const p = payload.new as any
-        if (!p || !p.id) return
-        // Apply targeted update: patch votes/counts/answers without refetching.
-        setPosts(prev => prev.map(x => x.id === p.id ? { ...x, ...p, profiles: x.profiles } : x))
+        if (!p?.id) return
+        if (p.user_id === profile.id) return
+        queryClient.setQueriesData({ queryKey: ['feed'], type: 'active' }, (old: any) => {
+          if (!old?.pages) return old
+          return {
+            ...old,
+            pages: old.pages.map((page: any) => ({
+              ...page,
+              posts: (page.posts ?? []).map((x: any) => x.id === p.id ? { ...x, ...p } : x),
+            })),
+          }
+        })
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'posts' }, (payload) => {
+        const id = (payload.old as any)?.id
+        if (!id) return
+        queryClient.setQueriesData({ queryKey: ['feed'], type: 'active' }, (old: any) => {
+          if (!old?.pages) return old
+          return {
+            ...old,
+            pages: old.pages.map((page: any) => ({
+              ...page,
+              posts: (page.posts ?? []).filter((x: any) => x.id !== id),
+            })),
+          }
+        })
       })
       .subscribe()
 
-    return () => { clearTimeout(debounceTimer); supabase.removeChannel(channel) }
-  }, [supabase, profile, activeTab, typeFilter, countyFilter])
+    return () => { supabase.removeChannel(channel) }
+  }, [supabase, profile, activeTab, typeFilter, countyFilter, queryClient])
 
-  const handleVote = useCallback(async (postId: string, voteType: 1 | -1 | null) => {
+  const handleVote = (postId: string, voteType: 1 | -1 | null) => {
     if (!profile) { toast('Sign in to vote'); return }
-    const prevPost = postsRef.current.find(p => p.id === postId)
-    setPosts(prev => prev.map(p => {
-      if (p.id !== postId) return p
-      const diff = voteType === 1 ? 1 : p.user_vote === 1 ? -1 : 0
-      return { ...p, user_vote: voteType, upvotes_count: Math.max(0, p.upvotes_count + diff) }
-    }))
-    try {
-      if (voteType === null) {
-        await fetch(`/api/votes?target_type=post&target_id=${postId}`, { method: 'DELETE' })
-      } else {
-        const res = await fetch('/api/votes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ target_type: 'post', target_id: postId, vote_type: voteType }),
-        })
-        if (!res.ok) throw new Error('Vote failed')
-      }
-    } catch {
-      if (prevPost) setPosts(prev => patchPost(prev, postId, { user_vote: prevPost.user_vote, upvotes_count: prevPost.upvotes_count }))
-    }
-  }, [profile])
+    voteAction.mutate({ postId, voteType })
+  }
 
-  const handleSave = useCallback(async (postId: string) => {
+  const handleSave = (postId: string) => {
     if (!profile) { toast('Sign in to save posts'); return }
-    const prevPost = postsRef.current.find(p => p.id === postId)
-    setPosts(prev => prev.map(p => p.id === postId ? { ...p, user_saved: !p.user_saved } : p))
-    try {
-      const res = await fetch('/api/saves', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target_type: 'post', target_id: postId }),
-      })
-      if (!res.ok) throw new Error('Save failed')
-    } catch {
-      if (prevPost) setPosts(prev => patchPost(prev, postId, { user_saved: prevPost.user_saved }))
-    }
-  }, [profile])
+    saveAction.mutate({ postId })
+  }
 
-  const handleReact = useCallback((_postId: string, _emoji: string) => {
+  const handleReact = (_postId: string, _emoji: string) => {
     // Reactions stored locally; could sync to DB later
-  }, [])
-
-  const feedItems = useMemo(() => buildFeedItems(posts), [posts])
+  }
 
   if (userLoading) {
     return (
@@ -368,7 +248,7 @@ export default function FeedPage() {
           {profile ? (
             <>
               {profile.avatar_url ? (
-                <img src={profile.avatar_url} alt="" className="w-[36px] h-[36px] rounded-full object-cover flex-shrink-0" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.querySelector('.composer-avatar-fallback')?.classList.remove('hidden') }} />
+                <Image src={profile.avatar_url} alt="" width={36} height={36} className="w-[36px] h-[36px] rounded-full object-cover flex-shrink-0" unoptimized={profile.avatar_url.startsWith('data:')} onError={e => { (e.target as HTMLElement).style.display = 'none'; (e.target as HTMLElement).parentElement!.querySelector('.composer-avatar-fallback')?.classList.remove('hidden') }} />
               ) : null}
               <div className={`composer-avatar-fallback w-[36px] h-[36px] rounded-full bg-gradient-to-br from-gold to-green flex items-center justify-center text-[11px] font-extrabold text-night flex-shrink-0 ${profile.avatar_url ? 'hidden' : ''}`}>
                 {getInitials(profile.full_name || profile.username)}
@@ -425,17 +305,6 @@ export default function FeedPage() {
         </div>
       </div>
 
-      {/* New posts banner */}
-      {newPostsCount > 0 && (
-        <button
-          onClick={() => { setNewPostsCount(0); fetchPosts() }}
-          className="w-full mb-[12px] px-[14px] py-[9px] rounded-[12px] bg-gold text-night text-[12px] font-bold flex items-center justify-center gap-2 transition-opacity hover:opacity-90"
-        >
-          <span aria-hidden="true">🆕</span>
-          <span>{newPostsCount} new post{newPostsCount === 1 ? '' : 's'} — tap to refresh</span>
-        </button>
-      )}
-
       {/* Type filter chips */}
       <div className="flex gap-[4px] overflow-x-auto pb-[8px] scrollbar-none -mx-[12px] px-[12px]">
         {TYPE_FILTERS.map(f => (
@@ -484,7 +353,7 @@ export default function FeedPage() {
       </div>
 
       {/* Content area */}
-      {error && <ErrorBanner message={error} onRetry={fetchPosts} />}
+      {error && <ErrorBanner message={error} onRetry={() => void feedQuery.refetch()} />}
 
       {loading && (
         <div>
@@ -498,34 +367,45 @@ export default function FeedPage() {
         <EmptyState tab={activeTab} hasCountyFilter={!!countyFilter} />
       )}
 
-      {!loading && feedItems.map((item, idx) => (
-        item.kind === 'ad'
-          ? <FeedAd key={`ad-${idx}`} />
-          : <PostCard
-              key={item.post.id}
-              post={item.post}
-              currentUserId={user?.id || null}
-              onVote={handleVote}
-              onSave={handleSave}
-              onReact={handleReact}
-            />
-      ))}
-
-      {/* Load more */}
-      {!loading && posts.length > 0 && hasMore && (
-        <div className="text-center py-[16px]">
-          <button onClick={() => fetchPosts(posts[posts.length - 1]?.created_at)}
-            className="px-[24px] py-[10px] rounded-full text-[12px] font-bold transition-all"
-            style={{ background: 'var(--raised)', color: 'var(--ink)', border: '1px solid var(--line)' }}
-            disabled={loadingMore}>
-            {loadingMore ? 'Loading...' : 'Load more'}
-          </button>
-        </div>
-      )}
-      {!loading && !hasMore && posts.length > 0 && (
-        <div className="text-center py-[20px]">
-          <p className="text-[var(--muted)] text-[11px]">You've reached the end... for now</p>
-        </div>
+      {!loading && feedItems.length > 0 && !error && (
+        <Virtuoso
+          useWindowScroll
+          data={feedItems}
+          endReached={() => { if (hasMore && !loadingMore) void feedQuery.fetchNextPage() }}
+          overscan={600}
+          components={{
+            Footer: () => (
+              <>
+                {hasMore && (
+                  <div className="text-center py-[16px]">
+                    <button onClick={() => void feedQuery.fetchNextPage()}
+                      className="px-[24px] py-[10px] rounded-full text-[12px] font-bold transition-all"
+                      style={{ background: 'var(--raised)', color: 'var(--ink)', border: '1px solid var(--line)' }}
+                      disabled={loadingMore}>
+                      {loadingMore ? 'Loading...' : 'Load more'}
+                    </button>
+                  </div>
+                )}
+                {!hasMore && (
+                  <div className="text-center py-[20px]">
+                    <p className="text-[var(--muted)] text-[11px]">You've reached the end... for now</p>
+                  </div>
+                )}
+              </>
+            ),
+          }}
+          itemContent={(_index, item) =>
+            item.kind === 'ad'
+              ? <FeedAd />
+              : <PostCard
+                  post={item.post}
+                  currentUserId={user?.id || null}
+                  onVote={handleVote}
+                  onSave={handleSave}
+                  onReact={handleReact}
+                />
+          }
+        />
       )}
     </div>
   )

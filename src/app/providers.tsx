@@ -1,6 +1,8 @@
 'use client'
 import { createContext, useContext, useState, type ReactNode } from 'react'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { createBrowserClient } from '@/lib/supabase'
+import { queryClient } from '@/lib/react-query'
 import { usePathname } from 'next/navigation'
 import { AuthProvider, useUser } from './providers/auth-provider'
 import { ThemeProvider } from './providers/theme-provider'
@@ -38,17 +40,19 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <SupabaseCtx.Provider value={supabase}>
-      <ToastProvider>
-        <AuthProvider supabase={supabase}>
-          <ThemeProvider>
-            <NotificationProvider>
-              <ShellRouter>
-                {children}
-              </ShellRouter>
-            </NotificationProvider>
-          </ThemeProvider>
-        </AuthProvider>
-      </ToastProvider>
+      <QueryClientProvider client={queryClient}>
+        <ToastProvider>
+          <AuthProvider supabase={supabase}>
+            <ThemeProvider>
+              <NotificationProvider>
+                <ShellRouter>
+                  {children}
+                </ShellRouter>
+              </NotificationProvider>
+            </ThemeProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </QueryClientProvider>
     </SupabaseCtx.Provider>
   )
 }

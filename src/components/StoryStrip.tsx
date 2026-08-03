@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useSupabase, useUser, toast } from '@/app/providers'
-import { Play, Plus, PlusIcon, X, Image, Send } from 'lucide-react'
+import { Play, Plus, PlusIcon, X, Image as ImageIcon, Send } from 'lucide-react'
 import { getInitials, isVideoType } from '@/lib/utils'
 
 interface Story {
@@ -331,7 +332,7 @@ function StoryComposer({ profile, supabase, onClose, onPublished }: {
           <button onClick={() => fileRef.current?.click()}
             className="w-full h-[140px] rounded-[12px] border-2 border-dashed border-[var(--line)] flex flex-col items-center justify-center gap-2 text-[var(--muted)] hover:border-gold hover:text-gold transition-colors cursor-pointer mb-3"
             style={{ background: 'var(--raised)' }}>
-            <Image className="w-6 h-6" />
+            <ImageIcon className="w-6 h-6" />
             <span className="text-[11px] font-bold">Add photo or video</span>
           </button>
         )}
@@ -450,7 +451,7 @@ function ShortCard({ short }: { short: Short }) {
           </span>
         </div>
       ) : (
-        <img src={short.media_url!} alt="" className="w-full h-full object-cover object-center" loading="lazy" />
+        <Image src={short.media_url!} alt="" width={64} height={64} className="w-full h-full object-cover object-center" loading="lazy" />
       )}
     </Link>
   )
@@ -467,7 +468,7 @@ function StoryCard({ story, isOwn = false, onClick }: { story: Story; isOwn?: bo
         <video src={story.thumbnail_url || story.media_url} autoPlay muted loop playsInline
           className="w-full h-full object-cover object-center" />
       ) : (
-        <img src={story.media_url} alt="" className="w-full h-full object-cover object-center" loading="lazy" />
+        <Image src={story.media_url} alt="" width={64} height={64} className="w-full h-full object-cover object-center" loading="lazy" />
       )}
       {!isOwn && (
         <span className="absolute inset-0 rounded-full border-2 border-gold/70 pointer-events-none" />
@@ -495,7 +496,7 @@ function StoryViewer({ story, onClose, supabase }: { story: Story; onClose: () =
             className="w-[300px] h-[540px] sm:w-[340px] sm:h-[600px] object-cover"
             onEnded={() => setEnded(true)} onPlay={e => { if (story.media_type === 'video') { (e.currentTarget as HTMLVideoElement).playbackRate = 1 } }} />
         ) : (
-          <img src={story.media_url} alt={story.caption || ''} className="w-[300px] h-[540px] sm:w-[340px] sm:h-[600px] object-cover" />
+          <Image src={story.media_url} alt={story.caption || ''} width={340} height={600} className="w-[300px] h-[540px] sm:w-[340px] sm:h-[600px] object-cover" />
         )}
         <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/70 to-transparent">
           <p className="text-sm text-white font-medium">{story.caption}</p>
