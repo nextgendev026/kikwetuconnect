@@ -451,7 +451,7 @@ function ShortCard({ short }: { short: Short }) {
           </span>
         </div>
       ) : (
-        <img src={short.media_url!} alt="" className="w-full h-full object-cover" loading="lazy" />
+        <img src={short.media_url!} alt="" className="w-full h-full object-cover object-center" loading="lazy" />
       )}
     </Link>
   )
