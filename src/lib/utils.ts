@@ -8,6 +8,15 @@ export function timeAgo(date: string | Date): string {
   }
 }
 
+export function timeAgoShort(date: string): string {
+  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
+  if (seconds < 60) return 'now'
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d`
+  return new Date(date).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })
+}
+
 export function formatDate(date: string | Date): string {
   try {
     return format(new Date(date), 'MMM d, yyyy')
@@ -26,9 +35,11 @@ export function formatNumber(num: number): string {
   return num.toString()
 }
 
-export function getInitials(name: string): string {
+export function getInitials(name: string | null | undefined): string {
+  if (!name) return '?'
   return name
     .split(' ')
+    .filter(Boolean)
     .map((n) => n[0])
     .join('')
     .toUpperCase()
@@ -38,4 +49,8 @@ export function getInitials(name: string): string {
 export function truncate(text: string, length: number): string {
   if (text.length <= length) return text
   return text.slice(0, length) + '...'
+}
+
+export function cn(...classes: (string | boolean | undefined | null)[]): string {
+  return classes.filter(Boolean).join(' ')
 }

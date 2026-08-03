@@ -1,11 +1,12 @@
 import { createApiClient } from '@/lib/server-supabase'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   const supabase = createApiClient(request)
   const { searchParams } = new URL(request.url)
   const page = parseInt(searchParams.get('page') || '1')
-  const limit = parseInt(searchParams.get('limit') || '20')
+  const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
   const type = searchParams.get('type')
   const county = searchParams.get('county')
   const topic = searchParams.get('topic')
@@ -16,9 +17,7 @@ export async function GET(request: NextRequest) {
     .from('posts')
     .select(`
       *,
-      profiles:user_id (id, username, full_name, avatar_url, county_hub, heshima_rating, is_verified_expert),
-      post_topics (topics:topic_id (name, slug, color)),
-      votes:user_id (vote_type)
+      profiles:user_id (id, username, full_name, avatar_url, county_hub, heshima_rating, is_verified_expert)
     `)
     .is('space_id', null)
     .order('created_at', { ascending: false })
@@ -31,8 +30,9 @@ export async function GET(request: NextRequest) {
     const { data: postIds } = await supabase
       .from('post_topics')
       .select('post_id')
-      .eq('topic_id', topic) as any
+      .eq('topic_id', topic)
     const ids = postIds?.map((p: { post_id: string }) => p.post_id) || []
+    if (ids.length === 0) return NextResponse.json({ posts: [] })
     query = query.in('id', ids)
   }
 
@@ -42,16 +42,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const transformedPosts = (posts as any[])?.map(post => ({
-    ...post,
-    user_vote: post.votes?.[0]?.vote_type || null,
-    tags: post.post_topics?.map((pt: any) => pt.topics?.name).filter(Boolean) || [],
-  })) || []
-
-  return NextResponse.json({ posts: transformedPosts })
+  return NextResponse.json({ posts: posts || [] })
 }
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+  if (!checkRateLimit('posts', ip, 10, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   const supabase = createApiClient(request)
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -59,43 +58,44 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const body = await request.json()
-  const { post_type, title, content, media_url, county_tag, bounty_tokens, topic_ids } = body
+  let body: Record<string, unknown>
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
+
+  const { post_type, title, content, media_url, county_tag, bounty_tokens, category } = body as {
+    post_type?: string; title?: string; content?: string; media_url?: string;
+    county_tag?: string; bounty_tokens?: number; category?: string
+  }
+
+  if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    return NextResponse.json({ error: 'Content is required' }, { status: 400 })
+  }
+
+  const validTypes = ['baraza', 'inquiry', 'article', 'poll']
+  if (post_type && !validTypes.includes(post_type)) {
+    return NextResponse.json({ error: 'Invalid post type' }, { status: 400 })
+  }
 
   const { data: post, error } = await supabase
     .from('posts')
     .insert({
       user_id: user.id,
-      post_type,
-      title,
-      content,
-      media_url,
-      county_tag,
+      post_type: post_type || 'baraza',
+      title: title || null,
+      content: content.trim(),
+      media_url: media_url || null,
+      county_tag: county_tag || null,
       bounty_tokens: bounty_tokens || 0,
-    } as any)
+      category: category || 'Post',
+    })
     .select()
     .single()
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  if (topic_ids && topic_ids.length > 0) {
-    await supabase.from('post_topics').insert(
-      topic_ids.map((topic_id: string) => ({
-        post_id: post.id,
-        topic_id,
-      })) as any
-    )
-  }
-
-  if (bounty_tokens && bounty_tokens > 0) {
-    await supabase.from('tokens').insert({
-      user_id: user.id,
-      amount: -bounty_tokens,
-      type: 'bounty',
-      reference: post.id,
-    } as any)
   }
 
   return NextResponse.json({ post })

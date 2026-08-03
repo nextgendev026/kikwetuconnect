@@ -110,8 +110,8 @@ export default function WalletPage() {
       }
 
       if (profile?.phone) {
-        setMpesaNumber(profile.phone)
-        setTopupPhone(profile.phone)
+        setMpesaNumber(String(profile.phone))
+        setTopupPhone(String(profile.phone))
       }
     } catch (err) {
       console.error('Error fetching wallet data:', err)
@@ -124,7 +124,7 @@ export default function WalletPage() {
     setTopupState('idle')
     setTopupMessage('')
     setTopupAmount('1000')
-    setTopupPhone(profile?.phone || '')
+    setTopupPhone(String(profile?.phone || ''))
     setShowTopup(true)
   }
 

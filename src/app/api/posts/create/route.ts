@@ -1,8 +1,14 @@
 import { createApiClient } from '@/lib/server-supabase'
+import { checkRateLimit } from '@/lib/rate-limit'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+    if (!checkRateLimit('posts-create', ip, 10, 60_000)) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    }
+
     const supabase = createApiClient(request)
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -10,14 +16,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await request.json()
-    const { postType, title, content, mediaUrl, mediaUrls, countyTag, bountyTokens = 0, topics = [], category } = body
+    let body: Record<string, unknown>
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+    }
+
+    const { postType, title, content, mediaUrl, mediaUrls, countyTag, bountyTokens = 0, topics = [], category } = body as {
+      postType?: string; title?: string; content?: string; mediaUrl?: string;
+      mediaUrls?: string[]; countyTag?: string; bountyTokens?: number;
+      topics?: string[]; category?: string
+    }
 
     if (!postType || !content) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    if (content.length < 10) {
+    if (typeof content !== 'string' || content.trim().length < 10) {
       return NextResponse.json({ error: 'Content must be at least 10 characters' }, { status: 400 })
     }
 
@@ -26,13 +42,13 @@ export async function POST(request: NextRequest) {
     }
 
     const allowedCategories = ['Post', 'Ask', 'Poll', 'Nairobi']
-    const validCategory = allowedCategories.includes(category) ? category : 'Post'
+    const validCategory = allowedCategories.includes(category || '') ? category : 'Post'
 
-    const insertData: Record<string, any> = {
+    const insertData: Record<string, unknown> = {
       user_id: user.id,
       post_type: postType,
       title: title || null,
-      content,
+      content: content.trim(),
       media_url: mediaUrl || (mediaUrls && mediaUrls.length > 0 ? mediaUrls[0] : null),
       media_urls: mediaUrls || null,
       county_tag: countyTag || null,
@@ -50,13 +66,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: postError.message }, { status: 400 })
     }
 
-    if (topics.length > 0 && post) {
+    if (topics && topics.length > 0 && post) {
       const postTopics = topics.map((topicId: string) => ({ post_id: post.id, topic_id: topicId }))
       await supabase.from('post_topics').insert(postTopics)
     }
 
     return NextResponse.json({ post, message: 'Post created successfully' })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Create post error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }

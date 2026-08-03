@@ -141,7 +141,7 @@ export default function SpaceDetailPage() {
       await supabase.from('spaces').update({ member_count: (space.member_count || 0) + 1 }).eq('id', space.id)
       setIsMember(true)
       setSpace(prev => prev ? { ...prev, member_count: (prev.member_count || 0) + 1 } : prev)
-      setMembers(prev => [...prev, { user_id: profile.id, role: 'member', profiles: { id: profile.id, full_name: profile.full_name, username: profile.username, avatar_url: profile.avatar_url } }])
+      setMembers(prev => [...prev, { user_id: profile.id, role: 'member', profiles: { id: profile.id, full_name: profile.full_name || '', username: profile.username || '', avatar_url: profile.avatar_url } }])
       toast(`Joined ${space.name}`)
     } catch { toast('Failed to join') }
   }

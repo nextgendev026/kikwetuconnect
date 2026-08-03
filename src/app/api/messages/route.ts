@@ -11,7 +11,6 @@ export async function GET(request: NextRequest) {
 
   if (!conversation_id) return NextResponse.json({ error: 'Missing conversation_id' }, { status: 400 })
 
-  // Verify membership
   const { data: membership } = await supabase
     .from('conversation_participants')
     .select('user_id')
@@ -41,12 +40,29 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { conversation_id, content, message_type, metadata, reply_to } = await request.json()
-  if (!conversation_id || !content) return NextResponse.json({ error: 'Missing conversation_id or content' }, { status: 400 })
+  let body: Record<string, unknown>
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
+
+  const { conversation_id, content, message_type, metadata, reply_to } = body as {
+    conversation_id?: string; content?: string; message_type?: string;
+    metadata?: Record<string, unknown>; reply_to?: string
+  }
+
+  if (!conversation_id || !content) {
+    return NextResponse.json({ error: 'Missing conversation_id or content' }, { status: 400 })
+  }
+
+  if (typeof content !== 'string' || content.trim().length === 0) {
+    return NextResponse.json({ error: 'Content cannot be empty' }, { status: 400 })
+  }
 
   const { data, error } = await supabase.rpc('send_message', {
     p_conversation_id: conversation_id,
-    p_content: content,
+    p_content: content.trim(),
     p_message_type: message_type || 'text',
     p_metadata: metadata || {},
     p_reply_to: reply_to || null,
@@ -62,7 +78,14 @@ export async function PATCH(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { conversation_id } = await request.json()
+  let body: Record<string, unknown>
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
+
+  const { conversation_id } = body as { conversation_id?: string }
   if (!conversation_id) return NextResponse.json({ error: 'Missing conversation_id' }, { status: 400 })
 
   const { error } = await supabase.rpc('mark_conversation_read', {

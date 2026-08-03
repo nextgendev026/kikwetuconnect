@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || 'Upload error' }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
   }
 }

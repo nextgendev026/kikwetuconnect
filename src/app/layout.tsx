@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Plus_Jakarta_Sans, DM_Sans } from 'next/font/google'
 import { Analytics } from "@vercel/analytics/next"
 import './globals.css'
-import { Providers, ShellRouter } from './providers'
+import { Providers } from './providers'
 import PwaSetup from '@/components/PwaSetup'
 import ErrorBoundary from '@/components/ErrorBoundary'
 
@@ -56,7 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen antialiased">
         <Providers>
           <ErrorBoundary>
-            <ShellRouter>{children}</ShellRouter>
+            {children}
           </ErrorBoundary>
           <PwaSetup />
         </Providers>

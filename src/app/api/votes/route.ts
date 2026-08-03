@@ -1,23 +1,40 @@
 import { createApiClient, createServiceClient } from '@/lib/server-supabase'
 import { trackActivity } from '@/lib/activity'
 import { dispatchPushForNotification } from '@/lib/push-notifications'
+import { checkRateLimit, getRateLimitHeaders } from '@/lib/rate-limit'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+  if (!checkRateLimit('votes-post', ip, 30, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   const supabase = createApiClient(request)
   const svc = createServiceClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const body = await request.json()
-  const { target_type, target_id, vote_type } = body
-  if (!['post', 'answer'].includes(target_type)) {
+
+  let body: Record<string, unknown>
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
+
+  const { target_type, target_id, vote_type } = body as { target_type?: string; target_id?: string; vote_type?: number }
+  if (!['post', 'answer'].includes(target_type || '')) {
     return NextResponse.json({ error: 'Invalid target type' }, { status: 400 })
   }
-  if (![1, -1].includes(vote_type)) {
+  if (![1, -1].includes(vote_type || 0)) {
     return NextResponse.json({ error: 'Invalid vote type' }, { status: 400 })
   }
+  if (!target_id || typeof target_id !== 'string') {
+    return NextResponse.json({ error: 'Invalid target ID' }, { status: 400 })
+  }
+
   const { data: existingVote } = await supabase
     .from('votes')
     .select('id, vote_type')
@@ -68,6 +85,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+  if (!checkRateLimit('votes-delete', ip, 30, 60_000)) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+  }
+
   const supabase = createApiClient(request)
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {

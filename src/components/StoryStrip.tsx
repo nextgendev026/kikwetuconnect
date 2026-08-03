@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSupabase, toast } from '@/app/providers'
 import { Play, Plus, PlusIcon } from 'lucide-react'
+import { getInitials } from '@/lib/utils'
 
 interface Story {
   id: string
@@ -41,11 +42,6 @@ function timeLeft(exp: string) {
   const h = Math.floor(ms / 3600000)
   const m = Math.floor((ms % 3600000) / 60000)
   return `${h}h ${m}m`
-}
-
-function initials(name: string | null | undefined): string {
-  if (!name) return '?'
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
 export default function StoryStrip({ profile }: StoryStripProps) {
@@ -208,7 +204,7 @@ export default function StoryStrip({ profile }: StoryStripProps) {
 function ShortCard({ short }: { short: Short }) {
   const author = short.profiles
   const isVideo = short.media_type?.startsWith('video/')
-  const fallback = initials(author?.full_name || author?.username)
+  const fallback = getInitials(author?.full_name || author?.username)
   return (
     <Link
       href={`/posts/${short.id}`}

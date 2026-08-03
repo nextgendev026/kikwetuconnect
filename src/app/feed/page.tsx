@@ -9,8 +9,9 @@ import StoryStrip from '@/components/StoryStrip'
 import RichText, { stripMarkdown } from '@/components/RichText'
 import { COUNTIES, TABS, TYPE_FILTERS, EMOJI_REACTIONS } from '@/lib/feed-config'
 import type { TabId, TypeFilter } from '@/lib/feed-config'
+import { timeAgoShort, getInitials } from '@/lib/utils'
 
-interface Profile {
+export interface Profile {
   id: string
   full_name: string | null
   username: string
@@ -29,7 +30,7 @@ interface SaveRow {
   target_id: string
 }
 
-interface Post {
+export interface Post {
   id: string
   user_id: string
   post_type: string
@@ -48,20 +49,6 @@ interface Post {
   profiles: Profile | null
   user_vote?: 1 | -1 | null
   user_saved?: boolean
-}
-
-function timeAgo(date: string): string {
-  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000)
-  if (seconds < 60) return 'now'
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
-  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`
-  return new Date(date).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })
-}
-
-function getInitials(name: string | null | undefined): string {
-  if (!name) return '?'
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
 }
 
 function SkeletonCard() {
@@ -272,7 +259,7 @@ function PostCardComponent({
               {post.category}
             </span>
           )}
-          <span className="text-[var(--muted)] text-[11px] whitespace-nowrap">{timeAgo(post.created_at)}</span>
+          <span className="text-[var(--muted)] text-[11px] whitespace-nowrap">{timeAgoShort(post.created_at)}</span>
           {currentUserId === post.user_id && (
             <div className="relative">
               <button onClick={() => setShowMenu(!showMenu)} className="action-button w-[28px] h-[28px]" aria-label="Post options">

@@ -175,7 +175,7 @@ export default function StudentsPage() {
         </div>
         <div style={s.cardSm}>
           <Flame className="w-4 h-4 mb-1" style={{ color: 'var(--gold-text)' }} />
-          <div className="text-xl font-bold" style={{ color: 'var(--gold-text)' }}>{profile?.streak_days || 0}</div>
+          <div className="text-xl font-bold" style={{ color: 'var(--gold-text)' }}>{Number(profile?.streak_days) || 0}</div>
           <p className="text-[10px]" style={{ color: 'var(--muted)' }}>Day Streak</p>
         </div>
         <div style={s.cardSm}>
@@ -185,7 +185,7 @@ export default function StudentsPage() {
         </div>
         <div style={s.cardSm}>
           <Clock className="w-4 h-4 mb-1" style={{ color: 'var(--earth)' }} />
-          <div className="text-xl font-bold" style={{ color: 'var(--earth)' }}>{profile?.quizzes_completed || 0}</div>
+          <div className="text-xl font-bold" style={{ color: 'var(--earth)' }}>{Number(profile?.quizzes_completed) || 0}</div>
           <p className="text-[10px]" style={{ color: 'var(--muted)' }}>Quizzes</p>
         </div>
       </div>

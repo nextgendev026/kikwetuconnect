@@ -60,11 +60,11 @@ export default function ProfilePage() {
 
   // Optimistic local display profile
   const displayProfile = useMemo(() => profile ? {
-    ...profile,
-    avatar_url: localAvatarUrl || profile.avatar_url,
-    cover_url: localCoverUrl || profile.cover_url,
-    follower_count: followerCount || profile.follower_count || 0,
-    following_count: followingCount || profile.following_count || 0,
+    ...(profile as Record<string, unknown>),
+    avatar_url: localAvatarUrl || (profile as Record<string, unknown>).avatar_url,
+    cover_url: localCoverUrl || (profile as Record<string, unknown>).cover_url,
+    follower_count: followerCount || (profile as Record<string, unknown>).follower_count || 0,
+    following_count: followingCount || (profile as Record<string, unknown>).following_count || 0,
   } : null, [profile, localAvatarUrl, localCoverUrl, followerCount, followingCount])
 
   // Realtime subscription for profile changes
@@ -312,7 +312,7 @@ export default function ProfilePage() {
   return (
     <div className="animate-fade-in-up">
       <ProfileHeader
-        profile={displayProfile || profile}
+        profile={(displayProfile || profile) as any}
         isOwn={true}
         supabase={supabase}
         postCount={postCount}
@@ -340,8 +340,8 @@ export default function ProfilePage() {
           <div className="flex-1">
             <h2 className="font-bold text-sm">Heshima Points</h2>
             <div className="flex items-center gap-3 mt-1">
-              <p className="text-xs text-muted">Balance: <strong className="text-green">{profile.heshima_balance || 0}</strong></p>
-              <p className="text-xs text-muted">Streak: <strong className="text-gold">{profile.streak_days || 0}d</strong></p>
+              <p className="text-xs text-muted">Balance: <strong className="text-green">{Number((profile as Record<string, unknown>).heshima_balance) || 0}</strong></p>
+              <p className="text-xs text-muted">Streak: <strong className="text-gold">{Number((profile as Record<string, unknown>).streak_days) || 0}d</strong></p>
             </div>
             {profile.heshima_rating >= 1000 && (
               <div className="flex items-center gap-1.5 mt-2">
@@ -349,11 +349,11 @@ export default function ProfilePage() {
                 <span className="text-xs font-medium text-gold">Community Sage</span>
               </div>
             )}
-            {profile.is_expert && (
+            {Boolean((profile as Record<string, unknown>).is_expert) && (
               <div className="flex items-center gap-1.5 mt-1">
                 <Shield className="w-4 h-4 text-green" />
                 <span className="text-xs font-medium text-green">
-                  Verified Expert {profile.expert_since ? `since ${new Date(profile.expert_since).toLocaleDateString()}` : ''}
+                  Verified Expert {String((profile as Record<string, unknown>).expert_since || '') ? `since ${new Date(String((profile as Record<string, unknown>).expert_since)).toLocaleDateString()}` : ''}
                 </span>
               </div>
             )}

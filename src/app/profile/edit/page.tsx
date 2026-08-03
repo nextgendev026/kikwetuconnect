@@ -225,7 +225,7 @@ export default function EditProfilePage() {
                   Member Since
                 </label>
                 <p className="text-sm p-3 rounded-lg bg-surface border border-line">
-                  {new Date(profile.created_at).toLocaleDateString('en-KE', {
+                  {new Date(profile.created_at as string).toLocaleDateString('en-KE', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',

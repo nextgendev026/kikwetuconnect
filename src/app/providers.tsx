@@ -1,355 +1,54 @@
 'use client'
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
+import { createContext, useContext, useState, type ReactNode } from 'react'
 import { createBrowserClient } from '@/lib/supabase'
-import { getJwtSessionId } from '@/lib/session'
 import { usePathname } from 'next/navigation'
+import { AuthProvider, useUser } from './providers/auth-provider'
+import { ThemeProvider } from './providers/theme-provider'
+import { NotificationProvider } from './providers/notification-provider'
+import { ToastProvider, toast } from './providers/toast-provider'
+import AppShell from './AppShell'
+
+export { toast } from './providers/toast-provider'
+export { useUser } from './providers/auth-provider'
+export { useTheme } from './providers/theme-provider'
+export { useNotifications } from './providers/notification-provider'
 
 type SupabaseClient = ReturnType<typeof createBrowserClient>
-
 const SupabaseCtx = createContext<SupabaseClient | undefined>(undefined)
-const UserCtx = createContext<{ user: any; profile: any; loading: boolean; refreshProfile: () => void }>({ user: null, profile: null, loading: true, refreshProfile: () => {} })
-const ThemeCtx = createContext<{ theme: string; toggleTheme: () => void }>({ theme: 'light', toggleTheme: () => {} })
 
-// Notification context
-interface Notification {
-  id: string
-  type: string
-  title: string
-  body: string
-  data: Record<string, any>
-  is_read: boolean
-  created_at: string
-}
-
-const NotifCtx = createContext<{
-  notifications: Notification[]
-  unreadCount: number
-  fetchNotifications: () => Promise<void>
-  markAsRead: (id: string) => Promise<void>
-  markAllAsRead: () => Promise<void>
-  subscribe: () => void
-  unsubscribe: () => void
-}>({
-  notifications: [],
-  unreadCount: 0,
-  fetchNotifications: async () => {},
-  markAsRead: async () => {},
-  markAllAsRead: async () => {},
-  subscribe: () => {},
-  unsubscribe: () => {},
-})
-
-export function toast(msg: string, type?: 'info' | 'success' | 'error') {
-  if (typeof window !== 'undefined') {
-    const el = document.getElementById('global-toast')
-    if (el) {
-      el.textContent = msg
-      el.className = 'toast'
-      if (type && type !== 'info') el.classList.add(type)
-      el.classList.add('show')
-      setTimeout(() => el.classList.remove('show'), 2400)
-    }
-  }
+export const useSupabase = () => {
+  const c = useContext(SupabaseCtx)
+  if (!c) throw new Error('Missing SupabaseProvider')
+  return c
 }
 
 const publicPaths = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/auth/callback', '/onboarding', '/welcome']
 
-export function ShellRouter({ children }: { children: React.ReactNode }) {
+function ShellRouter({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const { user } = useUser()
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
   const isPublic = publicPaths.some(p => pathname === p || pathname.startsWith(p + '/')) || pathname.startsWith('/admin')
-  // Shared posts are anonymous read-only: no app chrome, no login redirect.
   const isAnonymousSharedPost = !user && pathname.startsWith('/posts')
-  if (!mounted) return <div style={{ minHeight: '100vh', background: 'var(--bg)' }} />
-  return <>{isPublic || isAnonymousSharedPost ? children : <AppShell>{children}</AppShell>}</>
+  if (isPublic || isAnonymousSharedPost) return <>{children}</>
+  return <AppShell>{children}</AppShell>
 }
 
-import AppShell from './AppShell'
-
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children }: { children: ReactNode }) {
   const [supabase] = useState(() => createBrowserClient())
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [theme, setTheme] = useState('light')
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
-  const notifChannelRef = useRef<any>(null)
-  const heshimaChannelRef = useRef<any>(null)
-  const profileChannelRef = useRef<any>(null)
-  // Guards against cross-account "fusing": when switching users quickly,
-  // a slow fetchProfile(A) must never overwrite the profile of user B.
-  const activeUserIdRef = useRef<string | null>(null)
-  // Single-active-session enforcement: current JWT session id + signed-out guard.
-  const sessionIdRef = useRef<string | null>(null)
-  const signedOutRef = useRef(false)
-  const claimInFlightRef = useRef(false)
-
-  useEffect(() => {
-    const saved = localStorage.getItem('kikwetu-theme') || 'light'
-    setTheme(saved)
-    document.body.setAttribute('data-theme', saved)
-  }, [])
-
-  const toggleTheme = useCallback(() => {
-    setTheme(prev => {
-      const next = prev === 'dark' ? 'light' : 'dark'
-      localStorage.setItem('kikwetu-theme', next)
-      document.body.setAttribute('data-theme', next)
-      return next
-    })
-  }, [])
-
-  const fetchProfile = useCallback(async (id: string) => {
-    try {
-      const { data } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle()
-      // Only apply if this user is STILL the active session (prevents account fusing)
-      if (data && activeUserIdRef.current === id) setProfile(data)
-      return data
-    } catch (e) {
-      console.error('fetchProfile error:', e)
-      return null
-    }
-  }, [supabase])
-
-  const refreshProfile = useCallback(async () => {
-    const { data: { user: u } } = await supabase.auth.getUser()
-    if (u) { setUser(u); await fetchProfile(u.id) }
-  }, [supabase, fetchProfile])
-
-  // Force sign-out because the account was logged in elsewhere (or the session expired).
-  const forceSignOut = useCallback(async (reason: string) => {
-    if (signedOutRef.current) return
-    signedOutRef.current = true
-    try { await supabase.auth.signOut() } catch { /* ignore */ }
-    toast(reason)
-    setTimeout(() => {
-      const url = new URL('/signup', window.location.origin)
-      url.searchParams.set('mode', 'login')
-      url.searchParams.set('reason', 'elsewhere')
-      window.location.href = url.toString()
-    }, 250)
-  }, [supabase])
-
-  // Ask the server whether this session is still the active one.
-  const checkSession = useCallback(async () => {
-    if (claimInFlightRef.current) return
-    try {
-      const r = await fetch('/api/auth/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'check' }),
-      })
-      const d = await r.json()
-      if (d && d.ok === false) void forceSignOut('Signed out — you logged in on another device')
-    } catch { /* non-fatal */ }
-  }, [forceSignOut])
-
-  // Mark this session as the account's only active session (called on login).
-  const claimSession = useCallback(async () => {
-    claimInFlightRef.current = true
-    try {
-      await fetch('/api/auth/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'claim' }),
-      })
-    } catch { /* non-fatal */ }
-    claimInFlightRef.current = false
-    void checkSession()
-  }, [checkSession])
-
-  // Revalidate the session on load, on window focus, and periodically.
-  useEffect(() => {
-    if (!user) return
-    void checkSession()
-    const onVisible = () => { if (document.visibilityState === 'visible') void checkSession() }
-    window.addEventListener('focus', onVisible)
-    document.addEventListener('visibilitychange', onVisible)
-    const id = setInterval(() => void checkSession(), 60_000)
-    return () => {
-      window.removeEventListener('focus', onVisible)
-      document.removeEventListener('visibilitychange', onVisible)
-      clearInterval(id)
-    }
-  }, [user, checkSession])
-
-  // Notifications
-  const fetchNotifications = useCallback(async () => {
-    if (!user) return
-    const { data } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(50)
-    if (data) {
-      setNotifications(data as Notification[])
-      setUnreadCount(data.filter((n: Notification) => !n.is_read).length)
-    }
-  }, [supabase, user])
-
-  const markAsRead = useCallback(async (id: string) => {
-    await supabase.from('notifications').update({ is_read: true }).eq('id', id)
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
-    setUnreadCount(prev => Math.max(0, prev - 1))
-  }, [supabase])
-
-  const markAllAsRead = useCallback(async () => {
-    if (!user) return
-    await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false)
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
-    setUnreadCount(0)
-  }, [supabase, user])
-
-  const subscribeToNotifications = useCallback(() => {
-    if (!user || notifChannelRef.current) return
-    const channel = supabase.channel('notifications')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
-        const notif = payload.new as Notification
-        setNotifications(prev => [notif, ...prev])
-        setUnreadCount(prev => prev + 1)
-        if (notif.type === 'message') toast(`New message from ${notif.data?.sender_name || 'someone'}`)
-        else toast(notif.title)
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
-        const notif = payload.new as Notification
-        setNotifications(prev => prev.map(n => n.id === notif.id ? notif : n))
-        setUnreadCount(prev => Math.max(0, prev - (notif.is_read ? 1 : 0)))
-      })
-      .subscribe()
-    notifChannelRef.current = channel
-  }, [supabase, user])
-
-  const subscribeToHeshima = useCallback(() => {
-    if (!user || heshimaChannelRef.current) return
-    const channel = supabase.channel('heshima')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'heshima_earnings', filter: `user_id=eq.${user.id}` }, (payload: any) => {
-        const e = payload.new
-        toast(`+${e.amount} Heshima${e.description ? ' — ' + e.description : ''}`)
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_badges', filter: `user_id=eq.${user.id}` }, () => {
-        toast('Badge unlocked 🎉')
-      })
-      .subscribe()
-    heshimaChannelRef.current = channel
-  }, [supabase, user])
-
-  const unsubscribeFromHeshima = useCallback(() => {
-    if (heshimaChannelRef.current) {
-      supabase.removeChannel(heshimaChannelRef.current)
-      heshimaChannelRef.current = null
-    }
-  }, [supabase])
-
-  const unsubscribeFromNotifications = useCallback(() => {
-    if (notifChannelRef.current) {
-      supabase.removeChannel(notifChannelRef.current)
-      notifChannelRef.current = null
-    }
-  }, [supabase])
-
-  const subscribeToProfile = useCallback(() => {
-    if (!user || profileChannelRef.current) return
-    const channel = supabase.channel(`profile-${user.id}`)
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
-        (payload: any) => {
-          const updated = (payload.new as any) || null
-          setProfile(updated)
-          // Another login bumped active_session_id → this session is stale.
-          const active = updated?.active_session_id ?? null
-          if (active && sessionIdRef.current && active !== sessionIdRef.current) {
-            void forceSignOut('Signed out — you logged in on another device')
-          }
-        }
-      )
-      .subscribe()
-    profileChannelRef.current = channel
-  }, [supabase, user, forceSignOut])
-
-  const unsubscribeFromProfile = useCallback(() => {
-    if (profileChannelRef.current) {
-      supabase.removeChannel(profileChannelRef.current)
-      profileChannelRef.current = null
-    }
-  }, [supabase])
-
-  useEffect(() => {
-    let cancelled = false
-    const timeout = setTimeout(() => { if (!cancelled) setLoading(false) }, 8000)
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (cancelled) return
-      // Mark the active session synchronously so stale fetches can't leak across accounts
-      activeUserIdRef.current = session?.user?.id ?? null
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        const sid = getJwtSessionId(session.access_token)
-        sessionIdRef.current = sid
-        // Claim on a fresh login so this device becomes the single active session.
-        if (sid && event === 'SIGNED_IN') void claimSession()
-        const p = await fetchProfile(session.user.id)
-        if (!cancelled) {
-          if (!p) console.warn('No profile found for user', session.user.id)
-          setLoading(false)
-        }
-      } else {
-        sessionIdRef.current = null
-        signedOutRef.current = false
-        setProfile(null)
-        setLoading(false)
-      }
-      clearTimeout(timeout)
-    })
-    return () => { cancelled = true; subscription.unsubscribe() }
-  }, [supabase, fetchProfile, claimSession])
-
-  useEffect(() => {
-    if (user) {
-      fetchNotifications()
-      subscribeToNotifications()
-      subscribeToHeshima()
-      subscribeToProfile()
-    } else {
-      setNotifications([])
-      setUnreadCount(0)
-      unsubscribeFromNotifications()
-      unsubscribeFromHeshima()
-      unsubscribeFromProfile()
-    }
-    return () => { unsubscribeFromNotifications(); unsubscribeFromHeshima(); unsubscribeFromProfile() }
-  }, [user, fetchNotifications, subscribeToNotifications, unsubscribeFromNotifications, subscribeToHeshima, unsubscribeFromHeshima, subscribeToProfile, unsubscribeFromProfile])
-
-  // Admin activity logging helper
-  const logAdminActivity = useCallback(async (action: string, targetType?: string, targetId?: string, details?: Record<string, any>) => {
-    if (!user) return
-    await supabase.rpc('admin_log_activity', {
-      p_action: action,
-      p_target_type: targetType,
-      p_target_id: targetId,
-      p_details: details || {},
-    })
-  }, [supabase, user])
 
   return (
     <SupabaseCtx.Provider value={supabase}>
-      <ThemeCtx.Provider value={{ theme, toggleTheme }}>
-        <UserCtx.Provider value={{ user, profile, loading, refreshProfile }}>
-          <NotifCtx.Provider value={{ notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead, subscribe: subscribeToNotifications, unsubscribe: unsubscribeFromNotifications }}>
-            {children}
-            <div className="toast" id="global-toast"></div>
-          </NotifCtx.Provider>
-        </UserCtx.Provider>
-      </ThemeCtx.Provider>
+      <ToastProvider>
+        <AuthProvider supabase={supabase}>
+          <ThemeProvider>
+            <NotificationProvider>
+              <ShellRouter>
+                {children}
+              </ShellRouter>
+            </NotificationProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </ToastProvider>
     </SupabaseCtx.Provider>
   )
 }
-
-export const useSupabase = () => { const c = useContext(SupabaseCtx); if (!c) throw new Error('Missing SupabaseProvider'); return c }
-export const useUser = () => useContext(UserCtx)
-export const useTheme = () => useContext(ThemeCtx)
-export const useNotifications = () => useContext(NotifCtx)
-export const useAdminActivity = () => ({ logAdminActivity: () => {} }) // placeholder, use inside components with supabase

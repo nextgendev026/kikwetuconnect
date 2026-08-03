@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ ok: false, error: 'Unknown action' }, { status: 400 })
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e.message || 'Session error' }, { status: 500 })
+  } catch {
+    return NextResponse.json({ ok: false, error: 'Session error' }, { status: 500 })
   }
 }

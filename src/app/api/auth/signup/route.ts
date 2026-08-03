@@ -1,5 +1,6 @@
 import { createApiClient } from '@/lib/server-supabase'
 import { trackActivity } from '@/lib/activity'
+import { validateBody, signupSchema } from '@/lib/validation'
 import { NextRequest, NextResponse } from 'next/server'
 
 type PendingSignup = { at: number }
@@ -21,28 +22,19 @@ function rateLimited(email: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, fullName, username, phone, county, area, language, role, device, referrer } = await request.json()
-
-    if (!email || !password || !fullName) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      )
+    let body: Record<string, unknown>
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: 'Password must be at least 8 characters' },
-        { status: 400 }
-      )
+    const validation = validateBody(signupSchema, body)
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
-    if (!email.includes('@')) {
-      return NextResponse.json(
-        { error: 'Invalid email address' },
-        { status: 400 }
-      )
-    }
+    const { email, password, full_name, username } = validation.data
 
     const wait = rateLimited(email)
     if (wait > 0) {
@@ -60,15 +52,8 @@ export async function POST(request: NextRequest) {
       password,
       options: {
         data: {
-          full_name: fullName,
+          full_name,
           username: username || null,
-          phone: phone || null,
-          county_hub: county || null,
-          area: area || null,
-          preferred_language: language || null,
-          role: role || null,
-          device: device || null,
-          signup_referrer: referrer || null,
         },
       },
     })
@@ -90,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     await trackActivity(supabase, {
       eventType: 'signup',
-      metadata: { county: county || null, area: area || null, role: role || null, device: device || null },
+      metadata: { email },
     }, data.user?.id || null)
 
     return NextResponse.json({

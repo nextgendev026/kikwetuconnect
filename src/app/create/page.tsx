@@ -93,7 +93,7 @@ export default function CreatePage() {
       const urls: string[] = []
       for (const m of mediaFiles) {
         const ext = m.file.name.split('.').pop() || 'jpg'
-        const path = `posts/${profile.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+        const path = `posts/${profile!.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
         const { error: upErr } = await supabase.storage.from('public-media').upload(path, m.file, { upsert: false })
         if (upErr) throw upErr
         const { data: { publicUrl } } = supabase.storage.from('public-media').getPublicUrl(path)

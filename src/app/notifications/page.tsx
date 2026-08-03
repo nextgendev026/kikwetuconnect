@@ -97,6 +97,7 @@ export default function NotificationsPage() {
 
   const markAllAsRead = async () => {
     try {
+      if (!profile) return
       await supabase.from('notifications').update({ is_read: true }).eq('user_id', profile.id).eq('is_read', false)
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
       setUnreadCount(0)

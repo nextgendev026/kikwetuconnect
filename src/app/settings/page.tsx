@@ -84,15 +84,15 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!profile) return
-    setFullName(profile.full_name || '')
-    setUsername(profile.username || '')
-    setCounty(profile.county_hub || '')
-    setArea(profile.area || '')
-    setPhone(profile.phone || '')
-    setNotifPref(profile.notif_pref || 'important')
-    setVisibility(profile.visibility || 'public')
-    setBio(profile.bio || '')
-    setLanguage(profile.preferred_language || 'en')
+    setFullName(String(profile.full_name || ''))
+    setUsername(String(profile.username || ''))
+    setCounty(String(profile.county_hub || ''))
+    setArea(String(profile.area || ''))
+    setPhone(String(profile.phone || ''))
+    setNotifPref(String(profile.notif_pref || 'important'))
+    setVisibility(String(profile.visibility || 'public'))
+    setBio(String(profile.bio || ''))
+    setLanguage(String(profile.preferred_language || 'en'))
     loadLocalPrefs()
   }, [profile])
 
