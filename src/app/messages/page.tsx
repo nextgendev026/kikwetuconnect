@@ -1,10 +1,13 @@
 'use client'
-import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 import { useUser, useSupabase, toast } from '@/app/providers'
 import { useConversations, useMessages, Message } from '@/hooks/useConversations'
 import { usePresence } from '@/hooks/usePresence'
-import { Trash2, X } from 'lucide-react'
+import { Virtuoso } from 'react-virtuoso'
+import imageCompression from 'browser-image-compression'
+import { Trash2, X, RotateCcw, Paperclip, ImagePlus, Loader2 } from 'lucide-react'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -25,11 +28,41 @@ function MessagesInner() {
   const [replyTo, setReplyTo] = useState<{ id: string; content: string } | null>(null)
   const [selectMode, setSelectMode] = useState(false)
   const [selectedConvs, setSelectedConvs] = useState<Set<string>>(new Set())
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [pendingFiles, setPendingFiles] = useState<Array<{ id: string; file: File; preview: string }>>([])
+  const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({})
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<any>(null)
 
-  const { messages, loading: msgsLoading, sendMessage, sendMediaMessage, startTyping, typingUsers, addReaction, removeReaction } = useMessages(convId)
+  const { messages, loading: msgsLoading, hasEarlier, loadEarlier, sendMessage, sendMediaMessage, retryMessage, discardMessage, startTyping, typingUsers, addReaction, removeReaction } = useMessages(convId)
+
+  useEffect(() => {
+    const needSigning = messages.filter(m => {
+      const path = m.metadata?.path
+      return path && !m.id.startsWith('temp-') && !mediaUrls[path]
+    }) 
+    if (needSigning.length === 0) return
+    let cancelled = false
+    ;(async () => {
+      const entries = await Promise.all(needSigning.map(async m => {
+        try {
+          const res = await fetch('/api/media/signed', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messageId: m.id, path: m.metadata?.path }),
+          })
+          if (!res.ok) return null
+          const data = await res.json()
+          return data?.url ? { [m.metadata?.path as string]: data.url } : null
+        } catch { return null }
+      }))
+      if (cancelled) return
+      const merged: Record<string, string> = {}
+      entries.forEach(e => { if (e) Object.assign(merged, e) })
+      if (Object.keys(merged).length > 0) setMediaUrls(prev => ({ ...prev, ...merged }))
+    })()
+    return () => { cancelled = true }
+  }, [messages, mediaUrls])
 
   const openConversationWith = useCallback(async (userId: string) => {
     if (!supabase || !user || !UUID_RE.test(userId)) return
@@ -63,8 +96,6 @@ function MessagesInner() {
     }
   }, [searchParams, openConversationWith])
 
-  useEffect(() => { if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'smooth' }) }, [messages])
-
   const activeConv = conversations.find(c => c.id === convId)
   const convTitle = activeConv ? (activeConv.type === 'support' ? 'KikwetuConnect Support' : activeConv.participants.map(p => p?.full_name || p?.username || 'User').join(', ') || 'Conversation') : ''
   const convAvatar = activeConv?.participants?.[0]
@@ -80,29 +111,89 @@ function MessagesInner() {
   })
 
   const handleSend = async () => {
-    if (!input.trim()) return
     const content = input.trim()
+    const hasFiles = pendingFiles.length > 0
+    if (!content && !hasFiles) return
     setInput('')
-    if (replyTo) {
-      await sendMessage(content, 'text', { reply_to: replyTo.id, reply_content: replyTo.content })
-      setReplyTo(null)
-    } else {
-      await sendMessage(content)
+
+    const onProgress = (p: number) => { /* progress tracked per-pending message */ }
+
+    if (content && !hasFiles) {
+      if (replyTo) {
+        await sendMessage(content, 'text', { reply_to: replyTo.id, reply_content: replyTo.content })
+        setReplyTo(null)
+      } else {
+        await sendMessage(content)
+      }
+    }
+    if (hasFiles) {
+      const files = pendingFiles
+      setPendingFiles([])
+      for (const item of files) {
+        const type = item.file.type.startsWith('image/') ? 'image' : 'file'
+        const toUpload = await compressImageIfNeeded(item.file)
+        await sendMediaMessage(toUpload, type, onProgress)
+      }
+      if (content && replyTo) setReplyTo(null)
     }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
     else if (e.key === 'Enter' && e.shiftKey) { /* allow newline */ }
-    else startTyping()
+    else if (!e.metaKey && !e.ctrlKey && !e.altKey) startTyping()
+  }
+
+  const addPendingFiles = (fileList: FileList | File[] | null) => {
+    if (!fileList) return
+    const files = Array.from(fileList)
+    for (const file of files) {
+      if (file.size > 20 * 1024 * 1024) { toast('Max 20MB per file'); continue }
+      const id = `pending-${Date.now()}-${Math.random().toString(36).slice(2)}`
+      const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : ''
+      setPendingFiles(prev => [...prev, { id, file, preview }])
+    }
   }
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (file.size > 20 * 1024 * 1024) { toast('Max 20MB'); return }
-    await sendMediaMessage(file, type === 'image/*' ? 'image' : 'file')
+    addPendingFiles(e.target.files)
     e.target.value = ''
+  }
+
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const files = e.clipboardData?.files
+    if (files && files.length > 0) { addPendingFiles(files); e.preventDefault() }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation() }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation()
+    addPendingFiles(e.dataTransfer?.files)
+  }
+
+  const removePendingFile = (id: string) => {
+    setPendingFiles(prev => {
+      const item = prev.find(p => p.id === id)
+      if (item?.preview) URL.revokeObjectURL(item.preview)
+      return prev.filter(p => p.id !== id)
+    })
+  }
+
+  const handleRetry = (messageId: string) => { retryMessage(messageId) }
+  const handleDiscard = (messageId: string) => { discardMessage(messageId) }
+
+  const compressImageIfNeeded = async (file: File): Promise<File> => {
+    if (!file.type.startsWith('image/')) return file
+    if (file.size <= 1024 * 1024) return file
+    try {
+      return await imageCompression(file, {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1600,
+        useWebWorker: true,
+        fileType: file.type,
+      })
+    } catch { return file }
   }
 
   const handleReaction = async (messageId: string, emoji: string) => {
@@ -140,19 +231,33 @@ function MessagesInner() {
     return date.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined })
   }
 
-  const shouldShowDate = (idx: number) => {
-    if (idx === 0) return true
-    const curr = new Date(messages[idx].created_at)
-    const prev = new Date(messages[idx - 1].created_at)
-    return curr.toDateString() !== prev.toDateString()
-  }
-
   const isOwn = (senderId: string) => senderId === user?.id
 
-  const isLastInGroup = (idx: number) => {
-    const next = messages[idx + 1]
-    return !next || next.sender_id !== messages[idx].sender_id
-  }
+  type ListRow =
+    | { kind: 'date'; date: string; key: string }
+    | { kind: 'msg'; msg: Message; idx: number; isLast: boolean; key: string }
+
+  const rows: ListRow[] = useMemo(() => {
+    const out: ListRow[] = []
+    messages.forEach((msg, idx) => {
+      if (idx === 0 || new Date(msg.created_at).toDateString() !== new Date(messages[idx - 1].created_at).toDateString()) {
+        out.push({ kind: 'date', date: msg.created_at, key: `d-${msg.id}` })
+      }
+      const next = messages[idx + 1]
+      const isLast = !next || next.sender_id !== msg.sender_id
+      out.push({ kind: 'msg', msg, idx, isLast, key: msg.id })
+    })
+    return out
+  }, [messages])
+
+  const initialIndex = rows.length > 0 ? rows.length - 1 : 0
+
+  const handleRangeChanged = useCallback((range: { startIndex: number; endIndex: number }) => {
+    if (range.startIndex <= 5 && hasEarlier && !msgsLoading) loadEarlier()
+  }, [hasEarlier, msgsLoading, loadEarlier])
+
+  const isPending = (msg: Message) => msg.status === 'sending' || msg.status === 'failed'
+  const isTemp = (msg: Message) => msg.id.startsWith('temp-')
 
   if (!user) return <div className="flex items-center justify-center min-h-screen" style={{ background: 'var(--bg)' }}><p style={{ color: 'var(--muted)' }}>Sign in to see messages</p></div>
 
@@ -294,25 +399,55 @@ function MessagesInner() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-3 py-3" style={{ background: 'var(--bg)' }}>
+            <div className="flex-1 overflow-y-auto px-3 py-3" style={{ background: 'var(--bg)' }} onDragOver={handleDragOver} onDrop={handleDrop}>
               {msgsLoading ? (
                 <div className="flex justify-center py-10"><div className="w-[24px] h-[24px] rounded-full animate-spin" style={{ border: '2px solid var(--gold)', borderTopColor: 'transparent' }} /></div>
               ) : messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full">
+                <div className="flex items-center justify-center h-full flex-col gap-2">
                   <p className="text-xs" style={{ color: 'var(--muted)' }}>No messages yet. Say hello!</p>
+                  <p className="text-[10px]" style={{ color: 'var(--faint-accessible)' }}>Drop an image here, or paste one from your clipboard</p>
                 </div>
               ) : (
-                <div className="flex flex-col">
-                  {messages.map((msg, idx) => (
-                    <div key={msg.id}>
-                      {shouldShowDate(idx) && (
+                <Virtuoso
+                  ref={listRef}
+                  data={rows}
+                  initialTopMostItemIndex={initialIndex}
+                  atBottomThreshold={120}
+                  followOutput={(isAtBottom) => (isAtBottom ? 'smooth' : false)}
+                  rangeChanged={handleRangeChanged}
+                  style={{ height: '100%' }}
+                  components={{
+                    Header: hasEarlier ? () => (
+                      <div className="flex justify-center py-3">
+                        <button onClick={() => void loadEarlier()} className="px-4 py-1.5 rounded-full text-[11px] font-bold border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--ink)' }}>Load earlier messages</button>
+                      </div>
+                    ) : () => null,
+                    Footer: () => (
+                      <div>
+                        {typingUsers.length > 0 && (
+                          <div className="flex items-center gap-1.5 py-1.5 text-xs" style={{ color: 'var(--muted)' }}>
+                            <div className="flex gap-0.5"><span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--muted)', animationDelay: '0ms' }} /><span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--muted)', animationDelay: '150ms' }} /><span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--muted)', animationDelay: '300ms' }} /></div>
+                            <i>{typingUsers.map(t => t.full_name || t.username).join(', ')} typing...</i>
+                          </div>
+                        )}
+                      </div>
+                    ),
+                  }}
+                  itemContent={(_index, row) => {
+                    if (row.kind === 'date') {
+                      return (
                         <div className="flex justify-center my-3">
-                          <span className="text-[9px] px-3 py-1 rounded-full" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>{formatDateSeparator(msg.created_at)}</span>
+                          <span className="text-[9px] px-3 py-1 rounded-full" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>{formatDateSeparator(row.date)}</span>
                         </div>
-                      )}
-                      <div className={`mb-1 ${isOwn(msg.sender_id) ? 'flex justify-end' : 'flex justify-start'}`}>
-                        {!isOwn(msg.sender_id) && (
-                          <div className={`mr-1.5 w-[26px] ${isLastInGroup(idx) ? '' : 'invisible'}`}>
+                      )
+                    }
+                    const msg = row.msg
+                    const own = isOwn(msg.sender_id)
+                    const temp = isTemp(msg)
+                    return (
+                      <div className={`mb-1 ${own ? 'flex justify-end' : 'flex justify-start'}`}>
+                        {!own && (
+                          <div className={`mr-1.5 w-[26px] ${row.isLast ? '' : 'invisible'}`}>
                             {msg.sender?.avatar_url ? (
                               <img src={msg.sender.avatar_url} alt="" className="w-[26px] h-[26px] rounded-full object-cover" />
                             ) : (
@@ -322,60 +457,86 @@ function MessagesInner() {
                             )}
                           </div>
                         )}
-                        <div className="relative max-w-[75%]">
-                          {msg.reply_to && (
-                            <div className="px-2.5 pt-1.5 pb-1 rounded-t-xl text-[10px] border-l-2 mb-0.5" style={{ background: isOwn(msg.sender_id) ? 'rgba(255,255,255,0.15)' : 'var(--raised)', borderLeftColor: 'var(--gold)', color: 'var(--muted)' }}>
+                        <div className="relative max-w-[75%]" style={{ opacity: temp ? 0.85 : 1 }}>
+                          {msg.reply_to && !temp && (
+                            <div className="px-2.5 pt-1.5 pb-1 rounded-t-xl text-[10px] border-l-2 mb-0.5" style={{ background: own ? 'rgba(255,255,255,0.15)' : 'var(--raised)', borderLeftColor: 'var(--gold)', color: 'var(--muted)' }}>
                               {msg.metadata?.reply_content || 'Replied to a message'}
                             </div>
                           )}
-                          <div className={`px-3 py-1.5 rounded-2xl text-sm ${isOwn(msg.sender_id) ? 'rounded-br-md' : 'rounded-bl-md'}`}
+                          <div className={`px-3 py-1.5 rounded-2xl text-sm ${own ? 'rounded-br-md' : 'rounded-bl-md'}`}
                             style={{
-                              background: isOwn(msg.sender_id) ? '#0F625B' : 'var(--surface)',
-                              color: isOwn(msg.sender_id) ? '#FFFFFF' : 'var(--ink)',
-                              borderBottomRightRadius: isOwn(msg.sender_id) ? '6px' : '18px',
-                              borderBottomLeftRadius: isOwn(msg.sender_id) ? '18px' : '6px',
+                              background: own ? '#0F625B' : 'var(--surface)',
+                              color: own ? '#FFFFFF' : 'var(--ink)',
+                              borderBottomRightRadius: own ? '6px' : '18px',
+                              borderBottomLeftRadius: own ? '18px' : '6px',
                             }}>
-                            {msg.message_type === 'image' && msg.metadata?.url && (
-                              <img src={msg.metadata.url} alt="" className="max-w-[240px] rounded-lg mb-1 max-h-[250px] object-cover cursor-pointer" onClick={() => window.open(msg.metadata.url)} />
+                            {msg.message_type === 'image' && (
+                              msg.metadata?.path && mediaUrls[msg.metadata.path] ? (
+                                <img src={mediaUrls[msg.metadata.path]} alt={msg.metadata?.name || ''} className="max-w-[240px] rounded-lg mb-1 max-h-[250px] object-cover cursor-pointer" onClick={() => window.open(mediaUrls[msg.metadata.path])} />
+                              ) : msg.metadata?.url ? (
+                                <img src={msg.metadata.url} alt={msg.metadata?.name || ''} className="max-w-[240px] rounded-lg mb-1 max-h-[250px] object-cover cursor-pointer" onClick={() => window.open(msg.metadata.url)} />
+                              ) : null
                             )}
-                            {msg.message_type === 'file' && msg.metadata?.url && (
-                              <div className="flex items-center gap-2 p-1.5 rounded-lg mb-1" style={{ background: isOwn(msg.sender_id) ? 'rgba(0,0,0,0.15)' : 'var(--raised)' }}>
-                                <span>📎</span>
-                                <div className="min-w-0">
-                                  <span className="text-xs truncate block">{msg.metadata?.name || 'File'}</span>
-                                  <span className="text-[10px]">{msg.metadata?.size ? `${(msg.metadata.size / 1024).toFixed(0)} KB` : ''}</span>
-                                </div>
+                            {msg.message_type === 'file' && (
+                              (msg.metadata?.path && mediaUrls[msg.metadata.path]) || msg.metadata?.url ? (
+                                <a href={mediaUrls[msg.metadata.path] || msg.metadata?.url} download={msg.metadata?.name} className="flex items-center gap-2 p-1.5 rounded-lg mb-1 no-underline" style={{ background: own ? 'rgba(0,0,0,0.15)' : 'var(--raised)', color: own ? '#FFFFFF' : 'var(--ink)' }}>
+                                  <span>📎</span>
+                                  <div className="min-w-0">
+                                    <span className="text-xs truncate block">{msg.metadata?.name || 'File'}</span>
+                                    <span className="text-[10px]">{msg.metadata?.size ? `${(msg.metadata.size / 1024).toFixed(0)} KB` : ''}</span>
+                                  </div>
+                                </a>
+                              ) : null
+                            )}
+                            {msg.content && (msg.message_type !== 'image' || !msg.metadata?.url) && <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>}
+                            {msg.status === 'sending' && msg.upload_progress !== undefined && (
+                              <div className="mt-1 h-[3px] w-full rounded overflow-hidden" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                                <div className="h-full transition-all" style={{ background: 'var(--gold)', width: `${msg.upload_progress || 0}%` }} />
                               </div>
                             )}
-                            {msg.content && <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>}
+                            {msg.status === 'failed' && msg.upload_error && (
+                              <div className="text-[9px] mt-1 font-semibold" style={{ color: own ? '#FFD6D6' : 'var(--red)' }}>{msg.upload_error}</div>
+                            )}
                           </div>
-                          <div className={`flex items-center gap-0.5 mt-0.5 text-[8px]`} style={{ color: 'var(--faint)', marginLeft: isOwn(msg.sender_id) ? 'auto' : '0' }}>
-                            <span>{formatTime(msg.created_at)}</span>
-                            {isOwn(msg.sender_id) && msg.status !== 'sending' && (
-                              <span style={{ color: msg.status === 'read' ? '#53bdeb' : 'var(--faint)' }}>
-                                <svg width="10" height="7" viewBox="0 0 18 12" fill="none">
-                                  <path d="M1 6.5L5 10.5L14.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                                {(msg.status === 'delivered' || msg.status === 'read') && (
-                                  <svg width="10" height="7" viewBox="0 0 18 12" fill="none" style={{ marginLeft: -3 }}>
-                                    <path d="M1 6.5L5 10.5L14.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                  </svg>
-                                )}
+                          <div className="flex items-center gap-1 mt-0.5 text-[8px]" style={{ color: 'var(--faint-accessible)', marginLeft: own ? 'auto' : '0' }}>
+                            {msg.status === 'sending' ? (
+                              <span className="flex items-center gap-1" style={{ color: own ? '#B9E4DF' : 'var(--muted)' }}>
+                                <Loader2 className="w-2.5 h-2.5 animate-spin" aria-hidden="true" />
+                                <span>Sending...</span>
                               </span>
+                            ) : msg.status === 'failed' ? (
+                              <span className="flex items-center gap-1" style={{ color: 'var(--red)' }}>
+                                <span>Failed</span>
+                                <button onClick={() => handleRetry(msg.id)} aria-label="Retry sending message" className="flex items-center gap-0.5 border-0 cursor-pointer text-[8px] font-bold" style={{ background: 'none', color: 'var(--red)' }}>
+                                  <RotateCcw className="w-2.5 h-2.5" aria-hidden="true" />Retry
+                                </button>
+                                <button onClick={() => handleDiscard(msg.id)} aria-label="Discard message" className="border-0 cursor-pointer" style={{ background: 'none', color: 'var(--red)' }}>
+                                  <X className="w-2.5 h-2.5" aria-hidden="true" />
+                                </button>
+                              </span>
+                            ) : (
+                              <>
+                                <span>{formatTime(msg.created_at)}</span>
+                                {own && msg.status !== 'sending' && (
+                                  <span style={{ color: msg.status === 'read' ? '#53bdeb' : 'var(--faint)' }}>
+                                    <svg width="10" height="7" viewBox="0 0 18 12" fill="none">
+                                      <path d="M1 6.5L5 10.5L14.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                    {(msg.status === 'delivered' || msg.status === 'read') && (
+                                      <svg width="10" height="7" viewBox="0 0 18 12" fill="none" style={{ marginLeft: -3 }}>
+                                        <path d="M1 6.5L5 10.5L14.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                      </svg>
+                                    )}
+                                  </span>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  {typingUsers.length > 0 && (
-                    <div className="flex items-center gap-1.5 py-1.5 text-xs" style={{ color: 'var(--muted)' }}>
-                      <div className="flex gap-0.5"><span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--muted)', animationDelay: '0ms' }} /><span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--muted)', animationDelay: '150ms' }} /><span className="w-1 h-1 rounded-full animate-bounce" style={{ background: 'var(--muted)', animationDelay: '300ms' }} /></div>
-                      <i>{typingUsers.map(t => t.full_name || t.username).join(', ')} typing...</i>
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
-                </div>
+                    )
+                  }}
+                />
               )}
             </div>
 
@@ -391,24 +552,49 @@ function MessagesInner() {
             )}
 
             {/* Composer - sticky at bottom */}
-            <div className="flex-shrink-0 sticky bottom-0 flex items-center gap-2 px-3 py-2 border-t z-10" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
-              <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFileSelect(e, 'image/*')} />
-              <input ref={fileInputRef} type="file" className="hidden" onChange={e => handleFileSelect(e, 'file')} />
-              <button onClick={() => imageInputRef.current?.click()} aria-label="Upload image" className="w-[34px] h-[34px] rounded-full grid place-items-center text-sm flex-shrink-0 border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              </button>
-              <div className="flex-1 relative">
-                <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
-                  placeholder="Type a message..." rows={1}
-                  className="composer-input w-full rounded-2xl px-3 py-2 text-sm outline-none resize-none"
-                  style={{ background: 'var(--raised)', border: '1px solid var(--line)', color: 'var(--ink)', maxHeight: 120 }}
-                  onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px' }} />
+            <div className="flex-shrink-0 sticky bottom-0 border-t z-10" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
+              {pendingFiles.length > 0 && (
+                <div className="flex gap-2 px-3 pt-2 pb-1 overflow-x-auto">
+                  {pendingFiles.map(p => (
+                    <div key={p.id} className="relative flex-shrink-0">
+                      {p.preview ? (
+                        <Image src={p.preview} alt="" width={72} height={72} unoptimized className="w-[72px] h-[72px] rounded-lg object-cover" />
+                      ) : (
+                        <div className="w-[72px] h-[72px] rounded-lg flex flex-col items-center justify-center gap-1 text-[9px] font-semibold" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+                          <Paperclip className="w-4 h-4" aria-hidden="true" />
+                          <span className="max-w-[60px] truncate">{p.file.name}</span>
+                        </div>
+                      )}
+                      <button onClick={() => removePendingFile(p.id)} aria-label={`Remove ${p.file.name}`} className="absolute -top-1.5 -right-1.5 w-[18px] h-[18px] rounded-full grid place-items-center border-0 cursor-pointer" style={{ background: 'var(--red)', color: '#fff' }}>
+                        <X className="w-2.5 h-2.5" aria-hidden="true" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-2 px-3 py-2">
+                <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFileSelect(e, 'image/*')} />
+                <input ref={fileInputRef} type="file" className="hidden" onChange={e => handleFileSelect(e, 'file')} />
+                <button onClick={() => imageInputRef.current?.click()} aria-label="Attach image" className="w-[34px] h-[34px] rounded-full grid place-items-center text-sm flex-shrink-0 border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+                  <ImagePlus className="w-[18px] h-[18px]" aria-hidden="true" />
+                </button>
+                <button onClick={() => fileInputRef.current?.click()} aria-label="Attach file" className="w-[34px] h-[34px] rounded-full grid place-items-center text-sm flex-shrink-0 border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+                  <Paperclip className="w-[18px] h-[18px]" aria-hidden="true" />
+                </button>
+                <div className="flex-1 relative">
+                  <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} onPaste={handlePaste}
+                    placeholder="Type a message..." rows={1}
+                    aria-label="Message"
+                    className="composer-input w-full rounded-2xl px-3 py-2 text-sm outline-none resize-none"
+                    style={{ background: 'var(--raised)', border: '1px solid var(--line)', color: 'var(--ink)', maxHeight: 120 }}
+                    onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px' }} />
+                </div>
+                <button onClick={handleSend} disabled={!input.trim() && pendingFiles.length === 0} aria-label="Send message"
+                  className="w-[40px] h-[40px] rounded-full grid place-items-center border-0 cursor-pointer flex-shrink-0"
+                  style={{ background: input.trim() || pendingFiles.length > 0 ? '#0F625B' : 'var(--raised)', color: input.trim() || pendingFiles.length > 0 ? '#FFFFFF' : 'var(--faint)', opacity: input.trim() || pendingFiles.length > 0 ? 1 : 0.9 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </button>
               </div>
-              <button onClick={handleSend} disabled={!input.trim()} aria-label="Send message"
-                className="w-[40px] h-[40px] rounded-full grid place-items-center border-0 cursor-pointer flex-shrink-0"
-                style={{ background: input.trim() ? '#0F625B' : 'var(--raised)', color: input.trim() ? '#FFFFFF' : 'var(--faint)', opacity: input.trim() ? 1 : 0.9 }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-              </button>
             </div>
           </>
         )}
