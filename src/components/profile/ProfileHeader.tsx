@@ -32,6 +32,7 @@ interface ProfileHeaderProps {
   postCount?: number
   onFollow?: () => void
   onMessage?: () => void
+  messaging?: boolean
   onBook?: () => void
   onAvatarChange?: (url: string) => void
   onCoverChange?: (url: string) => void
@@ -45,6 +46,7 @@ export default function ProfileHeader({
   postCount = 0,
   onFollow,
   onMessage,
+  messaging = false,
   onBook,
   onAvatarChange,
   onCoverChange,
@@ -295,13 +297,14 @@ export default function ProfileHeader({
                   <Heart className={`w-3.5 h-3.5 ${isFollowing ? '' : 'fill-current'}`} />
                   {isFollowing ? 'Following' : 'Follow'}
                 </button>
-                <button onClick={onMessage}
+                <button onClick={onMessage} disabled={messaging}
                   style={{
                     padding: '8px 18px', borderRadius: 11, fontWeight: 600, fontSize: 12,
                     background: 'var(--raised)', color: 'var(--ink)',
                     border: '1px solid var(--line)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6,
+                    opacity: messaging ? 0.6 : 1,
                   }}>
-                  <MessageCircle className="w-3.5 h-3.5" /> Message
+                  <MessageCircle className={`w-3.5 h-3.5 ${messaging ? 'animate-spin' : ''}`} /> {messaging ? 'Opening...' : 'Message'}
                 </button>
                 {onBook && (
                   <button onClick={onBook}

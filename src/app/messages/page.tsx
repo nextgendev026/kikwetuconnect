@@ -11,6 +11,68 @@ import { Trash2, X, RotateCcw, Paperclip, ImagePlus, Loader2 } from 'lucide-reac
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+function NewChatModal({ onClose, onPick }: { onClose: () => void; onPick: (userId: string) => void }) {
+  const { user } = useUser()
+  const supabase = useSupabase()
+  const [q, setQ] = useState('')
+  const [results, setResults] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (q.trim().length < 2) { setResults([]); return }
+    let cancelled = false
+    setLoading(true)
+    ;(async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, username, full_name, avatar_url')
+        .ilike('username', `%${q.trim()}%`)
+        .limit(12)
+      if (cancelled) return
+      setResults((data || []).filter(p => p.id !== user?.id))
+      setLoading(false)
+    })()
+    return () => { cancelled = true }
+  }, [q, supabase, user])
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
+      <div className="w-full max-w-[420px] rounded-2xl p-4" style={{ background: 'var(--surface)', border: '1px solid var(--line)', boxShadow: 'var(--card-shadow)' }} onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-3">
+          <strong className="text-sm font-bold" style={{ color: 'var(--ink)' }}>New message</strong>
+          <button onClick={onClose} aria-label="Close new message" className="bg-none border-0 cursor-pointer text-lg leading-none" style={{ color: 'var(--muted)' }}>×</button>
+        </div>
+        <input autoFocus placeholder="Search people by username..." value={q} onChange={e => setQ(e.target.value)}
+          className="w-full h-[38px] rounded-lg px-3 text-sm outline-none mb-3"
+          style={{ border: '1px solid var(--line)', background: 'var(--raised)', color: 'var(--ink)' }} />
+        <div className="max-h-[300px] overflow-y-auto">
+          {q.trim().length < 2 ? (
+            <p className="text-xs text-center py-6" style={{ color: 'var(--muted)' }}>Type at least 2 characters to search</p>
+          ) : loading ? (
+            <p className="text-xs text-center py-6" style={{ color: 'var(--muted)' }}>Searching...</p>
+          ) : results.length === 0 ? (
+            <p className="text-xs text-center py-6" style={{ color: 'var(--muted)' }}>No users found</p>
+          ) : results.map(p => (
+            <button key={p.id} onClick={() => onPick(p.id)}
+              className="w-full flex items-center gap-3 p-2.5 rounded-xl text-left border-0 cursor-pointer transition-colors"
+              style={{ background: 'none', color: 'var(--ink)' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--raised)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'none' }}>
+              <div className="w-[40px] h-[40px] rounded-full flex-shrink-0 grid place-items-center text-xs font-bold overflow-hidden" style={{ background: p.avatar_url ? 'none' : 'var(--gold)', color: p.avatar_url ? 'none' : 'var(--night)' }}>
+                {p.avatar_url ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" /> : (p.full_name?.[0] || p.username?.[0] || '?').toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <strong className="text-sm block truncate">{p.full_name || p.username}</strong>
+                <span className="text-xs block truncate" style={{ color: 'var(--muted)' }}>@{p.username}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function MessagesInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -26,6 +88,7 @@ function MessagesInner() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null)
   const [replyTo, setReplyTo] = useState<{ id: string; content: string } | null>(null)
+  const [showNewChat, setShowNewChat] = useState(false)
   const [selectMode, setSelectMode] = useState(false)
   const [selectedConvs, setSelectedConvs] = useState<Set<string>>(new Set())
   const [pendingFiles, setPendingFiles] = useState<Array<{ id: string; file: File; preview: string }>>([])
@@ -83,9 +146,9 @@ function MessagesInner() {
         })
         if (conv) convId = conv
       }
-      if (convId) { setConvId(convId); setSidebarOpen(false) }
+      if (convId) { setConvId(convId); setSidebarOpen(false); fetchConversations() }
     } catch { toast('Failed to open conversation') }
-  }, [supabase, user])
+  }, [supabase, user, fetchConversations])
 
   useEffect(() => {
     const cid = searchParams.get('conversation_id')
@@ -264,7 +327,7 @@ function MessagesInner() {
   return (
     <div className="flex h-[calc(100vh-4rem)]" style={{ background: 'var(--bg)' }}>
       {/* Conversation list */}
-      <div className={`${sidebarOpen ? 'flex' : 'flex'} md:flex flex-col w-full md:w-[360px] flex-shrink-0 border-r`}>
+      <div className={`${sidebarOpen ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-[360px] flex-shrink-0 border-r`}>
 
       {/* Sidebar header */}
       <div className="p-3 pb-2 border-b" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
@@ -290,7 +353,7 @@ function MessagesInner() {
                   <span className="inline-block w-1.5 h-1.5 rounded-full mr-1" style={{ background: onlineOnly ? 'var(--surface)' : 'var(--green)' }} />
                   Online {onlineCount > 0 ? `(${onlineCount})` : ''}
                 </button>
-                <button onClick={() => setConvId(null)} aria-label="Create new message" className="text-xs border-0 cursor-pointer p-1.5 rounded-lg" style={{ background: 'var(--raised)', color: 'var(--ink)' }}>
+                <button onClick={() => setShowNewChat(true)} aria-label="Create new message" className="text-xs border-0 cursor-pointer p-1.5 rounded-lg" style={{ background: 'var(--raised)', color: 'var(--ink)' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 </button>
                 <button onClick={() => setSelectMode(true)} aria-label="Select conversations" className="text-xs border-0 cursor-pointer p-1.5 rounded-lg" style={{ background: 'var(--raised)', color: 'var(--ink)' }}>
@@ -374,7 +437,10 @@ function MessagesInner() {
             <div className="text-6xl mb-2">💬</div>
             <h2 className="font-extrabold text-2xl m-0" style={{ color: 'var(--ink)' }}>KikwetuChat</h2>
             <p className="text-sm" style={{ color: 'var(--muted)' }}>Select a conversation or start a new one</p>
-            <button onClick={() => router.push('/feed')} className="px-6 h-[42px] rounded-[10px] text-sm font-bold border-0 cursor-pointer" style={{ background: 'var(--gold)', color: 'var(--night)' }}>Browse the feed</button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowNewChat(true)} className="px-6 h-[42px] rounded-[10px] text-sm font-bold border-0 cursor-pointer" style={{ background: 'var(--gold)', color: 'var(--night)' }}>New message</button>
+              <button onClick={() => router.push('/feed')} className="px-6 h-[42px] rounded-[10px] text-sm font-bold border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--ink)', border: '1px solid var(--line)' }}>Browse the feed</button>
+            </div>
           </div>
         ) : (
           <>
@@ -599,6 +665,12 @@ function MessagesInner() {
           </>
         )}
       </div>
+      {showNewChat && (
+        <NewChatModal
+          onClose={() => setShowNewChat(false)}
+          onPick={(userId) => { setShowNewChat(false); openConversationWith(userId) }}
+        />
+      )}
     </div>
   )
 }

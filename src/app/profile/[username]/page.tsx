@@ -28,6 +28,7 @@ export default function UserProfilePage() {
   const [heshimaEarnings, setHeshimaEarnings] = useState<any[]>([])
   const [isFollowing, setIsFollowing] = useState(false)
   const [followRequest, setFollowRequest] = useState<any>(null)
+  const [messaging, setMessaging] = useState(false)
   const { user } = useUser()
   const router = useRouter()
   const { setConfig } = useToolbar()
@@ -107,15 +108,27 @@ export default function UserProfilePage() {
   }
 
   const handleMessage = async () => {
-    if (!profile) return
-    const res = await fetch('/api/conversations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'dm', member_ids: [profile.id] }),
-    })
-    if (!res.ok) { toast('Failed to open chat'); return }
-    const { conversation_id } = await res.json()
-    router.push(`/messages?conversation_id=${conversation_id}`)
+    if (!profile || messaging) return
+    if (profile.id === user?.id) { toast('You can\'t message yourself'); return }
+    setMessaging(true)
+    try {
+      const res = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'dm', member_ids: [profile.id] }),
+      })
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}))
+        toast(errBody?.error || 'Failed to open chat')
+        return
+      }
+      const { conversation_id } = await res.json()
+      router.push(`/messages?conversation_id=${conversation_id}`)
+    } catch {
+      toast('Failed to open chat')
+    } finally {
+      setMessaging(false)
+    }
   }
 
   useEffect(() => {
@@ -125,12 +138,12 @@ export default function UserProfilePage() {
     setConfig({
       actions: [
         { icon: Heart, label: isFollowing ? 'Following' : isPending ? 'Requested' : 'Follow', onClick: handleFollow, variant: isFollowing ? 'default' : isPending ? 'default' : 'gold', active: isFollowing || isPending },
-        { icon: MessageCircle, label: 'Message', onClick: handleMessage },
+        { icon: MessageCircle, label: messaging ? 'Opening...' : 'Message', onClick: handleMessage },
       ],
     })
     return () => setConfig(null)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile, user, isFollowing, followRequest, setConfig])
+  }, [profile, user, isFollowing, followRequest, messaging, setConfig])
 
   useEffect(() => {
     if (!profile || !user) return
@@ -229,7 +242,7 @@ export default function UserProfilePage() {
   return (
     <section className="page active" style={{ paddingTop: 33, paddingBottom: 94 }}>
       <ProfileHeader profile={profile} isOwn={false} supabase={supabase} postCount={postCount}
-        isFollowing={isFollowing} onFollow={handleFollow} onMessage={handleMessage} />
+        isFollowing={isFollowing} onFollow={handleFollow} onMessage={handleMessage} messaging={messaging} />
 
       {/* Sticky Tab Bar */}
       <div style={{
