@@ -473,7 +473,7 @@ function MessagesInner() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-3 py-3" style={{ background: 'var(--bg)' }} onDragOver={handleDragOver} onDrop={handleDrop}>
+            <div className="messages-thread" style={{ background: 'var(--bg)' }} onDragOver={handleDragOver} onDrop={handleDrop}>
               {msgsLoading ? (
                 <div className="flex justify-center py-10"><div className="w-[24px] h-[24px] rounded-full animate-spin" style={{ border: '2px solid var(--gold)', borderTopColor: 'transparent' }} /></div>
               ) : messages.length === 0 ? (
@@ -519,7 +519,7 @@ function MessagesInner() {
                     const own = isOwn(msg.sender_id)
                     const temp = isTemp(msg)
                     return (
-                      <div className={`mb-1 ${own ? 'flex justify-end' : 'flex justify-start'}`}>
+                      <div className={`msg-row ${own ? 'me' : ''} mb-1`}>
                         {!own && (
                           <div className={`mr-1.5 w-[26px] ${row.isLast ? '' : 'invisible'}`}>
                             {msg.sender?.avatar_url ? (
@@ -537,13 +537,7 @@ function MessagesInner() {
                               {msg.metadata?.reply_content || 'Replied to a message'}
                             </div>
                           )}
-                          <div className={`px-3 py-1.5 rounded-2xl text-sm ${own ? 'rounded-br-md' : 'rounded-bl-md'}`}
-                            style={{
-                              background: own ? '#0F625B' : 'var(--surface)',
-                              color: own ? '#FFFFFF' : 'var(--ink)',
-                              borderBottomRightRadius: own ? '6px' : '18px',
-                              borderBottomLeftRadius: own ? '18px' : '6px',
-                            }}>
+                          <div className="msg-bubble">
                             {msg.message_type === 'image' && (
                               msg.metadata?.path && mediaUrls[msg.metadata.path] ? (
                                 <img src={mediaUrls[msg.metadata.path]} alt={msg.metadata?.name || ''} className="max-w-[240px] rounded-lg mb-1 max-h-[250px] object-cover cursor-pointer" onClick={() => window.open(mediaUrls[msg.metadata.path])} />
@@ -626,11 +620,11 @@ function MessagesInner() {
             )}
 
             {/* Composer - sticky at bottom */}
-            <div className="flex-shrink-0 border-t z-10" style={{ borderColor: 'var(--line)', background: 'var(--surface)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+            <div className="messages-composer">
               {pendingFiles.length > 0 && (
-                <div className="flex gap-2 px-3 pt-2 pb-1 overflow-x-auto">
+                <div className="pending-files">
                   {pendingFiles.map(p => (
-                    <div key={p.id} className="relative flex-shrink-0">
+                    <div key={p.id} className="pending-file">
                       {p.preview ? (
                         <Image src={p.preview} alt="" width={72} height={72} unoptimized className="w-[72px] h-[72px] rounded-lg object-cover" />
                       ) : (
@@ -639,34 +633,32 @@ function MessagesInner() {
                           <span className="max-w-[60px] truncate">{p.file.name}</span>
                         </div>
                       )}
-                      <button onClick={() => removePendingFile(p.id)} aria-label={`Remove ${p.file.name}`} className="absolute -top-1.5 -right-1.5 w-[18px] h-[18px] rounded-full grid place-items-center border-0 cursor-pointer" style={{ background: 'var(--red)', color: '#fff' }}>
+                      <button onClick={() => removePendingFile(p.id)} aria-label={`Remove ${p.file.name}`} className="remove">
                         <X className="w-2.5 h-2.5" aria-hidden="true" />
                       </button>
                     </div>
                   ))}
                 </div>
               )}
-              <div className="flex items-center gap-2 px-3 py-2">
+              <div className="input-wrap">
                 <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFileSelect(e, 'image/*')} />
                 <input ref={fileInputRef} type="file" className="hidden" onChange={e => handleFileSelect(e, 'file')} />
-                <button onClick={() => imageInputRef.current?.click()} aria-label="Attach image" className="w-[34px] h-[34px] rounded-full grid place-items-center text-sm flex-shrink-0 border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+                <button onClick={() => imageInputRef.current?.click()} aria-label="Attach image" className="attach-btn">
                   <ImagePlus className="w-[18px] h-[18px]" aria-hidden="true" />
                 </button>
-                <button onClick={() => fileInputRef.current?.click()} aria-label="Attach file" className="w-[34px] h-[34px] rounded-full grid place-items-center text-sm flex-shrink-0 border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>
+                <button onClick={() => fileInputRef.current?.click()} aria-label="Attach file" className="attach-btn">
                   <Paperclip className="w-[18px] h-[18px]" aria-hidden="true" />
                 </button>
                 <div className="flex-1 relative">
                   <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} onPaste={handlePaste}
                     placeholder="Type a message..." rows={1}
                     aria-label="Message"
-                    className="composer-input w-full rounded-2xl px-3 py-2 text-sm outline-none resize-none"
-                    style={{ background: 'var(--raised)', border: '1px solid var(--line)', color: 'var(--ink)', maxHeight: 120 }}
+                    className="composer-input"
                     onInput={e => { const t = e.target as HTMLTextAreaElement; t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 120) + 'px' }} />
                 </div>
-                <button onClick={handleSend} disabled={!input.trim() && pendingFiles.length === 0} aria-label="Send message"
-                  className="w-[40px] h-[40px] rounded-full grid place-items-center border-0 cursor-pointer flex-shrink-0"
-                  style={{ background: input.trim() || pendingFiles.length > 0 ? '#0F625B' : 'var(--raised)', color: input.trim() || pendingFiles.length > 0 ? '#FFFFFF' : 'var(--faint)', opacity: input.trim() || pendingFiles.length > 0 ? 1 : 0.9 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+<button onClick={handleSend} disabled={!input.trim() && pendingFiles.length === 0} aria-label="Send message"
+                  className="send-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                 </button>
               </div>
             </div>

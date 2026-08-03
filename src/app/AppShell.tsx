@@ -384,25 +384,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <div className="chat-list" style={{ overflowY: 'auto', flex: 1 }}>
               {chatMessages.length === 0 ? (
                 <div className="chat-msg">
-                  <div className="bubble">Welcome to KikwetuConnect! How can we help?</div>
+                  <div className="chat-bubble">Welcome to KikwetuConnect! How can we help?</div>
                 </div>
               ) : chatMessages.map((msg: any) => {
                 const isMe = msg.sender_id === profile?.id
                 return (
                   <div key={msg.id} className={`chat-msg ${isMe ? 'me' : ''}`}>
-                    <div className="bubble" style={{
-                      background: isMe ? 'var(--gold)' : 'var(--raised)',
-                      color: isMe ? 'var(--night)' : 'var(--ink)',
-                    }}>{msg.content}</div>
+                    <div className="chat-bubble">{msg.content}</div>
                   </div>
                 )
               })}
               <div ref={chatEndRef} />
             </div>
             <div className="chat-input">
-              <input value={chatInput} onChange={e => setChatInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleChatSend() } }}
-                placeholder="Write a message..." disabled={!chatConvId} />
+              <textarea value={chatInput} onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChatSend() } }}
+                placeholder="Write a message..." disabled={!chatConvId} rows={1}
+                style={{ minHeight: 40, maxHeight: 100, resize: 'none' }} />
               <button onClick={handleChatSend} disabled={!chatConvId || !chatInput.trim() || chatSending} aria-label="Send message">↗</button>
             </div>
           </>
@@ -421,7 +419,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <div className="chat-list" style={{ overflowY: 'auto', flex: 1 }}>
               {followingUsers.length === 0 ? (
                 <div className="chat-msg">
-                  <div className="bubble" style={{ color: 'var(--muted)' }}>You are not following anyone yet. Open a full chat to continue later.</div>
+                  <div className="chat-bubble" style={{ color: 'var(--muted)' }}>You are not following anyone yet. Open a full chat to continue later.</div>
                 </div>
               ) : followingUsers.slice(0, 12).map((p: any) => {
                 const name = p.full_name || p.username || 'User'
