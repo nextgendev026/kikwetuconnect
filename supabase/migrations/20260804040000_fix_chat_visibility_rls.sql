@@ -40,6 +40,7 @@ CREATE POLICY cp_delete_own ON public.conversation_participants
 
 -- Conversations may only be updated by participants (e.g. last_message).
 DROP POLICY IF EXISTS conversations_update_all ON public.conversations;
+DROP POLICY IF EXISTS conversations_update_participant ON public.conversations;
 CREATE POLICY conversations_update_participant ON public.conversations
   FOR UPDATE TO authenticated
   USING (public.is_conversation_participant(id))
@@ -49,6 +50,7 @@ CREATE POLICY conversations_update_participant ON public.conversations
 -- SECURITY DEFINER so it is unaffected; this just closes the open hole).
 DROP POLICY IF EXISTS messages_update_all ON public.messages;
 DROP POLICY IF EXISTS "Users can mark messages as read" ON public.messages;
+DROP POLICY IF EXISTS messages_update_participant ON public.messages;
 CREATE POLICY messages_update_participant ON public.messages
   FOR UPDATE TO authenticated
   USING (public.is_conversation_participant(conversation_id))

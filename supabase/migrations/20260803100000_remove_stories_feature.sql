@@ -5,7 +5,14 @@
 -- activity-engine references to story counters.
 
 -- 1. Drop the auto-moderation trigger + function for stories
-DROP TRIGGER IF EXISTS tr_stories_auto_moderate ON public.stories;
+-- (guarded so migration is idempotent if stories table was already removed)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'stories') THEN
+    DROP TRIGGER IF EXISTS tr_stories_auto_moderate ON public.stories;
+  END IF;
+END;
+$$;
 DROP FUNCTION IF EXISTS public.moderate_new_story();
 
 -- 2. Drop the stories RPCs
