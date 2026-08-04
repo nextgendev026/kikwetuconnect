@@ -2,6 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  output: 'standalone',
+  experimental: {
   experimental: {
     optimizePackageImports: ['lucide-react', '@supabase/supabase-js'],
   },

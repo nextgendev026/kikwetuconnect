@@ -52,13 +52,13 @@ export function GuideProvider({ children }: GuideProviderProps) {
     setSteps(guideSteps)
     setCurrentStep(0)
     setIsGuideOpen(true)
-  }, [completeGuide])
+  }, [])
 
   const closeGuide = useCallback(() => {
     setIsGuideOpen(false)
     setSteps([])
     setCurrentStep(0)
-  }, [completeGuide])
+  }, [])
 
   const nextStep = useCallback(() => {
     if (currentStep < steps.length - 1) {
@@ -66,7 +66,7 @@ export function GuideProvider({ children }: GuideProviderProps) {
     } else {
       completeGuide()
     }
-  }, [currentStep, steps.length])
+  }, [currentStep, steps.length, completeGuide])
 
   const prevStep = useCallback(() => {
     setCurrentStep(s => Math.max(0, s - 1))
@@ -74,7 +74,7 @@ export function GuideProvider({ children }: GuideProviderProps) {
 
   const skipGuide = useCallback(() => {
     completeGuide()
-  }, [])
+  }, [completeGuide])
 
   const completeGuide = useCallback(() => {
     localStorage.setItem('kikwetu_guide_completed', 'true')
@@ -90,7 +90,7 @@ export function GuideProvider({ children }: GuideProviderProps) {
     if (step.action?.onClick) {
       step.action.onClick()
     }
-  }, [steps, currentStep, router])
+  }, [steps, currentStep, router, completeGuide])
 
   const value: GuideContextType = {
     isGuideOpen,
