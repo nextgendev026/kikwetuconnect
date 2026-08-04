@@ -8,12 +8,14 @@ import { AuthProvider, useUser } from './providers/auth-provider'
 import { ThemeProvider } from './providers/theme-provider'
 import { NotificationProvider } from './providers/notification-provider'
 import { ToastProvider, toast } from './providers/toast-provider'
+import { GuideProvider } from '@/components/GuideProvider'
 import AppShell from './AppShell'
 
 export { toast } from './providers/toast-provider'
 export { useUser } from './providers/auth-provider'
 export { useTheme } from './providers/theme-provider'
 export { useNotifications } from './providers/notification-provider'
+export { useGuide } from '@/components/GuideProvider'
 
 type SupabaseClient = ReturnType<typeof createBrowserClient>
 const SupabaseCtx = createContext<SupabaseClient | undefined>(undefined)
@@ -45,9 +47,11 @@ export function Providers({ children }: { children: ReactNode }) {
           <AuthProvider supabase={supabase}>
             <ThemeProvider>
               <NotificationProvider>
-                <ShellRouter>
-                  {children}
-                </ShellRouter>
+                <GuideProvider>
+                  <ShellRouter>
+                    {children}
+                  </ShellRouter>
+                </GuideProvider>
               </NotificationProvider>
             </ThemeProvider>
           </AuthProvider>
