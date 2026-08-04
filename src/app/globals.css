@@ -81,7 +81,7 @@ button { border: 0; cursor: pointer; }
 button:active { transform: scale(0.97); }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 
-.app { display: grid; grid-template-columns: 248px minmax(0, 1fr) 294px; min-height: 100vh; max-width: min(1600px, 96vw); margin: auto; }
+.app { display: grid; grid-template-columns: 248px minmax(0, 1fr) 294px; min-height: 100vh; max-width: 1600px; margin: 0 auto; }
 
 .sidebar { background: var(--night); color: var(--ink); padding: 24px 16px; display: flex; flex-direction: column; gap: 24px; position: sticky; top: 0; align-self: start; height: 100vh; overflow: auto; transition: background-color .35s var(--ease-in-out); }
 .sidebar::-webkit-scrollbar { width: 3px; }
