@@ -74,7 +74,7 @@ export function GuideProvider({ children }: GuideProviderProps) {
 
   const skipGuide = useCallback(() => {
     completeGuide()
-  }, [completeGuide])
+  }, [])
 
   const completeGuide = useCallback(() => {
     localStorage.setItem('kikwetu_guide_completed', 'true')
@@ -90,7 +90,7 @@ export function GuideProvider({ children }: GuideProviderProps) {
     if (step.action?.onClick) {
       step.action.onClick()
     }
-  }, [steps, currentStep, router, completeGuide])
+  }, [steps, currentStep, router])
 
   const value: GuideContextType = {
     isGuideOpen,
