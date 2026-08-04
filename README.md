@@ -91,7 +91,7 @@ src/
 │   ├── AppShell.tsx       # Main app layout (sidebar + right panel + chat widget)
 │   ├── globals.css        # Global styles (OKLch Savannah theme)
 │   ├── layout.tsx         # Root layout
-│   └── middleware.ts      # Auth & route protection
+│   └── proxy.ts           # Auth & route protection (middleware)
 ├── components/
 │   ├── layout/            # Layout components
 │   ├── providers/         # Supabase & Realtime providers

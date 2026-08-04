@@ -17,7 +17,7 @@ export default function LandingPage() {
   return (
     <div className="lp-root">
       <header className="lp-header">
-        <Link href="/" className="lp-brand" aria-label="KikwetuConnect home">
+        <Link href="/" className="lp-brand" aria-label="KikwetuConnect Tuko pamoja">
           <span className="lp-brand-mark" aria-hidden="true">K</span>
           <div className="lp-brand-text">
             <b>KikwetuConnect</b>
@@ -52,7 +52,7 @@ export default function LandingPage() {
             <h1 id="hero-title">Good questions deserve a home.</h1>
             <p className="lp-lead">KikwetuConnect brings local knowledge, trusted people, and useful opportunities into one warm, multilingual community.</p>
             <div className="lp-hero-actions">
-              <Link href="/signup" className="lp-btn lp-btn-gold">Join Kikwetu <span aria-hidden="true">↗</span></Link>
+              <Link href="/signup" className="lp-btn lp-btn-primary">Join Kikwetu <span aria-hidden="true">↗</span></Link>
               <Link href="/feed" className="lp-btn lp-btn-ghost">Explore the community</Link>
             </div>
             <div className="lp-hero-stats">

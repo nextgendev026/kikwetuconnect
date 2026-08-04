@@ -28,10 +28,10 @@ export function SearchBar() {
     setIsLoading(true)
     try {
       const searchResult = await searchContent(searchQuery, {}, 8)
-      const allResults = [
-        ...searchResult.posts.map(post => ({ ...post, type: 'post' as const })),
-        ...searchResult.quizzes.map(quiz => ({ ...quiz, type: 'quiz' as const })),
-        ...searchResult.users.map(user => ({ ...user, type: 'user' as const })),
+      const allResults: SearchResult[] = [
+        ...searchResult.posts.map((post: any) => ({ ...post, type: 'post' as const })),
+        ...searchResult.quizzes.map((quiz: any) => ({ ...quiz, type: 'quiz' as const })),
+        ...searchResult.users.map((user: any) => ({ ...user, type: 'user' as const })),
       ]
       setResults(allResults)
     } catch (error) {

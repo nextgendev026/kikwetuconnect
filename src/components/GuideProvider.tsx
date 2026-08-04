@@ -60,6 +60,11 @@ export function GuideProvider({ children }: GuideProviderProps) {
     setCurrentStep(0)
   }, [])
 
+  const completeGuide = useCallback(() => {
+    localStorage.setItem('kikwetu_guide_completed', 'true')
+    closeGuide()
+  }, [closeGuide])
+
   const nextStep = useCallback(() => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(s => s + 1)
@@ -74,12 +79,7 @@ export function GuideProvider({ children }: GuideProviderProps) {
 
   const skipGuide = useCallback(() => {
     completeGuide()
-  }, [])
-
-  const completeGuide = useCallback(() => {
-    localStorage.setItem('kikwetu_guide_completed', 'true')
-    closeGuide()
-  }, [closeGuide])
+  }, [completeGuide])
 
   const handleAction = useCallback(() => {
     const step = steps[currentStep]

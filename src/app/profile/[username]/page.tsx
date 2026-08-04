@@ -240,7 +240,7 @@ export default function UserProfilePage() {
   )
 
   return (
-    <section className="page active" style={{ paddingTop: 33, paddingBottom: 94 }}>
+    <section className="page active">
       <ProfileHeader profile={profile} isOwn={false} supabase={supabase} postCount={postCount}
         isFollowing={isFollowing} onFollow={handleFollow} onMessage={handleMessage} messaging={messaging} />
 

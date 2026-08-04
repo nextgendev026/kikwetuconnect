@@ -49,12 +49,26 @@ export default function MobileNav() {
   const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [unreadMsg, setUnreadMsg] = useState(0)
+  const [safeBottom, setSafeBottom] = useState(0)
 
   useEffect(() => {
     setMounted(true)
-    const check = () => setIsMobile(window.innerWidth < 760)
+    const check = () => {
+      setIsMobile(window.innerWidth < 760)
+      if (typeof window !== 'undefined' && window.visualViewport) {
+        setSafeBottom(0)
+      }
+    }
+    const safeArea = () => {
+      try {
+        const probe = getComputedStyle(document.documentElement)
+        const envVal = probe.getPropertyValue('--safe-area-bottom')
+        setSafeBottom(envVal ? parseInt(envVal, 10) : 0)
+      } catch { setSafeBottom(0) }
+    }
     check()
     window.addEventListener('resize', check)
+    safeArea()
     return () => window.removeEventListener('resize', check)
   }, [])
 
@@ -88,9 +102,9 @@ export default function MobileNav() {
       {hasContext && (
         <div className="fixed z-50 animate-rise" style={{
           left: '50%', transform: 'translateX(-50%)',
-          bottom: 82,
+          bottom: 'calc(78px + env(safe-area-inset-bottom))',
           width: 'calc(100vw - 20px)',
-          maxWidth: 400,
+          maxWidth: 420,
           touchAction: 'manipulation',
         }}>
           <div className="flex gap-1.5 justify-center" style={{
@@ -142,9 +156,9 @@ export default function MobileNav() {
       <nav style={{
         position: 'fixed', display: 'flex', zIndex: 12,
         left: '50%', transform: 'translateX(-50%)',
-        bottom: 10, height: 65,
+        bottom: 'calc(10px + env(safe-area-inset-bottom))', height: 64,
         width: 'calc(100vw - 20px)',
-        maxWidth: 400,
+        maxWidth: 420,
         background: 'var(--surface)',
         border: '1px solid var(--line)',
         borderRadius: 20,

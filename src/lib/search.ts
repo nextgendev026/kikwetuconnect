@@ -1,6 +1,6 @@
-import MeiliSearch from 'meilisearch'
+import { Meilisearch } from 'meilisearch'
 
-const meiliClient = new MeiliSearch(process.env.NEXT_PUBLIC_MEILI_HOST || 'http://localhost:7700', process.env.NEXT_PUBLIC_MEILI_KEY || 'test_key')
+const meiliClient = new Meilisearch({ host: process.env.NEXT_PUBLIC_MEILI_HOST || 'http://localhost:7700', apiKey: process.env.NEXT_PUBLIC_MEILI_KEY || 'test_key' })
 
 export const postsIndex = meiliClient.index('posts')
 export const quizzesIndex = meiliClient.index('quizzes')
@@ -21,7 +21,7 @@ export async function initializeSearchIndexes() {
 
 export async function indexPost(post: any) {
   try {
-    await postsIndex.addDocument({
+    await postsIndex.addDocuments([{
       id: post.id,
       title: post.title,
       content: post.content.substring(0, 500),
@@ -34,7 +34,7 @@ export async function indexPost(post: any) {
       visibility: post.visibility,
       language: post.language,
       tags: post.tags || [],
-    })
+    }])
   } catch (error) {
     console.error('Failed to index post:', error)
   }
@@ -42,7 +42,7 @@ export async function indexPost(post: any) {
 
 export async function indexQuiz(quiz: any) {
   try {
-    await quizzesIndex.addDocument({
+    await quizzesIndex.addDocuments([{
       id: quiz.id,
       title: quiz.title,
       description: quiz.description,
@@ -55,15 +55,30 @@ export async function indexQuiz(quiz: any) {
       verified: quiz.verified,
       tags: quiz.tags || [],
       estimated_time: quiz.estimated_time,
-    })
+    }])
   } catch (error) {
     console.error('Failed to index quiz:', error)
   }
 }
 
-export async function indexUser(user: any) {
+export async function indexUser(user: {
+  id: string
+  username?: string
+  full_name?: string
+  county?: string
+  heshima_score?: number
+  verified?: boolean
+  expert?: boolean
+  avatar_url?: string
+  created_at?: string
+  last_active?: string
+  post_count?: number
+  quiz_count?: number
+  followers_count?: number
+  following_count?: number
+}) {
   try {
-    await usersIndex.addDocument({
+    await usersIndex.addDocuments([{
       id: user.id,
       username: user.username,
       full_name: user.full_name,
@@ -78,7 +93,7 @@ export async function indexUser(user: any) {
       quiz_count: user.quiz_count || 0,
       followers_count: user.followers_count || 0,
       following_count: user.following_count || 0,
-    })
+    }])
   } catch (error) {
     console.error('Failed to index user:', error)
   }
@@ -86,7 +101,7 @@ export async function indexUser(user: any) {
 
 export async function searchContent(query: string, filters?: any, limit: number = 20) {
   try {
-    const searchParams: any = {
+    const searchParams: Record<string, any> = {
       q: query,
       limit,
       sort: ['heshima_score:desc'],
@@ -102,8 +117,11 @@ export async function searchContent(query: string, filters?: any, limit: number 
     return {
       posts: postsResults.hits,
       quizzes: quizzesResults.hits,
-      users: usersResults.hits.filter(user => user.expert),
-      totalHits: postsResults.total + quizzesResults.total + usersResults.total,
+      users: usersResults.hits.filter((user: Record<string, any>) => user.expert),
+      totalHits:
+        (postsResults.estimatedTotalHits ?? 0) +
+        (quizzesResults.estimatedTotalHits ?? 0) +
+        (usersResults.estimatedTotalHits ?? 0),
     }
   } catch (error) {
     console.error('Search failed:', error)

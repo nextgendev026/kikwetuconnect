@@ -67,7 +67,9 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; background: var(--bg); }
-body { margin: 0; color: var(--ink); font: 380 16.5px/1.65 var(--dm); background: var(--bg); background-image: var(--bg-pattern); background-attachment: fixed; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; transition: background-color .35s var(--ease-in-out), color .35s var(--ease-in-out); }
+body { margin: 0; color: var(--ink); font: 380 clamp(16px, 1rem + 0.12vw, 18px)/1.65 var(--dm); background: var(--bg); background-image: var(--bg-pattern); background-attachment: fixed; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; transition: background-color .35s var(--ease-in-out), color .35s var(--ease-in-out); }
+h1, h2, h3, h4, .page-title, .post-body h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
 @media (prefers-contrast: more) { body { font-weight: 420; } }
 [data-theme=dark] body { font-weight: 400; letter-spacing: .006em; }
 [data-theme=light] body { font-weight: 370; letter-spacing: -.003em; }
@@ -79,7 +81,7 @@ button { border: 0; cursor: pointer; }
 button:active { transform: scale(0.97); }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 
-.app { display: grid; grid-template-columns: 248px minmax(0, 1fr) 294px; min-height: 100vh; max-width: 1600px; margin: auto; }
+.app { display: grid; grid-template-columns: 248px minmax(0, 1fr) 294px; min-height: 100vh; max-width: min(1600px, 96vw); margin: auto; }
 
 .sidebar { background: var(--night); color: var(--ink); padding: 24px 16px; display: flex; flex-direction: column; gap: 24px; position: sticky; top: 0; height: 100vh; overflow: auto; transition: background-color .35s var(--ease-in-out); }
 .sidebar::-webkit-scrollbar { width: 3px; }
@@ -172,7 +174,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .icon { width: 44px; height: 44px; border-radius: var(--radius-md); background: none; color: var(--muted); display: grid; place-items: center; font-size: 18px; text-decoration: none; transition: all .2s var(--ease); }
 .icon:hover { background: var(--raised); color: var(--ink); transform: translateY(-1px); }
 
-.page { display: none; max-width: 960px; margin: auto; padding: 33px; }
+.page { display: none; width: 100%; max-width: clamp(760px, 72vw, 1080px); margin: auto; padding: clamp(18px, 2.5vw, 36px); }
 .page.active { display: block; animation: rise .3s var(--ease); }
 
 /* Messages page: fills the remaining viewport and stays keyboard-safe.
@@ -559,7 +561,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 
 .bottom { display: none; }
 @media (max-width: 760px) {
-  .bottom { display: flex; position: fixed; bottom: 0; left: 0; right: 0; height: 68px; background: color-mix(in oklab, var(--surface) 96%, transparent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-top: 1px solid var(--line); z-index: 250; align-items: center; justify-content: space-around; padding: 0 8px; }
+  .bottom { display: flex; position: fixed; bottom: 0; left: 0; right: 0; height: calc(62px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: color-mix(in oklab, var(--surface) 96%, transparent); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-top: 1px solid var(--line); z-index: 250; align-items: center; justify-content: space-around; padding: 0 8px; }
 }
 .navbtn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; background: none; color: var(--muted); font-size: 9px; font-weight: 500; padding: 6px 4px; border-radius: var(--radius-sm); transition: all .2s var(--ease); min-height: 48px; justify-content: center; text-decoration: none; }
 .navbtn:hover { color: var(--ink); background: var(--raised); }
@@ -584,23 +586,27 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 ::selection { background: var(--gold); color: var(--night); }
 
+/* Tablet: hide right rail, narrower sidebar, cap content width */
 @media (max-width: 1180px) {
-  .app { grid-template-columns: 228px minmax(0, 1fr); }
+  .app { grid-template-columns: 200px minmax(0, 1fr); }
   .right-panel { display: none; }
+  .sidebar { padding: 20px 12px; }
+  .page { padding: clamp(18px, 2.2vw, 30px); }
 }
 
+/* Phone: single column, mobile-first controls */
 @media (max-width: 760px) {
   .app { display: block; }
   .sidebar { display: none; }
-  .topbar { height: 68px; padding: 0 15px; }
-  .page { padding: 22px 15px 100px; }
+  .topbar { height: 64px; padding: 0 12px; }
+  .page { padding: 18px 14px calc(96px + env(safe-area-inset-bottom)); }
   .page-head { display: block; }
   .page-head .btn { width: 100%; margin-top: 17px; }
   .topic-grid { grid-template-columns: 1fr 1fr; }
   .page-title { font-size: clamp(1.6rem, 5vw, 2rem) !important; }
   .page-head p { font-size: 13px !important; }
   .subtitle-mobile { font-size: 11px; }
-  .chat { left: 10px; right: 10px; bottom: 100px; width: auto; }
+  .chat { left: 10px; right: 10px; bottom: 90px; width: auto; }
   .modal-wrap { align-items: end; padding: 0; }
   .modal { border-radius: 22px 22px 0 0; }
 
@@ -655,9 +661,25 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .side-body { padding: 0 12px 16px; }
 }
 
+/* Small form-factor phones (e.g. iPhone SE, 320–380px): tighten spacing, keep type legible */
+@media (max-width: 380px) {
+  .page { padding: 14px 12px calc(88px + env(safe-area-inset-bottom)); }
+  .topbar { padding: 0 10px; }
+  .topbar-brand-text { display: none; }
+  .search input { font-size: 12px; }
+  .topic-grid { grid-template-columns: 1fr; }
+  .tabs { gap: 16px; }
+  .post { padding: 14px 0 12px; }
+  .post-body { font-size: 13.5px; }
+  .card, .panel, .wallet { padding: 16px; }
+  .btn { padding: 0 14px; font-size: 12px; }
+  .action-button { padding: 6px 10px; }
+  .side-section summary { font-size: 15px; }
+}
+
   /* Bottom safe area for modern phones */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .page { padding-bottom: calc(100px + env(safe-area-inset-bottom)); }
+  .page { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .bottom { padding-bottom: env(safe-area-inset-bottom); }
 }
 

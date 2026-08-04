@@ -293,7 +293,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </div>
             </header>
 
-            <section className="page active" style={path === '/messages' ? { padding: 0 } : { paddingTop: 33, paddingBottom: 94, minHeight: 'calc(100vh - 33px)' }}>
+            <section className="page active" style={path === '/messages' ? { padding: 0 } : { minHeight: 'calc(100vh - 33px)' }}>
               {children}
             </section>
           </main>
