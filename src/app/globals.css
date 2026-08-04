@@ -83,7 +83,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 
 .app { display: grid; grid-template-columns: 248px minmax(0, 1fr) 294px; min-height: 100vh; max-width: min(1600px, 96vw); margin: auto; }
 
-.sidebar { background: var(--night); color: var(--ink); padding: 24px 16px; display: flex; flex-direction: column; gap: 24px; position: sticky; top: 0; height: 100vh; overflow: auto; transition: background-color .35s var(--ease-in-out); }
+.sidebar { background: var(--night); color: var(--ink); padding: 24px 16px; display: flex; flex-direction: column; gap: 24px; position: sticky; top: 0; align-self: start; height: 100vh; overflow: auto; transition: background-color .35s var(--ease-in-out); }
 .sidebar::-webkit-scrollbar { width: 3px; }
 .sidebar::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--line) 40%, transparent); border-radius: 3px; }
 
