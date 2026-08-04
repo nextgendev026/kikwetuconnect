@@ -1,0 +1,19 @@
+# KikwetuConnect robots.txt
+User-agent: *
+Allow: /
+
+# Disallow private/admin paths
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /login
+Disallow: /signup
+Disallow: /settings
+Disallow: /profile/edit
+Disallow: /messages
+Disallow: /notifications
+Disallow: /wallet
+Disallow: /onboarding
+
+# Sitemap
+Sitemap: https://kikwetuconnect.vercel.app/sitemap.xml
