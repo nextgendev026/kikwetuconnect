@@ -38,7 +38,7 @@ export default function WelcomePage() {
 
       <div style={{ position: 'relative', zIndex: 1, width: 'min(460px,100%)', textAlign: 'center', animation: 'rise .45s ease' }}>
         <div className="brand" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 34 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 12, background: 'oklch(72% .15 84)', color: 'oklch(16% .035 151)', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 19, transform: 'rotate(-8deg)' }}>K</div>
+          <div style={{ width: 38, height: 38, borderRadius: '12px 12px 12px 4px', background: 'oklch(43% .12 158)', color: 'oklch(96% .025 94)', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 19, fontFamily: 'Fraunces, Georgia, serif', boxShadow: '4px 5px 0 oklch(75% .15 78)', transform: 'rotate(-4deg)' }}>k</div>
           <div style={{ textAlign: 'left' }}><b style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-.05em' }}>KikwetuConnect</b><small style={{ display: 'block', color: 'oklch(65% .028 151)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', marginTop: 2 }}>Tuko pamoja</small></div>
         </div>
 

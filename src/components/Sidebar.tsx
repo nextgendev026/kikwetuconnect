@@ -95,9 +95,9 @@ export default function Sidebar({ initials, profile, following = [], onlineIds =
     <aside className="sidebar animate-slide-in-left">
       {/* Brand */}
       <Link href="/feed" className="brand" style={{ textDecoration: 'none', color: 'inherit' }}>
-        <div className="mark">K</div>
+        <div className="mark">k</div>
         <div>
-          <b>KikwetuConnect</b>
+          <b>kikwetu<span style={{ color: 'var(--gold)' }}>.</span></b>
           <small>Tuko pamoja</small>
         </div>
       </Link>

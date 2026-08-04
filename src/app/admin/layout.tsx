@@ -76,7 +76,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           flex flex-col gap-5 p-[22px_15px]
         `} style={{ background: 'var(--night)', color: 'oklch(92% .015 91)' }}>
           <div className="flex items-center gap-2.5 px-2">
-            <div className="w-[35px] h-[35px] rounded-[11px] grid place-items-center font-extrabold text-lg flex-shrink-0" style={{ background: 'var(--gold)', color: 'var(--night)', transform: 'rotate(-8deg)' }}>K</div>
+            <div className="w-[35px] h-[35px] rounded-[12px_12px_12px_4px] grid place-items-center font-extrabold text-lg flex-shrink-0" style={{ background: 'oklch(43% .12 158)', color: 'oklch(96% .025 94)', fontFamily: 'Fraunces, Georgia, serif', boxShadow: '4px 5px 0 oklch(75% .15 78)', transform: 'rotate(-4deg)' }}>k</div>
             <div className="flex-1 min-w-0">
               <b className="font-extrabold text-[15px] tracking-[-.05em] block truncate">KikwetuConnect</b>
               <small className="block text-[9px] uppercase tracking-[.13em] mt-0.5" style={{ color: 'oklch(64% .025 151)' }}>Admin console</small>

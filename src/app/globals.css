@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: light;
   --bg: oklch(96.5% .008 85);
   --surface: oklch(99% .004 85);
   --raised: oklch(93.5% .014 85);
@@ -39,30 +40,31 @@
 }
 
 [data-theme=dark] {
-  --bg: oklch(11.5% .014 151);
-  --surface: oklch(17% .02 151);
-  --raised: oklch(21% .02 151);
-  --ink: oklch(93% .008 85);
-  --muted: oklch(60% .018 151);
-  --faint: oklch(44% .018 151);
-  --line: oklch(27% .018 151);
-  --night: oklch(8% .018 151);
-  --night2: oklch(14% .018 151);
-  --gold: oklch(76% .14 84);
-  --green: oklch(58% .12 151);
-  --green-soft: oklch(24% .04 151);
-  --earth: oklch(46% .09 55);
-  --red: oklch(68% .15 28);
-  --blue: oklch(62% .12 260);
+  color-scheme: dark;
+  --bg: oklch(16% .02 151);
+  --surface: oklch(21% .025 151);
+  --raised: oklch(25.5% .025 151);
+  --ink: oklch(94% .008 85);
+  --muted: oklch(68% .018 151);
+  --faint: oklch(54% .018 151);
+  --line: oklch(33% .02 151);
+  --night: oklch(12% .02 151);
+  --night2: oklch(19% .02 151);
+  --gold: oklch(79% .15 84);
+  --green: oklch(62% .13 151);
+  --green-soft: oklch(28% .045 151);
+  --earth: oklch(48% .09 55);
+  --red: oklch(70% .15 28);
+  --blue: oklch(64% .12 260);
   --jakarta: 'Plus Jakarta Sans', system-ui, sans-serif;
   --dm: 'DM Sans', system-ui, -apple-system, sans-serif;
-  --card-shadow: 0 1px 2px oklch(0% 0 0 / 0.15), 0 2px 5px oklch(0% 0 0 / 0.18), 0 6px 12px oklch(0% 0 0 / 0.15);
-  --card-shadow-hover: 0 4px 8px oklch(0% 0 0 / 0.2), 0 12px 28px oklch(0% 0 0 / 0.22), 0 24px 60px oklch(0% 0 0 / 0.2);
-  --card-shadow-elevated: 0 8px 20px oklch(0% 0 0 / 0.25), 0 20px 50px oklch(0% 0 0 / 0.3);
-  --bg-pattern: radial-gradient(ellipse at 25% 30%, oklch(20% .02 151 / .4) 0%, transparent 55%), radial-gradient(ellipse at 75% 70%, oklch(18% .025 130 / .35) 0%, transparent 50%), radial-gradient(ellipse at 50% 10%, oklch(16% .02 170 / .25) 0%, transparent 45%);
-  --red-soft: oklch(30% .06 28);
-  --orange-soft: oklch(30% .08 60);
-  --blue-soft: oklch(30% .05 260);
+  --card-shadow: 0 1px 2px oklch(0% 0 0 / 0.18), 0 2px 5px oklch(0% 0 0 / 0.2), 0 6px 12px oklch(0% 0 0 / 0.18);
+  --card-shadow-hover: 0 4px 8px oklch(0% 0 0 / 0.24), 0 12px 28px oklch(0% 0 0 / 0.26), 0 24px 60px oklch(0% 0 0 / 0.24);
+  --card-shadow-elevated: 0 8px 20px oklch(0% 0 0 / 0.28), 0 20px 50px oklch(0% 0 0 / 0.3);
+  --bg-pattern: radial-gradient(ellipse at 25% 30%, oklch(26% .03 130 / .45) 0%, transparent 55%), radial-gradient(ellipse at 75% 70%, oklch(24% .035 110 / .4) 0%, transparent 50%), radial-gradient(ellipse at 50% 10%, oklch(22% .03 170 / .3) 0%, transparent 45%);
+  --red-soft: oklch(34% .07 28);
+  --orange-soft: oklch(34% .09 60);
+  --blue-soft: oklch(34% .06 260);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -108,7 +110,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .app.sidebar-collapsed { grid-template-columns: 76px minmax(0, 1fr); }
 }
 .brand { display: flex; gap: 12px; align-items: center; padding: 0 10px; }
-.mark { width: 36px; height: 36px; border-radius: var(--radius-md); background: var(--gold); color: var(--night); display: grid; place-items: center; font: 800 18px var(--jakarta); transform: rotate(-6deg); flex: none; box-shadow: 0 2px 8px color-mix(in oklab, var(--gold) 25%, transparent); }
+.mark { width: 36px; height: 36px; border-radius: 12px 12px 12px 4px; background: oklch(43% .12 158); color: oklch(96% .025 94); display: grid; place-items: center; font-family: Fraunces, Georgia, serif; font-weight: 800; font-size: 1.25rem; transform: rotate(-4deg); flex: none; box-shadow: 4px 5px 0 oklch(75% .15 78); }
 .brand b { font: 800 15px var(--jakarta); letter-spacing: -.05em; }
 .brand small { display: block; color: var(--muted); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; margin-top: 2px; font-weight: 500; }
 
@@ -1044,6 +1046,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
    SAVANNAH LANDING — matches kikwetu-savannah-landing-page mock
    ============================================================ */
 .sav-page { position: relative; min-height: 100vh; isolation: isolate; color: var(--cream-sav, oklch(96% .025 94)); }
+.sav-hero-zone { position: relative; min-height: 100vh; overflow: hidden; isolation: isolate; }
 .sav-scene { position: absolute; inset: 0; z-index: -1; overflow: hidden; background: linear-gradient(180deg, oklch(42% .09 211) 0%, oklch(62% .12 77) 43%, oklch(73% .12 70) 68%, oklch(53% .1 50) 100%); }
 .sav-scene::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 82% 18%, oklch(90% .12 82 / .95) 0 6%, oklch(90% .12 82 / .45) 9%, transparent 18%), linear-gradient(180deg, oklch(22% .05 215 / .15), transparent 45%), linear-gradient(0deg, oklch(30% .08 42 / .22), transparent 32%); }
 .sav-sky-haze { position: absolute; left: -10%; right: -10%; top: 39%; height: 20%; background: oklch(87% .08 82 / .22); filter: blur(18px); }
@@ -1136,13 +1139,57 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .sav-toast { position: fixed; left: 50%; bottom: 25px; z-index: 80; padding: 10px 14px; border-radius: 99px; color: var(--cream-sav, oklch(96% .025 94)); background: oklch(24% .034 158); box-shadow: 0 20px 50px oklch(10% .04 158 / .3); font-size: .72rem; transform: translate(-50%, 140%); transition: transform .25s var(--ease); }
 .sav-toast-show { transform: translate(-50%, 0); }
 
-.sav-footer { position: relative; z-index: 2; padding: 40px 28px; text-align: center; color: oklch(92% .025 94 / .7); }
+.sav-footer { position: relative; z-index: 2; padding: 40px 28px; text-align: center; color: oklch(92% .025 94 / .7); background: oklch(13% .04 151); }
 .sav-footer p { font-size: 12px; margin-bottom: 14px; }
 .sav-footer nav { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
 .sav-footer a { color: oklch(92% .025 94 / .7); font-size: 12px; text-decoration: none; transition: color 0.2s; }
 .sav-footer a:hover { color: oklch(75% .15 78); }
 
 .sav-icon-sm { width: 16px; height: 16px; }
+.sav-icon-md { width: 22px; height: 22px; }
+
+/* ==== Landing content sections (below the fold) ==== */
+.sav-eyebrow-dark { color: var(--gold); }
+.sav-how { position: relative; z-index: 2; padding: clamp(52px, 8vw, 110px) clamp(18px, 5vw, 68px); background: var(--bg); background-image: var(--bg-pattern); color: var(--ink); }
+.sav-how-inner { max-width: 1120px; margin: 0 auto; }
+.sav-how-inner h2 { font-family: var(--jakarta); font-size: clamp(1.9rem, 3.6vw, 3rem); line-height: 1.05; letter-spacing: -.055em; margin-top: 10px; max-width: 22ch; }
+.sav-how-lede { max-width: 58ch; margin-top: 14px; color: var(--muted); font-size: clamp(.95rem, 1.3vw, 1.08rem); line-height: 1.6; }
+.sav-step-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 38px; }
+.sav-step-card { position: relative; padding: 26px 22px 24px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--card-shadow); color: var(--ink); overflow: hidden; }
+.sav-step-card::before { content: ""; position: absolute; inset: 0 auto auto 0; width: 100%; height: 3px; background: linear-gradient(90deg, var(--gold), var(--green)); opacity: .8; }
+.sav-step-card .sav-icon-md { color: var(--gold); margin-top: 14px; }
+.sav-step-num { position: absolute; top: 18px; right: 18px; font: 800 .7rem var(--jakarta); letter-spacing: .12em; color: var(--faint); }
+.sav-step-card h3 { font-family: var(--jakarta); font-size: 1.08rem; letter-spacing: -.02em; margin-top: 6px; }
+.sav-step-card p { margin-top: 8px; color: var(--muted); font-size: .85rem; line-height: 1.6; }
+
+.sav-features { position: relative; z-index: 2; padding: clamp(52px, 8vw, 110px) clamp(18px, 5vw, 68px); background: var(--raised); color: var(--ink); }
+.sav-feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 38px; }
+.sav-feature-card { display: flex; flex-direction: column; padding: 26px 22px 24px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--card-shadow); color: inherit; text-decoration: none; transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease); }
+.sav-feature-card:hover { transform: translateY(-4px); box-shadow: var(--card-shadow-hover); border-color: color-mix(in oklab, var(--gold) 40%, var(--line)); }
+.sav-feature-card .sav-icon-md { color: var(--green); }
+.sav-feature-card h3 { font-family: var(--jakarta); font-size: 1.08rem; letter-spacing: -.02em; margin-top: 16px; }
+.sav-feature-card p { margin-top: 8px; color: var(--muted); font-size: .85rem; line-height: 1.6; flex: 1; }
+.sav-feature-go { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; color: var(--green); font: 800 .78rem var(--jakarta); }
+.sav-feature-card:hover .sav-feature-go { color: var(--gold); }
+
+.sav-cta { position: relative; z-index: 2; padding: clamp(56px, 8vw, 120px) clamp(18px, 5vw, 68px); background: linear-gradient(135deg, var(--raised) 0%, var(--bg) 100%); color: var(--ink); }
+.sav-cta-inner { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.sav-cta-inner h2 { font-size: clamp(2.2rem, 4.6vw, 3.8rem); }
+.sav-cta-inner .sav-how-lede { margin-left: auto; margin-right: auto; }
+.sav-cta-actions { justify-content: center; }
+.sav-cta .sav-btn-secondary { border-color: var(--line); color: var(--ink); background: var(--surface); }
+.sav-cta .sav-btn-secondary:hover { background: var(--raised); }
+[data-theme=dark] .sav-cta .sav-btn-secondary { color: var(--ink); }
+
+.sav-footer-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 30px; max-width: 1120px; margin: 0 auto; text-align: left; }
+.sav-footer-brand .sav-brand { color: var(--cream-sav, oklch(96% .025 94)); }
+.sav-footer-brand p { margin-top: 14px; color: oklch(88% .025 94 / .75); font-size: .82rem; line-height: 1.6; max-width: 34ch; }
+.sav-footer-col { display: flex; flex-direction: column; gap: 9px; }
+.sav-footer-col h4 { margin: 0 0 4px; color: oklch(92% .025 94 / .55); font: 800 .68rem var(--jakarta); letter-spacing: .12em; text-transform: uppercase; }
+.sav-footer-col a { color: oklch(92% .025 94 / .8); font-size: .82rem; text-decoration: none; transition: color .2s; }
+.sav-footer-col a:hover { color: oklch(75% .15 78); }
+.sav-footer-bottom { margin-top: 38px; padding-top: 18px; border-top: 1px solid oklch(98% .02 94 / .14); }
+.sav-footer-bottom p { font-size: 12px; margin: 0; color: oklch(88% .025 94 / .6); }
 
 @media (max-width: 820px) {
   .sav-header { padding: 16px 16px; }
@@ -1160,6 +1207,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .sav-value:last-child { border-bottom: 0; }
   .sav-value strong { font-size: .7rem; }
   .sav-value span { font-size: .59rem; }
+  .sav-step-grid { grid-template-columns: 1fr; gap: 12px; }
+  .sav-feature-grid { grid-template-columns: 1fr; gap: 12px; }
+  .sav-footer-grid { grid-template-columns: 1fr 1fr; gap: 24px; }
+  .sav-footer-brand { grid-column: 1 / -1; }
+  .sav-how, .sav-features, .sav-cta { padding: 44px 18px; }
 }
 
 

@@ -35,7 +35,7 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="min-h-screen flex items-center justify-center p-6" style={{ background: 'var(--bg)' }}>
           <div className="text-center max-w-[380px]">
-            <div className="mx-auto mb-4 w-[52px] h-[52px] rounded-[16px] grid place-items-center text-2xl font-extrabold" style={{ background: 'var(--gold)', color: 'var(--night)', transform: 'rotate(-8deg)' }}>K</div>
+            <div className="mx-auto mb-4 w-[52px] h-[52px] rounded-[16px] grid place-items-center text-2xl font-extrabold" style={{ background: 'oklch(43% .12 158)', color: 'oklch(96% .025 94)', fontFamily: 'Fraunces, Georgia, serif', boxShadow: '4px 5px 0 oklch(75% .15 78)', transform: 'rotate(-4deg)' }}>k</div>
             <h1 className="text-[17px] font-extrabold mb-2" style={{ fontFamily: 'var(--jakarta)', color: 'var(--ink)', letterSpacing: '-.02em' }}>Something went wrong</h1>
             <p className="text-[12px] mb-5" style={{ color: 'var(--muted)' }}>This has been reported. Try refreshing the page.</p>
             <button

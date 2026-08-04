@@ -239,7 +239,7 @@ function SignupForm() {
         <div className="acacia-tree" style={{ bottom: 0, left: '50%', transform: 'translateX(-50%)' }}>🌳</div>
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div className="savanna-brand" style={{ width: 38, height: 38, borderRadius: 12, background: 'oklcl(72% .15 84)', color: 'oklcl(16% .035 151)', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 19 }}>K</div>
+            <div className="savanna-brand" style={{ width: 38, height: 38, borderRadius: '12px 12px 12px 4px', background: 'oklch(43% .12 158)', color: 'oklch(96% .025 94)', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 19, fontFamily: 'Fraunces, Georgia, serif', boxShadow: '4px 5px 0 oklch(75% .15 78)', transform: 'rotate(-4deg)' }}>k</div>
             <div><b className="savanna-brand-text" style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-.05em' }}>KikwetuConnect</b><small style={{ display: 'block', color: 'oklch(72% .025 151)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', marginTop: 2 }}>Tuko pamoja</small></div>
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>

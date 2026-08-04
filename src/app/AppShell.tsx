@@ -244,8 +244,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <main className="main">
             <header className="topbar">
               <Link href="/feed" className="topbar-brand">
-                <span className="mark" style={{ width: 30, height: 30, fontSize: 15, transform: 'rotate(-6deg)' }}>K</span>
-                <span className="topbar-brand-text">KikwetuConnect</span>
+                <span className="mark" style={{ width: 30, height: 30, fontSize: 15, transform: 'rotate(-4deg)' }}>k</span>
+                <span className="topbar-brand-text">kikwetu<span style={{ color: 'var(--gold)' }}>.</span></span>
               </Link>
               <div className="search" id="global-search">
                 <button className="search-toggle" onClick={() => document.getElementById('global-search')?.classList.toggle('expanded')}>⌕</button>

@@ -39,7 +39,7 @@ export default function ResetPasswordPage() {
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 15% 18%,oklch(43% .08 151),transparent 33%),radial-gradient(circle at 85% 27%,oklch(38% .08 84),transparent 28%)', opacity: .62 }} />
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 38, height: 38, borderRadius: 12, background: 'oklch(72% .15 84)', color: 'oklch(16% .035 151)', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 19, transform: 'rotate(-8deg)' }}>K</div>
+            <div style={{ width: 38, height: 38, borderRadius: '12px 12px 12px 4px', background: 'oklch(43% .12 158)', color: 'oklch(96% .025 94)', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 19, fontFamily: 'Fraunces, Georgia, serif', boxShadow: '4px 5px 0 oklch(75% .15 78)', transform: 'rotate(-4deg)' }}>k</div>
             <div><b style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-.05em' }}>KikwetuConnect</b></div>
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
