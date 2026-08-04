@@ -39,8 +39,35 @@ async function getPost(id: string): Promise<PostMeta | null> {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
   const post = await getPost(id)
+  if (!post) return { title: 'Post not found | KikwetuConnect' }
   const title = post?.title ? `${post.title} | KikwetuConnect` : 'Post | KikwetuConnect'
   const description = post ? stripHtml(post.content || '').slice(0, 160) : 'Join the conversation on KikwetuConnect.'
+  const url = `https://kikwetuconnect.co.ke/posts/${post.id}`
+  const authorName = post.profiles?.full_name || post.profiles?.username || 'KikwetuConnect user'
+
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.title || title,
+    description,
+    author: {
+      '@type': 'Person',
+      name: authorName,
+    },
+    datePublished: post.created_at,
+    dateModified: post.created_at,
+    url,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': url,
+    },
+    ...(post.media_url ? {
+      image: post.media_url,
+    } : {}),
+    ...(post.post_type === 'poll' ? {
+      interactiveWidget: 'true',
+    } : {}),
+  }
 
   return {
     title,
@@ -49,11 +76,21 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       title,
       description,
       type: 'article',
+      url,
+      ...(post.media_url ? { images: [post.media_url] } : {}),
+      authors: [authorName],
     },
     twitter: {
-      card: 'summary_large_image',
+      card: post.media_url ? 'summary_large_image' : 'summary',
       title,
       description,
+      ...(post.media_url ? { images: [post.media_url] } : {}),
+    },
+    alternates: {
+      canonical: url,
+    },
+    other: {
+      'application/ld+json': JSON.stringify(structuredData),
     },
   }
 }
