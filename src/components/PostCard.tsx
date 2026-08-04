@@ -2,7 +2,7 @@
 import { memo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { toast } from '@/app/providers'
+import { toast, useSupabase } from '@/app/providers'
 import { ArrowUp, MessageCircle, Smile, Globe, Flag, Star, MoreHorizontal, Edit3, Trash2, EyeOff, Eye } from 'lucide-react'
 import ShareMenu from '@/components/ShareMenu'
 import RichText, { stripMarkdown } from '@/components/RichText'
@@ -16,6 +16,7 @@ interface PostCardProps {
   onVote: (postId: string, voteType: 1 | -1 | null) => void
   onSave: (postId: string) => void
   onReact: (postId: string, emoji: string) => void
+  onPollVote?: (postId: string, optionId: string) => void
 }
 
 export const PostCard = memo(function PostCard({
@@ -24,6 +25,7 @@ export const PostCard = memo(function PostCard({
   onVote,
   onSave,
   onReact,
+  onPollVote,
 }: PostCardProps) {
   const author = post.profiles
   const initials = getInitials(author?.full_name || author?.username)
@@ -38,7 +40,23 @@ export const PostCard = memo(function PostCard({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [hidden, setHidden] = useState(post.is_hidden)
+  const [userPollVotes, setUserPollVotes] = useState<Set<string>>(new Set())
+  const [localPollOptions, setLocalPollOptions] = useState(post.poll_options || [])
+  const [voting, setVoting] = useState<string | null>(null)
+  const supabase = useSupabase()
 
+  useEffect(() => {
+    if (currentUserId) {
+      supabase
+        .from('poll_votes')
+        .select('option_id')
+        .eq('user_id', currentUserId)
+        .eq('post_id', post.id)
+        .then(({ data }) => {
+          if (data) setUserPollVotes(new Set(data.map(d => d.option_id)))
+        })
+    }
+  }, [post.id, currentUserId, supabase])
   const handleEditSave = async () => {
     const res = await fetch(`/api/posts/${post.id}`, {
       method: 'PATCH',
@@ -226,6 +244,60 @@ export const PostCard = memo(function PostCard({
             <Image src={post.media_url} alt="" width={640} height={300} className="w-full h-auto max-h-[300px] object-cover" loading="lazy" unoptimized={post.media_url.startsWith('data:')} />
           )}
         </Link>
+      )}
+
+      {/* Poll Options */}
+      {post.post_type === 'poll' && localPollOptions.length > 0 && (
+        <div className="mb-[14px] space-y-[6px]">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold" style={{ color: 'var(--ink)' }}>Community Poll</span>
+            <span className="text-[10px] font-medium" style={{ color: 'var(--muted)' }}>{localPollOptions.reduce((a, b) => a + (b.votes || 0), 0)} votes</span>
+          </div>
+          {localPollOptions.map((opt) => {
+            const totalVotes = localPollOptions.reduce((a, b) => a + (b.votes || 0), 0)
+            const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0
+            const hasVoted = userPollVotes.has(opt.id)
+            return (
+              <button
+                key={opt.id}
+                onClick={async (e) => {
+                  e.preventDefault(); e.stopPropagation()
+                  if (voting) return
+                  setVoting(opt.id)
+                  try {
+                    const res = await fetch('/api/poll-vote', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ postId: post.id, optionId: opt.id }),
+                    })
+                    const j = await res.json()
+                    if (!res.ok) throw new Error(j.error || 'Failed to vote')
+                    setLocalPollOptions(prev => prev.map(o => o.id === opt.id ? { ...o, votes: o.votes + 1 } : o))
+                    setUserPollVotes(prev => new Set([...prev, opt.id]))
+                    onPollVote?.(post.id, opt.id)
+                  } catch (err: any) {
+                    toast(err.message || 'Failed to vote')
+                  } finally {
+                    setVoting(null)
+                  }
+                }}
+                disabled={voting !== null}
+                className="w-full flex items-center gap-2 p-2 rounded-[10px] text-left transition-all"
+                style={{
+                  background: hasVoted ? 'color-mix(in oklab, var(--gold) 15%, var(--raised))' : 'var(--raised)',
+                  border: hasVoted ? '1px solid var(--gold)' : '1px solid var(--line)',
+                  cursor: voting ? 'wait' : 'pointer',
+                }}
+                aria-label={hasVoted ? `${opt.option_text}, you voted (${opt.votes} votes)` : `${opt.option_text}, ${opt.votes} votes`}
+              >
+                <span className="flex-1 text-[12px] text-cream truncate">{opt.option_text}</span>
+                {totalVotes > 0 && (
+                  <span className="text-[10px] font-medium tabular-nums" style={{ color: 'var(--muted)' }}>{pct}%</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
       )}
 
       {/* County & Bounty */}

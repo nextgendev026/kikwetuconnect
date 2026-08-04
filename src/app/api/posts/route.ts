@@ -17,7 +17,8 @@ export async function GET(request: NextRequest) {
     .from('posts')
     .select(`
       *,
-      profiles:user_id (id, username, full_name, avatar_url, county_hub, heshima_rating, is_verified_expert)
+      profiles:user_id (id, username, full_name, avatar_url, county_hub, heshima_rating, is_verified_expert),
+      poll_options:id (id, option_text, votes)
     `)
     .is('space_id', null)
     .order('created_at', { ascending: false })

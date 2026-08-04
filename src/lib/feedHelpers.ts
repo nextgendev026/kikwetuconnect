@@ -17,6 +17,14 @@ export interface SaveRow {
   target_id: string
 }
 
+export interface PollOption {
+  id: string
+  post_id: string
+  option_text: string
+  votes: number
+  created_at: string
+}
+
 export interface Post {
   id: string
   user_id: string
@@ -36,6 +44,7 @@ export interface Post {
   profiles: Profile | null
   user_vote?: 1 | -1 | null
   user_saved?: boolean
+  poll_options?: PollOption[]
 }
 
 export type FeedRow =
