@@ -62,9 +62,17 @@ export function usePresence() {
   }, [supabase])
 
   const readState = useCallback((channel: any) => {
-    const state = channel.presenceState()
-    const ids = Object.keys(state).filter(k => k !== userIdRef.current)
-    void syncOnlineUsers(ids)
+    // presenceState() is keyed by per-client presence keys (socket/connection ids),
+    // NOT user ids. The actual profile id lives on each tracked payload as `user_id`.
+    const state = channel.presenceState() as Record<string, Array<{ user_id?: string }> | { user_id?: string }>
+    const ids = new Set<string>()
+    for (const presences of Object.values(state)) {
+      const list = Array.isArray(presences) ? presences : [presences]
+      for (const p of list) {
+        if (p?.user_id && p.user_id !== userIdRef.current) ids.add(p.user_id)
+      }
+    }
+    void syncOnlineUsers(Array.from(ids))
   }, [syncOnlineUsers])
 
   const trackMe = useCallback((sc: SharedChannel) => {
