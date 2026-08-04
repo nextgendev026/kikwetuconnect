@@ -923,6 +923,75 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .lp-footer a { color: var(--muted); font-size: 12px; text-decoration: none; transition: color 0.2s; }
 .lp-footer a:hover { color: var(--gold-text); }
 
+/* Signup page — savannah theme */
+@keyframes savannah-sway {
+  0%, 100% { transform: translateY(0) scale(1.02); }
+  50% { transform: translateY(-10px) scale(1.04); }
+}
+@keyframes savannah-rotate {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(5deg) scale(1.05); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+@keyframes acacia-sway {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+.auth-shell {
+  min-height: 100vh;
+  grid-template-columns: minmax(320px, .85fr) minmax(520px, 1.15fr);
+}
+.story-sidebar {
+  position: relative;
+  overflow: hidden;
+}
+.savanna-blobs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.savannah-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  animation: savannah-sway 20s ease-in-out infinite;
+}
+.savannah-blob.a { width: 300px; height: 300px; top: -80px; left: -80px; background: color-mix(in oklab, var(--earth) 40%, transparent); animation-duration: 24s; }
+.savannah-blob.b { width: 260px; height: 260px; bottom: -80px; right: -80px; background: color-mix(in oklab, var(--gold) 35%, transparent); animation-duration: 28s; animation-delay: 2s; }
+.savannah-blob.c { width: 200px; height: 200px; top: 40%; right: 20%; background: color-mix(in oklab, var(--green) 30%, transparent); animation-duration: 26s; animation-delay: 4s; }
+.acacia-tree {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 80px;
+  opacity: 0.12;
+  animation: acacia-sway 18s ease-in-out infinite;
+}
+.savanna-brand {
+  animation: savannah-rotate 12s ease-in-out infinite;
+}
+.savanna-brand-text {
+  background: linear-gradient(135deg, var(--gold), var(--green));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.auth-eye-btn {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  color: oklch(52% .035 151);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+}
+
 @media (max-width: 768px) {
   .lp-hero { grid-template-columns: 1fr; min-height: auto; padding: 40px 20px; }
   .lp-hero-visual { display: none; }
@@ -934,5 +1003,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .lp-features { grid-template-columns: 1fr; }
   .lp-spaces-layout { grid-template-columns: 1fr; }
   .lp-header { padding: 0 20px; }
+  .auth-shell { grid-template-columns: 1fr !important; }
 }
 

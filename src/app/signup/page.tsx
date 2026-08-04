@@ -26,7 +26,7 @@ const TOPICS = [
 function EyeBtn({ id }: { id: string }) {
   const [show, setShow] = useState(false)
   return (
-    <button type="button" onClick={() => setShow(!show)} className="absolute right-[5px] top-[5px] w-[36px] h-[36px] bg-transparent text-[oklch(52%_.035_151)] rounded-[8px] grid place-items-center text-xs">
+    <button type="button" onClick={() => setShow(!show)} className="auth-eye-btn" aria-label={show ? 'Hide password' : 'Show password'}>
       {show ? '\u25C9' : '\u25CE'}
     </button>
   )
@@ -228,14 +228,19 @@ function SignupForm() {
   )
 
   return (
-    <div className="shell" style={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: 'minmax(300px,.78fr) minmax(520px,1.22fr)' }}>
+    <div className="auth-shell" style={{ display: 'grid' }}>
       {/* Story sidebar */}
-      <aside className="story" style={{ background: 'oklch(16% .035 151)', color: 'oklch(95% .012 91)', padding: 'clamp(28px,6vw,80px)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 15% 18%,oklch(43% .08 151),transparent 33%),radial-gradient(circle at 85% 27%,oklch(38% .08 84),transparent 28%)', opacity: .62 }} />
+      <aside className="story story-sidebar" style={{ background: 'oklch(16% .035 151)', color: 'oklch(95% .012 91)', padding: 'clamp(28px,6vw,80px)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div className="savanna-blobs">
+          <div className="savannah-blob a" style={{ animationDuration: '24s' }} />
+          <div className="savannah-blob b" style={{ animationDuration: '28s', animationDelay: '2s' }} />
+          <div className="savannah-blob c" style={{ animationDuration: '26s', animationDelay: '4s' }} />
+        </div>
+        <div className="acacia-tree" style={{ bottom: 0, left: '50%', transform: 'translateX(-50%)' }}>🌳</div>
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: 38, height: 38, borderRadius: 12, background: 'oklch(72% .15 84)', color: 'oklch(16% .035 151)', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 19, transform: 'rotate(-8deg)' }}>K</div>
-            <div><b style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-.05em' }}>KikwetuConnect</b><small style={{ display: 'block', color: 'oklch(72% .025 151)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', marginTop: 2 }}>Tuko pamoja</small></div>
+            <div className="savanna-brand" style={{ width: 38, height: 38, borderRadius: 12, background: 'oklcl(72% .15 84)', color: 'oklcl(16% .035 151)', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 19 }}>K</div>
+            <div><b className="savanna-brand-text" style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-.05em' }}>KikwetuConnect</b><small style={{ display: 'block', color: 'oklch(72% .025 151)', fontSize: 9, letterSpacing: '.14em', textTransform: 'uppercase', marginTop: 2 }}>Tuko pamoja</small></div>
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <div style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', fontWeight: 800, color: 'oklch(72% .15 84)' }}>Kenya's knowledge circle</div>
