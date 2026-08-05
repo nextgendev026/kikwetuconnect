@@ -1,7 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { useRef, useState } from 'react'
-import { LogIn, ArrowUpRight, Compass, MessageCircleQuestion, BadgeCheck, ShieldCheck, MapPin, X, Users, Landmark, BookOpen, CheckCircle2 } from 'lucide-react'
+import { ArrowUpRight, Compass, LogIn, MessageCircleQuestion, BadgeCheck, ShieldCheck, MapPin, Users, Landmark, BookOpen, CheckCircle2 } from 'lucide-react'
 
 const steps = [
   {
@@ -34,15 +33,6 @@ const featureCards = [
 ]
 
 export default function SavannahLanding() {
-  const dialogRef = useRef<HTMLDialogElement>(null)
-  const [toast, setToast] = useState('')
-
-  const showToast = (msg: string) => {
-    setToast(msg)
-    window.clearTimeout((showToast as any)._t)
-    ;(showToast as any)._t = window.setTimeout(() => setToast(''), 2200)
-  }
-
   return (
     <div className="sav-page">
       <div className="sav-hero-zone">
@@ -218,55 +208,6 @@ export default function SavannahLanding() {
           <p>© 2026 KikwetuConnect · Tuko pamoja · English · Kiswahili · Sheng</p>
         </div>
       </footer>
-
-      <dialog ref={dialogRef} className="sav-dialog" aria-label="Join Kikwetu">
-        <div className="sav-dialog-inner">
-          <div className="sav-dialog-head">
-            <div>
-              <div className="sav-eyebrow">Join Kikwetu</div>
-              <h2 className="sav-serif">Start with where you are.</h2>
-            </div>
-            <button className="sav-dialog-close" onClick={() => dialogRef.current?.close()} aria-label="Close">
-              <X className="sav-icon-sm" aria-hidden="true" />
-            </button>
-          </div>
-          <p className="sav-dialog-copy">Choose a county and the things you want to learn, share, or follow. You can change this later.</p>
-          <form
-            className="sav-dialog-form"
-            onSubmit={(e) => {
-              e.preventDefault()
-              dialogRef.current?.close()
-              showToast('Welcome to KikwetuConnect')
-              window.setTimeout(() => { window.location.href = '/signup' }, 300)
-            }}
-          >
-            <label>County
-              <select defaultValue="Nairobi County">
-                <option>Nairobi County</option>
-                <option>Mombasa County</option>
-                <option>Kisumu County</option>
-                <option>Nakuru County</option>
-                <option>Kiambu County</option>
-                <option>Turkana County</option>
-              </select>
-            </label>
-            <label>What brings you here?
-              <select defaultValue="Learn from people with context">
-                <option>Learn from people with context</option>
-                <option>Share local knowledge</option>
-                <option>Find community and safety updates</option>
-                <option>Buy and sell locally</option>
-              </select>
-            </label>
-            <div className="sav-dialog-footer">
-              <button type="button" className="sav-btn sav-btn-secondary sav-btn-flat" onClick={() => { dialogRef.current?.close(); showToast('You can join whenever you are ready') }}>Maybe later</button>
-              <button type="submit" className="sav-btn sav-btn-primary">Create my space</button>
-            </div>
-          </form>
-        </div>
-      </dialog>
-
-      <div className={`sav-toast${toast ? ' sav-toast-show' : ''}`} role="status">{toast}</div>
     </div>
   )
 }

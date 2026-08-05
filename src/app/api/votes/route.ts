@@ -46,12 +46,13 @@ export const POST = withAuth(async (request, { supabase, user }) => {
       return NextResponse.json({ vote_type })
     }
   }
-  await supabase.from('votes').insert({
+  const { error: insertError } = await supabase.from('votes').insert({
     user_id: user.id,
     target_type,
     target_id,
     vote_type,
   })
+  if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
   const { data: target } = await supabase
     .from(target_type === 'post' ? 'posts' : 'answers')
     .select('user_id')

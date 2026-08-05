@@ -44,7 +44,11 @@ export async function proxy(req: NextRequest) {
     return res
   }
 
-  const publicPaths = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/auth/callback', '/onboarding']
+  // Static legal documents must be readable by everyone (and indexed), so they
+  // are exempt from both the anonymous->/login and the logged-in->/feed bounces.
+  if (pathname.startsWith('/legal')) return res
+
+  const publicPaths = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/auth/callback', '/onboarding', '/welcome']
   const isPublicPath = publicPaths.some(p => pathname.startsWith(p))
   const isLanding = pathname === '/' || pathname === ''
   // Shared posts must be readable by anyone (anonymous read-only), while

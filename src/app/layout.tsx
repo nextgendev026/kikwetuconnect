@@ -23,9 +23,6 @@ export const metadata: Metadata = {
   twitter: { card: 'summary_large_image', title: 'KikwetuConnect', description: "Kenya's local knowledge network." },
   robots: { index: true, follow: true },
   icons: {
-    icon: '/favicon.svg',
-    shortcut: '/favicon.svg',
-    apple: '/favicon.svg',
     other: [
       { rel: 'manifest', url: '/site.webmanifest' },
     ],
@@ -39,8 +36,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
-        <meta name="theme-color" content="#438854" media="(prefers-color-scheme: light)" />
-        <meta name="theme-color" content="#1a2e1a" media="(prefers-color-scheme: dark)" />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('kikwetu-theme')||'light';var dark=t==='dark';document.documentElement.setAttribute('data-theme',t);document.body.setAttribute('data-theme',t);var mk=document.querySelector('meta[name="theme-color"]');if(mk){mk.setAttribute('content',dark?'#1a3a24':'#438854');}}catch(e){}})();` }} />
+        <meta name="theme-color" content="#438854" id="theme-color-meta" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#1a3a24" id="theme-color-meta-dark" media="(prefers-color-scheme: dark)" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" media="(prefers-color-scheme: light)" />
+        <link rel="icon" type="image/svg+xml" href="/favicon-dark.svg" media="(prefers-color-scheme: dark)" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Kikwetu" />

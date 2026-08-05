@@ -26,7 +26,7 @@ export const useSupabase = () => {
   return c
 }
 
-const publicPaths = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/auth/callback', '/onboarding', '/welcome']
+const publicPaths = ['/', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/auth/callback', '/onboarding', '/welcome', '/legal']
 
 function ShellRouter({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
