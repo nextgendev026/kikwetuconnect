@@ -334,8 +334,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
     radial-gradient(900px 480px at 0% 100%, color-mix(in oklab, var(--green) 6%, transparent), transparent 55%),
     var(--bg);
 }
-.messages-thread .msg-row { display: flex; padding: 4px 0; }
+.messages-thread .msg-row { display: flex; align-items: flex-end; padding: 1px 0; }
 .messages-thread .msg-row.me { justify-content: flex-end; }
+.messages-thread .msg-row.last { padding-bottom: 7px; }
 
 .msg-bubble {
   max-width: 75%;
@@ -345,20 +346,21 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   border-radius: 20px;
   box-shadow: 0 1px 3px oklch(0% 0 0 / 0.06);
   transition: box-shadow .25s var(--ease);
+  overflow-wrap: anywhere;
 }
 .msg-row:not(.me) .msg-bubble {
   background: var(--surface);
   color: var(--ink);
   border: 1px solid var(--line);
-  border-bottom-left-radius: 5px;
 }
+.msg-row:not(.me).last .msg-bubble { border-bottom-left-radius: 5px; }
 .msg-row.me .msg-bubble {
   background: linear-gradient(165deg, var(--green), color-mix(in oklab, var(--green) 84%, var(--gold)));
   color: var(--surface);
   border: none;
-  border-bottom-right-radius: 5px;
   box-shadow: 0 3px 12px color-mix(in oklab, var(--green) 24%, transparent);
 }
+.msg-row.me.last .msg-bubble { border-bottom-right-radius: 5px; }
 .msg-row.me .msg-bubble:hover { box-shadow: 0 4px 16px color-mix(in oklab, var(--green) 32%, transparent); }
 .msg-row .msg-bubble img { max-width: 260px; border-radius: 14px; margin-top: 6px; }
 .msg-row .msg-bubble a { color: inherit; text-decoration: underline; }

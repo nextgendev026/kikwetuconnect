@@ -522,9 +522,9 @@ function MessagesInner() {
                     const own = isOwn(msg.sender_id)
                     const temp = isTemp(msg)
                     return (
-                      <div className={`msg-row ${own ? 'me' : ''} mb-1`}>
+                      <div className={`msg-row ${own ? 'me' : ''} ${row.isLast ? 'last' : 'grouped'}`}>
                         {!own && (
-                          <div className={`mr-1.5 w-[26px] ${row.isLast ? '' : 'invisible'}`}>
+                          <div className={`w-[26px] ${row.isLast ? '' : 'invisible'}`}>
                             {msg.sender?.avatar_url ? (
                               <img src={msg.sender.avatar_url} alt="" className="w-[26px] h-[26px] rounded-full object-cover" />
                             ) : (
