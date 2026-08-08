@@ -3,7 +3,7 @@ import { useState, useRef, useCallback, DragEvent } from 'react'
 import Link from 'next/link'
 import { Edit3, Settings, MapPin, Globe, MessageCircle, Heart, Users, BookOpen, Award, Calendar, Camera, Check, Upload } from 'lucide-react'
 import { toast } from '@/app/providers'
-import ImageCropper from '@/components/MediaEditor'
+import MediaEditor from '@/components/MediaEditor'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/lib/database.types'
 
@@ -386,7 +386,7 @@ export default function ProfileHeader({
 
       {/* Manual crop editor — real crop region with drag handles + zoom */}
       {showEditor && pendingFile && (
-        <ImageCropper
+        <MediaEditor
           file={pendingFile}
           type="image"
           aspect={cropType === 'cover' ? 'cover' : 'square'}

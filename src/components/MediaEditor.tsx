@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 interface MediaEditorProps {
   file: File
@@ -10,183 +10,37 @@ interface MediaEditorProps {
   maxDuration?: number
 }
 
-function constrainCrop(w: number, h: number, aspect: 'square' | 'cover', maxSide: number) {
-  if (aspect === 'cover') {
-    const ratio = 21 / 9
-    let nw: number
-    let nh: number
-    if (w / h >= ratio) { nh = h; nw = h * ratio }
-    else { nw = w; nh = w / ratio }
-    const long = Math.max(nw, nh)
-    const size = Math.min(long, Math.max(maxSide, 50))
-    if (long > size) { const f = size / long; nw *= f; nh *= f }
-    return { w: Math.max(50, nw), h: Math.max(50 / ratio, nh) }
-  }
-  const size = Math.max(50, Math.min(Math.min(w, h), maxSide))
-  return { w: size, h: size }
-}
-
-const FILTERS: Record<string, string> = {
-  Original: 'none',
-  Warm: 'sepia(.28) saturate(1.35) contrast(1.02)',
-  Cool: 'saturate(1.12) hue-rotate(14deg)',
-  Vivid: 'saturate(1.5) contrast(1.1)',
-  Mono: 'grayscale(1) contrast(1.06)',
-  Sepia: 'sepia(.72) saturate(1.25)',
-  Fade: 'contrast(.92) brightness(1.08) saturate(.85)',
-}
-
-export default function MediaEditor({ file, type, onComplete, onCancel, maxDuration = 30, aspect = 'square' }: MediaEditorProps) {
-  if (type === 'image') return <ImageCropper file={file} type={type} aspect={aspect} onComplete={onComplete} onCancel={onCancel} />
+export default function MediaEditor({ file, type, onComplete, onCancel, maxDuration = 30 }: MediaEditorProps) {
+  if (type === 'image') return <ImageUploader file={file} type={type} onComplete={onComplete} onCancel={onCancel} />
   if (type === 'audio') return <AudioTrimmer file={file} type={type} onComplete={onComplete} onCancel={onCancel} />
   return <VideoTrimmer file={file} type={type} maxDuration={maxDuration} onComplete={onComplete} onCancel={onCancel} />
 }
 
-export { ImageCropper, VideoTrimmer, AudioTrimmer }
+export { ImageUploader, VideoTrimmer, AudioTrimmer }
 
-function ImageCropper({ file, onComplete, onCancel, aspect = 'square' }: MediaEditorProps) {
-  const imgRef = useRef<HTMLImageElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [imgSrc, setImgSrc] = useState('')
-  const [zoom, setZoom] = useState(1)
-  const [crop, setCrop] = useState({ x: 0, y: 0, w: 300, h: 300 })
-  const [dragging, setDragging] = useState<'tl' | 'tr' | 'bl' | 'br' | 'move' | null>(null)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [naturalSize, setNaturalSize] = useState({ w: 0, h: 0 })
-  const [filter, setFilter] = useState('Original')
-
+function ImageUploader({ file, onComplete, onCancel }: MediaEditorProps) {
+  const [preview, setPreview] = useState('');
   useEffect(() => {
-    const url = URL.createObjectURL(file)
-    setImgSrc(url)
-    const img = new Image()
-    img.onload = () => {
-      const maxLen = Math.min(window.innerWidth, 720) - 48
-      const s = Math.min(img.width, img.height, maxLen)
-      const { w: cw, h: ch } = constrainCrop(s, s, aspect, maxLen)
-      setCrop({ x: (img.width - cw) / 2, y: (img.height - ch) / 2, w: cw, h: ch })
-      setNaturalSize({ w: img.width, h: img.height })
-    }
-    img.src = url
-    return () => URL.revokeObjectURL(url)
-  }, [file, aspect])
-
-  const handleMouseDown = (e: React.MouseEvent, handle: 'tl' | 'tr' | 'bl' | 'br' | 'move') => {
-    e.preventDefault()
-    setDragging(handle)
-    setDragStart({ x: e.clientX, y: e.clientY })
-  }
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!dragging || !naturalSize.w) return
-    const maxEditor = Math.min(window.innerWidth - 48, window.innerHeight - 240, 720)
-    const ds = Math.min(maxEditor / naturalSize.w, maxEditor / naturalSize.h, 1)
-    const factor = ds * zoom
-    if (!factor) return
-    const dx = (e.clientX - dragStart.x) / factor
-    const dy = (e.clientY - dragStart.y) / factor
-    const maxSide = Math.min(naturalSize.w, naturalSize.h, 720)
-    setCrop(prev => {
-      let { x, y, w, h } = prev
-      if (dragging === 'move') { x += dx; y += dy }
-      else if (dragging === 'br') { w += dx; h += dy }
-      else if (dragging === 'bl') { x += dx; w -= dx; h += dy }
-      else if (dragging === 'tr') { y += dy; w += dx; h -= dy }
-      else if (dragging === 'tl') { x += dx; y += dy; w -= dx; h -= dy }
-      const { w: nw, h: nh } = constrainCrop(Math.abs(w), Math.abs(h), aspect, maxSide)
-      x = Math.max(0, Math.min(x, naturalSize.w - nw))
-      y = Math.max(0, Math.min(y, naturalSize.h - nh))
-      return { x, y, w: nw, h: nh }
-    })
-    setDragStart({ x: e.clientX, y: e.clientY })
-  }, [dragging, zoom, dragStart, naturalSize, aspect])
-
-  useEffect(() => {
-    if (!dragging) return
-    const up = () => setDragging(null)
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('mouseup', up)
-    return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', up) }
-  }, [dragging, handleMouseMove])
-
-  const handleApply = () => {
-    const canvas = canvasRef.current
-    const img = imgRef.current
-    if (!canvas || !img) return
-    const outW = aspect === 'cover' ? 1920 : 1024
-    const outH = aspect === 'cover' ? 824 : 1024
-    canvas.width = outW
-    canvas.height = outH
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.filter = FILTERS[filter] || 'none'
-    const size = Math.min(crop.w, crop.h)
-    const drawW = aspect === 'cover' ? crop.w : size
-    const drawH = aspect === 'cover' ? crop.h : size
-    ctx.drawImage(img, crop.x, crop.y, drawW, drawH, 0, 0, outW, outH)
-    canvas.toBlob(blob => {
-      if (!blob) return
-      const croppedFile = new File([blob], file.name.replace(/\.[^.]+$/, '_cropped.jpg'), { type: 'image/jpeg', lastModified: Date.now() })
-      onComplete(croppedFile, { x: crop.x, y: crop.y, w: drawW, h: drawH, filter, aspect })
-    }, 'image/jpeg', 0.92)
-  }
-
-  const displayW = naturalSize.w || 400
-  const displayH = naturalSize.h || 400
-  const maxEditor = Math.min(window.innerWidth - 48, window.innerHeight - 240, 720)
-  const scale = Math.min(maxEditor / displayW, maxEditor / displayH, 1)
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center modal-center-scroll" style={{ background: 'rgba(0,0,0,0.85)' }}>
-      <div className="rounded-2xl p-5 max-w-[95vw] max-h-[95vh] overflow-y-auto" style={{ background: 'var(--surface)', maxWidth: '780px' }}>
+      <div className="rounded-2xl p-5 max-w-[95vw] max-h-[95vh] overflow-y-auto" style={{ background: 'var(--surface)', maxWidth: '500px' }}>
         <div className="flex justify-between items-center mb-4">
-          <strong className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>{aspect === 'cover' ? 'Cover image' : 'Edit profile photo'}</strong>
+          <strong className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>Confirm Photo</strong>
           <button onClick={onCancel} className="border-0 bg-none cursor-pointer text-2xl leading-none" style={{ color: 'var(--muted)' }}>×</button>
         </div>
-        <div className="relative mx-auto overflow-hidden rounded-xl" style={{ width: Math.min(displayW * scale, maxEditor), height: Math.min(displayH * scale, maxEditor), background: '#222' }}>
-          <div style={{ position: 'absolute', left: 0, top: 0, width: Math.min(displayW * scale, maxEditor), height: Math.min(displayH * scale, maxEditor), transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
-            <img ref={imgRef} src={imgSrc} alt="" className="max-w-none select-none" style={{ width: '100%', height: '100%', display: 'block', filter: FILTERS[filter] || 'none', userSelect: 'none' }} />
-            <div style={{
-              position: 'absolute', left: crop.x * scale, top: crop.y * scale,
-              width: crop.w * scale, height: crop.h * scale,
-              boxShadow: '0 0 0 2px rgba(255,255,255,0.8), 0 0 0 9999px rgba(0,0,0,0.5)',
-              cursor: 'move',
-            }} onMouseDown={e => handleMouseDown(e, 'move')}>
-              {['tl', 'tr', 'bl', 'br'].map(h => (
-                <div key={h} onMouseDown={e => handleMouseDown(e, h as any)}
-                  className="absolute w-[14px] h-[14px] rounded-sm cursor-nw-resize border border-white"
-                  style={{ background: 'white', [h.includes('t') ? 'top' : 'bottom']: -7, [h.includes('l') ? 'left' : 'right']: -7, boxShadow: '0 0 2px rgba(0,0,0,0.5)' }} />
-              ))}
-            </div>
-          </div>
+        <img src={preview} alt="preview" className="max-w-full max-h-80 mb-4 rounded" />
+        <div className="flex justify-end gap-2">
+          <button onClick={onCancel} className="px-5 h-[38px] rounded-[10px] text-sm border cursor-pointer" style={{ borderColor: 'var(--line)', background: 'none', color: 'var(--ink)' }}>Cancel</button>
+          <button onClick={() => onComplete(file)} className="px-5 h-[38px] rounded-[10px] text-sm font-bold border-0 cursor-pointer" style={{ background: 'var(--gold)', color: 'var(--night)' }}>Use Photo</button>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-          <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1">
-            {Object.keys(FILTERS).map(f => (
-              <button key={f} onClick={() => setFilter(f)}
-                className="px-2.5 h-[30px] rounded-[9px] text-[10px] font-semibold border whitespace-nowrap cursor-pointer transition-all"
-                style={{
-                  borderColor: filter === f ? 'var(--gold)' : 'var(--line)',
-                  background: filter === f ? 'color-mix(in oklab, var(--gold) 15%, var(--surface))' : 'none',
-                  color: filter === f ? 'var(--gold)' : 'var(--muted)',
-                }}>{f}</button>
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: 'var(--muted)' }}>Zoom</span>
-            <input type="range" min="1" max="3" step="0.1" value={zoom} onChange={e => setZoom(Number(e.target.value))} className="w-[100px]" />
-            <span className="text-xs" style={{ color: 'var(--muted)' }}>{naturalSize.w ? Math.round((crop.w / naturalSize.w) * 100) : 0}%</span>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={onCancel} className="px-5 h-[38px] rounded-[10px] text-sm border cursor-pointer" style={{ borderColor: 'var(--line)', background: 'none', color: 'var(--ink)' }}>Cancel</button>
-            <button onClick={handleApply} className="px-5 h-[38px] rounded-[10px] text-sm font-bold border-0 cursor-pointer" style={{ background: 'var(--gold)', color: 'var(--night)' }}>Apply</button>
-          </div>
-        </div>
-        <canvas ref={canvasRef} className="hidden" />
       </div>
     </div>
-  )
+  );
 }
 
 function formatTime(s: number) {

@@ -1,22 +1,28 @@
 'use client'
 import Link from 'next/link'
 import { Suspense, useEffect, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useSupabase, toast } from '@/app/providers'
 
 function VerifyEmailContent() {
   const supabase = useSupabase()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState(searchParams.get('email') || '')
   const [sent, setSent] = useState(false)
   const [sending, setSending] = useState(false)
 
+  // If a logged-in user already confirmed their email, go to the welcome page.
   useEffect(() => {
-    if (email) return
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user?.email) setEmail(data.user.email)
+      const user = data.user
+      if (user?.email_confirmed_at) {
+        router.replace('/welcome')
+      } else if (!email && user?.email) {
+        setEmail(user.email)
+      }
     })
-  }, [supabase, email])
+  }, [supabase, router, email])
 
   const resend = async () => {
     if (!email) { toast('Enter your email address first'); return }

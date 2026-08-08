@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useSupabase } from '@/app/providers'
 import { normalizePhone } from '@/lib/mpesa'
@@ -37,7 +37,6 @@ export default function SignupPage() {
 }
 
 function SignupForm() {
-  const router = useRouter()
   const supabase = useSupabase()
   const searchParams = useSearchParams()
   const [mode, setMode] = useState<'login' | 'signup'>(searchParams.get('mode') === 'login' ? 'login' : 'signup')
@@ -197,7 +196,7 @@ function SignupForm() {
         if (topicError) console.error(topicError)
       }
 
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`)
+      window.location.assign(`/verify-email?email=${encodeURIComponent(email)}`)
     } catch (e: any) {
       toast(friendlySignupError(e.message || 'Something went wrong'))
     } finally {
@@ -213,8 +212,17 @@ function SignupForm() {
     setLoading(true)
     try {
       const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword })
-      if (error) { setLoginError(error.message) } else { router.push('/feed') }
-    } catch (err: any) { setLoginError(err.message || 'An error occurred') } finally { setLoading(false) }
+      if (error) {
+        setLoginError(error.message)
+      } else {
+        const { data: { user } } = await supabase.auth.getUser()
+        window.location.assign(user?.email_confirmed_at ? '/feed' : `/verify-email?email=${encodeURIComponent(loginEmail)}`)
+      }
+    } catch (err: any) {
+      setLoginError(err.message || 'An error occurred')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const stepDots = (s: number) => (
