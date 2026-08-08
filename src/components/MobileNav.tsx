@@ -159,12 +159,14 @@ export default function MobileNav() {
         bottom: 'calc(10px + env(safe-area-inset-bottom))', height: 64,
         width: 'calc(100vw - 20px)',
         maxWidth: 420,
-        background: 'var(--surface)',
+        background: 'color-mix(in oklab, var(--surface) 92%, transparent)',
+        backdropFilter: 'blur(18px) saturate(1.4)',
+        WebkitBackdropFilter: 'blur(18px) saturate(1.4)',
         border: '1px solid var(--line)',
         borderRadius: 20,
         justifyContent: 'space-around',
         alignItems: 'center',
-        boxShadow: '0 16px 40px color-mix(in oklab, var(--night) 20%, transparent)',
+        boxShadow: '0 16px 40px color-mix(in oklab, var(--night) 22%, transparent), inset 0 1px 0 color-mix(in oklab, white 8%, transparent)',
         touchAction: 'manipulation',
         pointerEvents: 'auto',
       }}>
@@ -175,11 +177,13 @@ export default function MobileNav() {
               <button key={i.href} className="plus" aria-label="Create new post"
                 onClick={() => document.dispatchEvent(new CustomEvent('open-create-modal'))}
                 style={{
-                  height: 46, width: 46, borderRadius: 15,
-                  background: 'var(--gold)', color: 'var(--night)',
+                  height: 48, width: 48, borderRadius: 16,
+                  background: 'linear-gradient(135deg, var(--gold), color-mix(in oklab, var(--gold) 82%, oklch(85% .14 85)))',
+                  color: 'var(--night)',
                   border: 0, cursor: 'pointer', display: 'grid', placeItems: 'center',
                   transform: 'translateY(-6px)',
-                  boxShadow: '0 4px 12px color-mix(in oklab, var(--gold) 40%, transparent)',
+                  boxShadow: '0 4px 14px color-mix(in oklab, var(--gold) 45%, transparent), inset 0 1px 0 color-mix(in oklab, white 20%, transparent)',
+                  transition: 'transform .25s var(--ease-spring)',
                 }}>
                 <Plus className="w-5 h-5" />
               </button>
@@ -193,6 +197,7 @@ export default function MobileNav() {
                   background: 'none', border: 0, cursor: 'pointer', display: 'grid',
                   placeItems: 'center', gap: 4, minWidth: 45, fontSize: 9, position: 'relative',
                   color: active ? 'var(--gold-text)' : 'var(--muted)',
+                  transition: 'color .2s var(--ease)',
                 }}>
                 <Icon className="w-5 h-5" />
                 <span>{i.label}</span>
@@ -215,8 +220,15 @@ export default function MobileNav() {
                 textDecoration: 'none', display: 'grid',
                 placeItems: 'center', gap: 4, minWidth: 45, fontSize: 9,
                 color: active ? 'var(--gold-text)' : 'var(--muted)',
+                transition: 'color .2s var(--ease)',
               }}>
-              <Icon className="w-5 h-5" />
+              <span style={{
+                display: 'grid', placeItems: 'center',
+                borderRadius: 12, transition: 'background .25s var(--ease)',
+                ...(active ? { background: 'color-mix(in oklab, var(--gold) 18%, transparent)' } : {}),
+              }}>
+                <Icon className="w-5 h-5" />
+              </span>
               <span>{i.label}</span>
             </Link>
           )

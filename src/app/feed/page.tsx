@@ -10,7 +10,7 @@ import { PostCard } from '@/components/PostCard'
 import { COUNTIES, TABS, TYPE_FILTERS } from '@/lib/feed-config'
 import type { TabId, TypeFilter } from '@/lib/feed-config'
 import { getInitials } from '@/lib/utils'
-import { buildFeedItems, feedKey } from '@/lib/feedHelpers'
+import { buildFeedItems, feedKey, hasActiveAd } from '@/lib/feedHelpers'
 import { useFeed } from '@/hooks/useFeed'
 import { useVoteAction, useSaveAction } from '@/hooks/usePostActions'
 
@@ -89,7 +89,13 @@ export default function FeedPage() {
   const saveAction = useSaveAction(params)
 
   const posts = useMemo(() => feedQuery.data?.pages.flatMap(p => p.posts) ?? [], [feedQuery.data])
-  const feedItems = useMemo(() => buildFeedItems(posts), [posts])
+  const [hasAd, setHasAd] = useState(false)
+  useEffect(() => {
+    let active = true
+    hasActiveAd(supabase).then(v => { if (active) setHasAd(v) })
+    return () => { active = false }
+  }, [supabase])
+  const feedItems = useMemo(() => buildFeedItems(posts, hasAd), [posts, hasAd])
   const loading = feedQuery.isLoading
   const loadingMore = feedQuery.isFetchingNextPage
   const error = feedQuery.error ? (feedQuery.error as Error).message : null

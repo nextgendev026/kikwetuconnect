@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
+
 export interface Profile {
   id: string
   full_name: string | null
@@ -64,14 +66,31 @@ export function feedKey(params: FeedParams) {
 
 const AD_EVERY = 4
 
-/** Interleave FeedAd placeholders between posts (every 4th slot). */
-export function buildFeedItems(posts: Post[]): FeedRow[] {
+/** Interleave FeedAd placeholders between posts (every 4th slot), but only when
+ *  an active feed ad is available so the list never renders zero-height slots. */
+export function buildFeedItems(posts: Post[], hasAd = false): FeedRow[] {
   const items: FeedRow[] = []
   posts.forEach((post, idx) => {
-    if (idx > 0 && idx % AD_EVERY === 0) items.push({ kind: 'ad' })
+    if (hasAd && idx > 0 && idx % AD_EVERY === 0) items.push({ kind: 'ad' })
     items.push({ kind: 'post', post })
   })
   return items
+}
+
+/** Resolve whether a placement has an active ad (used to decide if ad slots render). */
+export async function hasActiveAd(supabase: SupabaseClient<any>, placement = 'feed'): Promise<boolean> {
+  try {
+    const { count } = await supabase
+      .from('ads')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_active', true)
+      .eq('placement', placement)
+      .lte('starts_at', new Date().toISOString())
+      .gte('ends_at', new Date().toISOString())
+    return (count ?? 0) > 0
+  } catch {
+    return false
+  }
 }
 
 /** Optimistically patch a single post in the list (no array copies of the whole feed). */

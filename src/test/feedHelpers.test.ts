@@ -29,13 +29,20 @@ describe('buildFeedItems', () => {
     expect(buildFeedItems([])).toEqual([])
   })
 
-  it('interleaves an ad after every 4th post', () => {
+  it('interleaves an ad after every 4th post when an ad is available', () => {
     const posts = Array.from({ length: 9 }, (_, i) => makePost({ id: `p${i}` }))
-    const items = buildFeedItems(posts)
+    const items = buildFeedItems(posts, true)
     expect(items.length).toBe(11) // 9 posts + 2 ads
     expect(items.filter(i => i.kind === 'ad').length).toBe(2)
     expect(items[4]).toEqual({ kind: 'ad' })
     expect(items[9]).toEqual({ kind: 'ad' })
+  })
+
+  it('does not inject ads when no ad is available', () => {
+    const posts = Array.from({ length: 9 }, (_, i) => makePost({ id: `p${i}` }))
+    const items = buildFeedItems(posts, false)
+    expect(items.length).toBe(9)
+    expect(items.filter(i => i.kind === 'ad').length).toBe(0)
   })
 
   it('does not inject an ad before the first post', () => {
