@@ -15,10 +15,11 @@ interface TokenEntry {
 interface PayoutEntry {
   id: string
   amount: number
-  method: string
+  net_amount: number
+  fee: number
   status: 'pending' | 'completed' | 'failed'
-  reference: string | null
-  created_at: string
+  mpesa_number: string
+  created_at: string | null
 }
 
 const activityIcons: Record<string, JSX.Element> = {
@@ -97,18 +98,18 @@ export default function WalletPage() {
 
       if (tokens) {
         setActivities(tokens as TokenEntry[])
-        setBalance(tokens.reduce((s: number, t: TokenEntry) => s + t.amount, 0))
+        setBalance(tokens.reduce((s, t) => s + (t.amount || 0), 0))
       }
 
       const { data: payoutData } = await supabase
         .from('payouts')
         .select('*')
-        .eq('user_id', profile!.id)
+        .eq('professional_id', profile!.id)
         .order('created_at', { ascending: false })
         .limit(20)
 
       if (payoutData) {
-        setPayouts(payoutData as PayoutEntry[])
+        setPayouts(payoutData as unknown as PayoutEntry[])
       }
 
       if (profile?.phone) {
@@ -212,12 +213,21 @@ export default function WalletPage() {
     }
     setCreatingPayout(true)
     try {
+      const amount = Number(payoutAmount)
+      const fee = Math.round(amount * 0.1)
+      const now = new Date()
+      const periodStart = now.toISOString().slice(0, 10)
+      const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
       const { error } = await supabase.from('payouts').insert({
-        user_id: profile!.id,
-        amount: Number(payoutAmount),
-        method: payoutMethod,
+        professional_id: profile!.id,
+        amount,
+        fee,
+        net_amount: amount - fee,
+        mpesa_number: String(profile?.phone || mpesaNumber),
+        period_start: periodStart,
+        period_end: periodEnd,
         status: 'pending',
-      } as any)
+      })
       if (error) throw error
       toast('Payout request submitted. Funds will be sent within 24 hours.')
       setPayoutAmount('')
@@ -406,8 +416,8 @@ export default function WalletPage() {
                 {payouts.map((p) => (
                   <div key={p.id} className="flex items-center justify-between px-3 py-2.5 rounded-[10px] hover:bg-[oklch(21%_.03_151)] transition-colors">
                     <div>
-                      <p className="text-[12px] font-medium">{p.method}</p>
-                      <p className="text-[10px] text-muted">{new Date(p.created_at).toLocaleDateString()}</p>
+                      <p className="text-[12px] font-medium">M-Pesa</p>
+                      <p className="text-[10px] text-muted">{new Date(p.created_at || '').toLocaleDateString()}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-[13px] font-bold">KSh {p.amount.toLocaleString()}</p>

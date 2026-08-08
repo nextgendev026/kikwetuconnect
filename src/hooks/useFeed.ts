@@ -2,7 +2,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useSupabase, useUser } from '@/app/providers'
 import { feedKey, toPost } from '@/lib/feedHelpers'
-import type { FeedParams, Post, Profile, VoteRow, SaveRow } from '@/lib/feedHelpers'
+import type { FeedParams, PollOption, Post, Profile, VoteRow, SaveRow } from '@/lib/feedHelpers'
 
 const PAGE_SIZE = 25
 
@@ -114,8 +114,45 @@ async function fetchFeedPage(
     }
   }
 
+  // Batch poll options + the user's poll votes for this page so PostCard
+  // doesn't run a per-card query fan-out on poll posts.
+  const pollPosts = pagePosts.filter((p: any) => p.post_type === 'poll')
+  const pollIds = pollPosts.map((p: any) => p.id)
+  let pollOptionMap: Record<string, PollOption[]> = {}
+  let pollVoteMap: Record<string, Set<string>> = {}
+  if (pollIds.length > 0) {
+    const { data: opts } = await supabase
+      .from('poll_options')
+      .select('id, post_id, option_text, votes, created_at')
+      .in('post_id', pollIds)
+      .order('created_at')
+    if (opts) {
+      opts.forEach((o: PollOption) => {
+        if (!pollOptionMap[o.post_id]) pollOptionMap[o.post_id] = []
+        pollOptionMap[o.post_id].push(o)
+      })
+    }
+    if (profile) {
+      const { data: pv } = await supabase
+        .from('poll_votes')
+        .select('post_id, option_id')
+        .eq('user_id', profile.id)
+        .in('post_id', pollIds)
+      if (pv) {
+        pv.forEach((v: any) => {
+          if (!pollVoteMap[v.post_id]) pollVoteMap[v.post_id] = new Set()
+          pollVoteMap[v.post_id].add(v.option_id)
+        })
+      }
+    }
+  }
+
   const posts: Post[] = pagePosts.map(toPost).map(p => ({
-    ...p, user_vote: voteMap[p.id] || null, user_saved: saveMap[p.id] || false,
+    ...p,
+    user_vote: voteMap[p.id] || null,
+    user_saved: saveMap[p.id] || false,
+    poll_options: pollOptionMap[p.id] && pollOptionMap[p.id].length > 0 ? pollOptionMap[p.id] : undefined,
+    poll_user_votes: pollVoteMap[p.id] ? Array.from(pollVoteMap[p.id]) : undefined,
   }))
 
   return {

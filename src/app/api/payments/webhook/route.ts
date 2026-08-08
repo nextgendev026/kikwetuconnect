@@ -17,11 +17,22 @@ function checkRateLimit(key: string, maxRequests = 60, windowMs = 60_000): boole
 
 function verifyMpesaSignature(body: string, signature: string | null): boolean {
   const secret = process.env.MPESA_WEBHOOK_SECRET
-  if (!secret) return true
+  if (!secret) return false
   if (!signature) return false
   const expected = crypto.createHmac('sha256', secret).update(body).digest('base64')
   if (expected.length !== signature.length) return false
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature))
+}
+
+/** Match the caller against the configured Safaricom source IP allowlist. */
+function isAllowedSource(request: NextRequest): boolean {
+  const allowlist = (process.env.MPESA_WEBHOOK_ALLOWED_IPS || '')
+    .split(',').map(s => s.trim()).filter(Boolean)
+  if (allowlist.length === 0) return false
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || request.headers.get('x-real-ip')?.trim()
+    || ''
+  return allowlist.includes(ip)
 }
 
 export async function POST(request: NextRequest) {
@@ -30,11 +41,23 @@ export async function POST(request: NextRequest) {
   }
 
   const rawBody = await request.text()
-  const signature = request.headers.get('x-mpesa-signature') || request.headers.get('x-mpesa-signature')
+  const signature = request.headers.get('x-mpesa-signature')
 
-  if (process.env.MPESA_WEBHOOK_SECRET && !verifyMpesaSignature(rawBody, signature)) {
-    console.error('M-Pesa webhook signature verification failed')
-    return NextResponse.json({ ResultCode: 0, ResultDesc: 'Invalid signature' }, { status: 401 })
+  // Fail closed: require a known source IP or a valid HMAC signature.
+  // Previously an unset secret silently disabled verification entirely.
+  const sourceOk = isAllowedSource(request)
+  const signatureOk = verifyMpesaSignature(rawBody, signature)
+  if (!sourceOk && !signatureOk) {
+    const allowlist = process.env.MPESA_WEBHOOK_ALLOWED_IPS
+    const secret = process.env.MPESA_WEBHOOK_SECRET
+    if (!allowlist && !secret) {
+      return NextResponse.json(
+        { ResultCode: 1, ResultDesc: 'Webhook not configured (set MPESA_WEBHOOK_ALLOWED_IPS or MPESA_WEBHOOK_SECRET)' },
+        { status: 503 }
+      )
+    }
+    console.error('M-Pesa webhook rejected: source IP not allowlisted and signature invalid')
+    return NextResponse.json({ ResultCode: 1, ResultDesc: 'Unauthorized' }, { status: 403 })
   }
 
   let body: Record<string, unknown>
@@ -62,13 +85,21 @@ export async function POST(request: NextRequest) {
           let mpesaReceipt = ''
           let phoneNumber = ''
           let transactionDate = ''
+          let paidAmount: number | null = null
 
           if (CallbackMetadata?.Item) {
             for (const item of CallbackMetadata.Item) {
               if (item.Name === 'MpesaReceiptNumber') mpesaReceipt = item.Value
               if (item.Name === 'PhoneNumber') phoneNumber = item.Value
               if (item.Name === 'TransactionDate') transactionDate = item.Value
+              if (item.Name === 'Amount') paidAmount = Number(item.Value)
             }
+          }
+
+          // Cross-check the paid amount against the order total before confirming.
+          if (paidAmount !== null && order.total_price != null && paidAmount !== order.total_price) {
+            console.error(`M-Pesa amount mismatch for order ${order.id}: expected ${order.total_price}, got ${paidAmount}`)
+            return NextResponse.json({ ResultCode: 1, ResultDesc: 'Amount mismatch' }, { status: 400 })
           }
 
           await supabase.rpc('confirm_order_payment', {
@@ -114,6 +145,13 @@ export async function POST(request: NextRequest) {
               if (item.Name === 'Amount') amount = Number(item.Value)
             }
           }
+
+          // Cross-check the paid amount against the requested top-up amount.
+          if (amount !== null && topup.amount != null && amount !== topup.amount) {
+            console.error(`M-Pesa amount mismatch for top-up ${topup.id}: expected ${topup.amount}, got ${amount}`)
+            return NextResponse.json({ ResultCode: 1, ResultDesc: 'Amount mismatch' }, { status: 400 })
+          }
+
           await supabase.rpc('complete_wallet_topup', {
             p_checkout_request_id: CheckoutRequestID,
             p_mpesa_reference: mpesaReceipt || CheckoutRequestID,
@@ -148,6 +186,12 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
 
       if (order && order.status === 'pending') {
+        // Cross-check the C2B payment amount against the order total.
+        if (order.total_price != null && Number(TransAmount) !== order.total_price) {
+          console.error(`M-Pesa C2B amount mismatch for order ${order.id}: expected ${order.total_price}, got ${TransAmount}`)
+          return NextResponse.json({ ResultCode: 1, ResultDesc: 'Amount mismatch' }, { status: 400 })
+        }
+
         await supabase.rpc('confirm_order_payment', {
           p_order_id: order.id,
           p_payment_provider: 'mpesa_c2b',
@@ -158,9 +202,9 @@ export async function POST(request: NextRequest) {
           sender_id: order.buyer_id,
           professional_id: order.buyer_id,
           session_id: null,
-          amount: TransAmount,
+          amount: Number(TransAmount),
           fee: 0,
-          net_amount: TransAmount,
+          net_amount: Number(TransAmount),
           currency: 'KES',
           mpesa_reference: TransID,
           status: 'completed',
@@ -170,11 +214,17 @@ export async function POST(request: NextRequest) {
       if (BillRefNumber && BillRefNumber.startsWith('WALLET-')) {
         const { data: topup } = await supabase
           .from('wallet_topups')
-          .select('id, status, checkout_request_id')
+          .select('id, status, amount, checkout_request_id')
           .eq('account_reference', BillRefNumber)
           .maybeSingle()
 
         if (topup) {
+          // Cross-check the C2B payment amount against the requested top-up.
+          if (topup.amount != null && Number(TransAmount) !== topup.amount) {
+            console.error(`M-Pesa C2B amount mismatch for top-up ${topup.id}: expected ${topup.amount}, got ${TransAmount}`)
+            return NextResponse.json({ ResultCode: 1, ResultDesc: 'Amount mismatch' }, { status: 400 })
+          }
+
           await supabase.rpc('complete_wallet_topup', {
             p_checkout_request_id: topup.checkout_request_id,
             p_mpesa_reference: TransID,

@@ -66,7 +66,8 @@ export default function NotificationTray({ onClose }: { onClose: () => void }) {
   }
 
   const markAllRead = async () => {
-    await supabase.from('notifications').update({ is_read: true }).eq('user_id', user?.id).eq('is_read', false)
+    if (!user?.id) return
+    await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false)
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
     toast('All marked as read')
   }

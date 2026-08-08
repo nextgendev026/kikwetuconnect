@@ -160,6 +160,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       currentIds = await fetchConvIds()
       subscribeTo(currentIds)
       shellMsgPollRef.current = setInterval(async () => {
+        // Skip polling while the tab is hidden (background tabs shouldn't churn).
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
         const next = await fetchConvIds()
         const changed = next.length !== currentIds.length || next.some(id => !currentIds.includes(id))
         if (changed) {
@@ -178,11 +180,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!supabase) return
-    supabase.from('profiles').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setUserCount(count ?? 0) })
-    supabase.from('posts').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setPostCount(count ?? 0) })
+    // Use estimated counts: exact COUNT on the biggest tables is expensive and
+    // these are informational stats in the Activity panel.
+    supabase.from('profiles').select('id', { count: 'estimated', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setUserCount(count ?? 0) })
+    supabase.from('posts').select('id', { count: 'estimated', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setPostCount(count ?? 0) })
     supabase.from('topics').select('name').order('follower_count', { ascending: false }).limit(3).then(({ data }: { data: any }) => { if (data) setTrendingTopics(data) })
-    supabase.from('moderation_queue').select('id', { count: 'exact', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setModerationCount(count ?? 0) })
-  }, [supabase])
+    // Moderation queue is staff-only info — skip loading it for regular members.
+    if (profile && (profile.role === 'admin' || profile.role === 'moderator')) {
+      supabase.from('moderation_queue').select('id', { count: 'estimated', head: true }).then(({ count }: { count: number | null }) => { if (count !== null) setModerationCount(count ?? 0) })
+    }
+  }, [supabase, profile])
 
   useEffect(() => {
     if (!chatConvId || !supabase) return

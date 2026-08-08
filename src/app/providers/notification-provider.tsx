@@ -54,8 +54,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       .order('created_at', { ascending: false })
       .limit(50)
     if (data) {
-      setNotifications(data as Notification[])
-      setUnreadCount(data.filter((n: Notification) => !n.is_read).length)
+      setNotifications(data as unknown as Notification[])
+      setUnreadCount(data.filter((n) => !n.is_read).length)
     }
   }, [supabase, user])
 

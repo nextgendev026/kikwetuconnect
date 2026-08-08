@@ -15,12 +15,12 @@ interface Space {
 
 interface Post {
   id: string; content: string; title: string; created_at: string; user_id: string
-  profiles: { id: string; full_name: string; username: string; avatar_url: string | null } | null
+  profiles: { id: string; full_name: string | null; username: string; avatar_url: string | null } | null
 }
 
 interface Member {
   user_id: string; role: string
-  profiles: { id: string; full_name: string; username: string; avatar_url: string | null } | null
+  profiles: { id: string; full_name: string | null; username: string; avatar_url: string | null } | null
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -112,7 +112,7 @@ export default function SpaceDetailPage() {
   const fetchSpace = async () => {
     setLoading(true)
     try {
-      const { data: sData } = await supabase.from('spaces').select('*').eq('slug', slug).maybeSingle()
+      const { data: sData } = await supabase.from('spaces').select('*').eq('slug', String(slug)).maybeSingle()
       if (!sData) { toast('Space not found'); router.push('/spaces'); return }
       setSpace(sData as Space)
 

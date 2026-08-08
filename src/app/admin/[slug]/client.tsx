@@ -164,7 +164,7 @@ function HealthPage() {
         dbStatus: dbCheck.error ? 'Error' : 'Normal',
         storageAvailable: !bucket.error,
         translationCount: trans.count || 0,
-        onlineNow: stats.data?.online_now || 0,
+        onlineNow: (stats.data as { online_now?: number } | null)?.online_now || 0,
         pendingReports: modQueue.count || 0,
         lastChecked: new Date().toISOString(),
       })
@@ -223,7 +223,7 @@ function VerificationPage() {
       const { error } = await supabase.rpc('admin_review_expert_application', {
         p_app_id: appId,
         p_approve: approve,
-        p_notes: notes[appId] || null,
+        p_notes: notes[appId],
       })
       if (error) throw error
       toast(approve ? 'Expert approved' : 'Application declined')
@@ -341,16 +341,22 @@ function UsersPage() {
     const { data } = await q
     if (data) setUsers(data); setLoading(false)
   }, [supabase, search])
-  useEffect(() => { fetchUsers() }, [fetchUsers])
+  useEffect(() => {
+    // Debounce so typing a username doesn't re-query on every keystroke.
+    const timer = setTimeout(() => fetchUsers(), 250)
+    return () => clearTimeout(timer)
+  }, [fetchUsers])
 
   const handleSuspend = async (userId: string) => {
     if (!reason.trim()) { toast('Reason required'); return }
-    const { error } = await supabase.rpc('admin_suspend_user', { p_admin_id: admin?.id, p_user_id: userId, p_reason: reason })
+    if (!admin?.id) return
+    const { error } = await supabase.rpc('admin_suspend_user', { p_admin_id: admin.id, p_user_id: userId, p_reason: reason })
     if (error) { toast(error.message); return }
     toast('User suspended'); setSuspendModal(null); setReason(''); fetchUsers()
   }
   const handleReinstate = async (userId: string) => {
-    const { error } = await supabase.rpc('admin_reinstate_user', { p_admin_id: admin?.id, p_user_id: userId, p_reason: 'Reinstated by admin' })
+    if (!admin?.id) return
+    const { error } = await supabase.rpc('admin_reinstate_user', { p_admin_id: admin.id, p_user_id: userId, p_reason: 'Reinstated by admin' })
     if (error) { toast(error.message); return }
     toast('User reinstated'); fetchUsers()
   }

@@ -1,6 +1,8 @@
 import { Meilisearch } from 'meilisearch'
 
-const meiliClient = new Meilisearch({ host: process.env.NEXT_PUBLIC_MEILI_HOST || 'http://localhost:7700', apiKey: process.env.NEXT_PUBLIC_MEILI_KEY || 'test_key' })
+// Server-only Meili client. Do NOT prefix these with NEXT_PUBLIC_ — the API key
+// would ship to the browser. Search from the client via /api/search.
+const meiliClient = new Meilisearch({ host: process.env.MEILI_HOST || 'http://localhost:7700', apiKey: process.env.MEILI_KEY || 'test_key' })
 
 export const postsIndex = meiliClient.index('posts')
 export const quizzesIndex = meiliClient.index('quizzes')

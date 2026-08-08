@@ -42,7 +42,7 @@ export default function SettingsPage() {
       const { error: uploadError } = await supabase.storage.from('public-media').upload(filePath, file, { upsert: true })
       if (uploadError) throw uploadError
       const { data: { publicUrl } } = supabase.storage.from('public-media').getPublicUrl(filePath)
-      const { error: updateError } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', profile?.id)
+      const { error: updateError } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', profile?.id || '')
       if (updateError) throw updateError
       await refreshProfile()
       setAvatarPreview(publicUrl)
@@ -68,7 +68,7 @@ export default function SettingsPage() {
   const handleSaveProfile = async () => {
     setSavingProfile(true); setError(''); setSuccess('')
     try {
-      const { error: upErr } = await supabase.from('profiles').update({ full_name: displayName, bio, county_hub: county }).eq('id', profile?.id)
+      const { error: upErr } = await supabase.from('profiles').update({ full_name: displayName, bio, county_hub: county }).eq('id', profile?.id || '')
       if (upErr) throw upErr
       await refreshProfile(); setSuccess('Profile updated!'); toast('Profile updated!')
     } catch { toast('Failed to update profile') }

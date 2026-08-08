@@ -15,13 +15,13 @@ export default function AdminDashboard() {
     let cancelled = false
     const refreshCounts = () => {
       Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('posts').select('*', { count: 'exact', head: true }),
-        supabase.from('topics').select('*', { count: 'exact', head: true }),
-        supabase.from('marketplace_listings').select('*', { count: 'exact', head: true }),
-        supabase.from('moderation_queue').select('*', { count: 'exact', head: true }),
-        supabase.from('quizzes').select('*', { count: 'exact', head: true }),
-        supabase.from('quiz_results').select('*', { count: 'exact', head: true }),
+        supabase.from('profiles').select('*', { count: 'estimated', head: true }),
+        supabase.from('posts').select('*', { count: 'estimated', head: true }),
+        supabase.from('topics').select('*', { count: 'estimated', head: true }),
+        supabase.from('marketplace_listings').select('*', { count: 'estimated', head: true }),
+        supabase.from('moderation_queue').select('*', { count: 'estimated', head: true }),
+        supabase.from('quizzes').select('*', { count: 'estimated', head: true }),
+        supabase.from('quiz_results').select('*', { count: 'estimated', head: true }),
         supabase.from('moderation_queue').select('id, target_type, reason, created_at, status').order('created_at', { ascending: false }).limit(5),
       ]).then(([users, posts, topics, listings, mods, quizes, results, modData]) => {
         if (cancelled) return

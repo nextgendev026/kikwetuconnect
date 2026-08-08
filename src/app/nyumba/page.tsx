@@ -6,7 +6,7 @@ import { isAdmin as checkAdminRole } from '@/lib/roles'
 import { AlertTriangle, AlertCircle, Droplets, Zap, Users, Shield, Share2, Bookmark, Flag, Plus, MapPin, Clock, Check, X, ChevronDown, ChevronUp, MessageCircle, Home, Bell, Eye, EyeOff, ThumbsUp, UserPlus, UserCheck, LogIn, Gavel, Search, RefreshCw, Languages } from 'lucide-react'
 
 interface Alert {
-  id: string; alert_type: 'safety' | 'traffic' | 'utility' | 'patrol' | 'urgent'; title: string; description: string; location: string; severity: 'low' | 'medium' | 'high' | 'critical'; confirmations_count: number; created_at: string; user_id: string
+  id: string; type: string; title: string; description: string; approximate_location: string | null; county: string; severity: string | null; confirmations: number | null; created_at: string | null; user_id: string
   profiles: { id: string; full_name: string; username: string; avatar_url: string | null } | null
 }
 
@@ -126,7 +126,8 @@ export default function NyumbaPage() {
     try {
       const { data } = await supabase.rpc('check_alert_rate_limit', { p_user_id: profile.id })
       if (data) {
-        const remaining = data.allowed ? Math.max(0, 3 - (data.recent_count || 0)) : 0
+        const result = data as { allowed?: boolean; recent_count?: number }
+        const remaining = result.allowed ? Math.max(0, 3 - (result.recent_count || 0)) : 0
         setRateLimitRemaining(remaining)
       }
     } catch { /* fail silently */ }
@@ -153,7 +154,7 @@ export default function NyumbaPage() {
         setConfirmedIds(prev => { const n = new Set(prev); n.add(alertId); return n })
         toast('Alert confirmed ✓')
       }
-      setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, confirmations_count: a.confirmations_count + (confirmedIds.has(alertId) ? -1 : 1) } : a))
+      setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, confirmations: (a.confirmations || 0) + (confirmedIds.has(alertId) ? -1 : 1) } : a))
     } catch { toast('Failed to confirm alert') }
   }
 
@@ -171,7 +172,7 @@ export default function NyumbaPage() {
   }
 
   const shareWhatsApp = (alert: Alert) => {
-    window.open(`https://wa.me/?text=${encodeURIComponent(`*${alert.title}*\n${alert.description}\n📍 ${alert.location}\n\nShared from Nyumba Kumi on KikwetuConnect`)}`, '_blank')
+    window.open(`https://wa.me/?text=${encodeURIComponent(`*${alert.title}*\n${alert.description}\n📍 ${alert.approximate_location}\n\nShared from Nyumba Kumi on KikwetuConnect`)}`, '_blank')
   }
 
   const reportMisinformation = async (alertId: string) => {
@@ -203,9 +204,10 @@ export default function NyumbaPage() {
       })
 
       if (error) throw error
-      if (data?.error) { toast(data.error); setSubmitting(false); return }
+      const result = (data as { error?: string; notifications_sent?: number } | null) || {}
+      if (result.error) { toast(result.error); setSubmitting(false); return }
 
-      const notifCount = data?.notifications_sent || 0
+      const notifCount = result.notifications_sent || 0
       toast(`Alert created! Notified ${notifCount} neighbour${notifCount !== 1 ? 's' : ''}. Stay safe.`)
       setFormData({ alert_type: 'safety', title: '', description: '', location: '', severity: 'medium' })
       setShowCreateForm(false)
@@ -247,11 +249,22 @@ export default function NyumbaPage() {
         p_name: groupForm.name.trim(),
         p_slug: slug,
         p_description: groupForm.description.trim(),
-        p_county: groupForm.county || null,
+        p_county: groupForm.county || undefined,
       })
       if (error) throw error
-      setGroups(prev => [{ ...data, name: groupForm.name.trim(), description: groupForm.description.trim(), created_by: profile.id, member_count: 1 } as any, ...prev])
-      setMyGroupIds(prev => { const n = new Set(prev); n.add(data.id); return n })
+      const created = (data as { id?: string } | null) || {}
+      const newGroup: Group = {
+        id: created.id || slug,
+        name: groupForm.name.trim(),
+        slug,
+        description: groupForm.description.trim(),
+        county: groupForm.county || '',
+        member_count: 1,
+        is_public: true,
+        created_by: profile.id,
+      }
+      setGroups(prev => [newGroup, ...prev])
+      setMyGroupIds(prev => { const n = new Set(prev); if (created.id) n.add(created.id); return n })
       setGroupForm({ name: '', description: '', county: '' })
       setShowCreateGroup(false)
       toast('Neighbourhood group created!')
@@ -323,12 +336,12 @@ export default function NyumbaPage() {
 
   if (userLoading) return <div className="flex items-center justify-center min-h-[80vh]"><div className="animate-spin w-8 h-8 border-2" style={{ borderColor: 'var(--green)', borderTopColor: 'transparent', borderRadius: '50%' }} /></div>
 
-  const urgentAlerts = alerts.filter(a => a.alert_type === 'urgent' || a.severity === 'critical')
+  const urgentAlerts = alerts.filter(a => a.type === 'urgent' || a.severity === 'critical')
 
   const renderAlert = (alert: Alert) => {
-    const cfg = ALERT_CONFIG[alert.alert_type] || ALERT_CONFIG.safety
+    const cfg = ALERT_CONFIG[alert.type] || ALERT_CONFIG.safety
     const Icon = cfg.icon
-    const isUrgent = alert.alert_type === 'urgent' || alert.severity === 'critical'
+    const isUrgent = alert.type === 'urgent' || alert.severity === 'critical'
     const author = alert.profiles
     const isConfirmed = confirmedIds.has(alert.id)
     const isSaved = savedIds.has(alert.id)
@@ -336,7 +349,7 @@ export default function NyumbaPage() {
     return (
       <div key={alert.id} style={{ ...s.card, borderColor: isUrgent ? 'color-mix(in oklab, var(--red) 30%, transparent)' : 'var(--line)', overflow: 'hidden' }} className="feature-card">
         {/* Severity bar */}
-        <div style={{ height: 3, background: SEVERITY_COLORS[alert.severity] || 'var(--line)', margin: '-20px -20px 16px -20px', opacity: 0.7 }} />
+        <div style={{ height: 3, background: SEVERITY_COLORS[alert.severity || 'low'] || 'var(--line)', margin: '-20px -20px 16px -20px', opacity: 0.7 }} />
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-[7px]"
@@ -344,8 +357,8 @@ export default function NyumbaPage() {
               <Icon className="w-3 h-3" /> {cfg.label}
             </span>
             <span className="text-[9px] font-medium px-2 py-0.5 rounded-full"
-              style={{ background: `color-mix(in oklab, ${SEVERITY_COLORS[alert.severity]} 20%, var(--surface))`, color: SEVERITY_COLORS[alert.severity] }}>
-              {alert.severity}
+              style={{ background: `color-mix(in oklab, ${SEVERITY_COLORS[alert.severity || 'low']} 20%, var(--surface))`, color: SEVERITY_COLORS[alert.severity || 'low'] }}>
+              {alert.severity || 'low'}
             </span>
           </div>
           {isUrgent && <span className="flex items-center gap-1 text-[9px] font-bold" style={{ color: 'var(--red)' }}><span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--red)' }} /> URGENT</span>}
@@ -356,9 +369,9 @@ export default function NyumbaPage() {
           {translations[alert.id] && <span className="text-[9px] ml-1 opacity-60">(SW)</span>}
         </p>
         <div className="flex flex-wrap items-center gap-3 text-[10px] mb-3" style={{ color: 'var(--muted)' }}>
-          {alert.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {alert.location}</span>}
-          <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {formatRelativeTime(alert.created_at)}</span>
-          <span className="flex items-center gap-1"><ThumbsUp className="w-3 h-3" /> {alert.confirmations_count} confirmed</span>
+          {alert.approximate_location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {alert.approximate_location}</span>}
+          <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {formatRelativeTime(alert.created_at || '')}</span>
+          <span className="flex items-center gap-1"><ThumbsUp className="w-3 h-3" /> {alert.confirmations || 0} confirmed</span>
           {author && <span className="flex items-center gap-1">by {author.full_name || author.username}</span>}
         </div>
         <div className="flex flex-wrap gap-2 pt-3" style={{ borderTop: '1px solid var(--line)' }}>

@@ -1,6 +1,21 @@
 import { withAuth } from '@/lib/server-supabase'
 import { NextResponse } from 'next/server'
 
+/** Reject path traversal and verify the caller owns the storage path
+ *  (paths are always {folder}/{userId}/... or public/{folder}/{userId}/...). */
+function isOwnedPath(path: string, userId: string): boolean {
+  const segments = path.split('/').filter(Boolean)
+  if (segments.some(s => s === '..')) return false
+  if (segments[0] === 'public') segments.shift()
+  return segments.length >= 2 && segments[1] === userId
+}
+
+/** Sanitize a user-supplied folder name: no traversal, no leading slash. */
+function sanitizeFolder(folder: string): string {
+  const clean = folder.replace(/\\/g, '/').split('/').filter(s => s && s !== '.' && s !== '..').join('/')
+  return clean || 'uploads'
+}
+
 export const POST = withAuth(async (request, { supabase, user }) => {
   try {
     const body = await request.json()
@@ -9,6 +24,7 @@ export const POST = withAuth(async (request, { supabase, user }) => {
     // Generate signed upload URL for any file type
     if (action === 'signed-url') {
       const { folder = 'uploads', contentType = 'image/jpeg', fileSize } = body
+      const safeFolder = sanitizeFolder(folder)
 
       const maxSize = 10 * 1024 * 1024
       if (fileSize && fileSize > maxSize) {
@@ -16,7 +32,7 @@ export const POST = withAuth(async (request, { supabase, user }) => {
       }
 
       const ext = contentType.split('/').pop() || 'jpg'
-      const path = `${folder}/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const path = `${safeFolder}/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
       const { data, error } = await supabase.storage
         .from('media')
@@ -31,6 +47,9 @@ export const POST = withAuth(async (request, { supabase, user }) => {
     if (action === 'finalize') {
       const { path, makePublic = true } = body
       if (!path) return NextResponse.json({ error: 'Missing path' }, { status: 400 })
+      if (!isOwnedPath(path, user.id)) {
+        return NextResponse.json({ error: 'Not your file' }, { status: 403 })
+      }
 
       if (makePublic) {
         const publicPath = `public/${path}`

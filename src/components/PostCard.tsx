@@ -40,29 +40,24 @@ export const PostCard = memo(function PostCard({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [hidden, setHidden] = useState(post.is_hidden)
-  const [userPollVotes, setUserPollVotes] = useState<Set<string>>(new Set())
+  const [userPollVotes, setUserPollVotes] = useState<Set<string>>(new Set(post.poll_user_votes || []))
   const [localPollOptions, setLocalPollOptions] = useState<any[]>([])
   const [voting, setVoting] = useState<string | null>(null)
   const supabase = useSupabase()
 
   useEffect(() => {
-    if (currentUserId) {
-      supabase
-        .from('poll_votes')
-        .select('option_id')
-        .eq('user_id', currentUserId)
-        .eq('post_id', post.id)
-        .then(({ data }) => {
-          if (data) setUserPollVotes(new Set(data.map(d => d.option_id)))
-        })
-    }
-  }, [post.id, currentUserId, supabase])
+    if (post.poll_user_votes) setUserPollVotes(new Set(post.poll_user_votes))
+  }, [post.id, post.poll_user_votes])
 
   // Poll options live in the normalized poll_options table (id + option_text).
-  // The feed also carries a legacy JSONB copy ({ text, votes }) without ids, so
-  // we always fetch the authoritative table rows here.
+  // The feed preloads them in the page query (useFeed batches per page); only
+  // fall back to a direct fetch when they weren't preloaded (e.g. profile page).
   useEffect(() => {
     if (post.post_type !== 'poll') return
+    if (Array.isArray(post.poll_options) && post.poll_options.length > 0) {
+      setLocalPollOptions(post.poll_options as any[])
+      return
+    }
     let cancelled = false
     ;(async () => {
       const { data } = await supabase

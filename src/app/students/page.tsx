@@ -75,7 +75,7 @@ export default function StudentsPage() {
     if (data) {
       setSessions(data as unknown as Session[])
       const active = data.find((s: any) => s.status === 'active')
-      if (active) { setActiveSession(active as unknown as Session); setSessionStart(new Date(active.started_at)); setElapsed(Math.floor((Date.now() - new Date(active.started_at).getTime()) / 1000)) }
+      if (active) { setActiveSession(active as unknown as Session); setSessionStart(new Date(active.started_at || '')); setElapsed(Math.floor((Date.now() - new Date(active.started_at || '').getTime()) / 1000)) }
     }
   }
 

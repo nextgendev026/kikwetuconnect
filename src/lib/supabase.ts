@@ -11,10 +11,10 @@ const REALTIME_CONFIG = {
 }
 
 // Browser client MUST persist the session in cookies (not localStorage) so that
-// middleware.ts can see it on server-side navigation. Otherwise login appears to
-// "refresh" the page and bounce back because the middleware never finds a session.
+// proxy.ts can see it on server-side navigation. Otherwise login appears to
+// "refresh" the page and bounce back because the proxy never finds a session.
 export const createBrowserClient = () =>
-  createSSRBrowserClient(
+  createSSRBrowserClient<Database>(
     supabaseUrl,
     supabaseAnonKey,
     REALTIME_CONFIG
@@ -23,7 +23,7 @@ export const createBrowserClient = () =>
 export const createServerClient = async () => {
   const { cookies } = await import('next/headers')
   const cookieStore = await cookies()
-  return createSSRServerClient(
+  return createSSRServerClient<Database>(
     supabaseUrl,
     supabaseAnonKey,
     {

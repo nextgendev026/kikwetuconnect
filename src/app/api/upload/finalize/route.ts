@@ -1,10 +1,22 @@
 import { withAuth } from '@/lib/server-supabase'
 import { NextResponse } from 'next/server'
 
+/** Reject path traversal and verify the caller owns the storage path
+ *  (paths are always {folder}/{userId}/... or public/{folder}/{userId}/...). */
+function isOwnedPath(path: string, userId: string): boolean {
+  const segments = path.split('/').filter(Boolean)
+  if (segments.some(s => s === '..')) return false
+  if (segments[0] === 'public') segments.shift()
+  return segments.length >= 2 && segments[1] === userId
+}
+
 export const POST = withAuth(async (request, { supabase, user }) => {
   try {
     const { path, visibility = 'private' } = await request.json()
     if (!path) return NextResponse.json({ error: 'Missing path' }, { status: 400 })
+    if (!isOwnedPath(path, user.id)) {
+      return NextResponse.json({ error: 'Not your file' }, { status: 403 })
+    }
 
     // Verify the file exists
     const { data: fileInfo, error: statError } = await supabase.storage

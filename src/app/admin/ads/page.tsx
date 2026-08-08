@@ -19,8 +19,8 @@ export default function AdminAds() {
   const [form, setForm] = useState({ title: '', link_url: '', image_url: '', placement: 'sidebar', is_active: true })
 
   useEffect(() => {
-    supabase.from('ads').select('*').order('created_at', { ascending: false }).then(({ data }: { data: Ad[] | null }) => {
-      if (data) setAds(data); setLoading(false)
+    supabase.from('ads').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+      if (data) setAds(data as Ad[]); setLoading(false)
     })
   }, [supabase])
 
@@ -39,8 +39,8 @@ export default function AdminAds() {
       toast('Ad created')
     }
     resetForm(); setShowForm(false)
-    const { data }: { data: Ad[] | null } = await supabase.from('ads').select('*').order('created_at', { ascending: false })
-    if (data) setAds(data)
+    const { data } = await supabase.from('ads').select('*').order('created_at', { ascending: false })
+    if (data) setAds(data as Ad[])
   }
 
   const handleDelete = async (id: string) => {

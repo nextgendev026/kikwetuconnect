@@ -114,6 +114,8 @@ export function usePresence() {
 
     const heartbeat = setInterval(() => {
       if (sc!.state !== 'SUBSCRIBED') return
+      // Skip heartbeats for hidden tabs to cut background network churn.
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
       const pid = profileIdRef.current
       if (!pid) return
       sc!.channel.track({ user_id: pid, online_at: new Date().toISOString() }).catch(() => { /* ignore */ })

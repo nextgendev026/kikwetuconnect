@@ -60,7 +60,7 @@ export default async function OpengraphImage({ params }: { params: Promise<{ id:
   try {
     const supabase = await createServerClient()
     const { data } = await supabase.rpc('get_post_by_id', { p_post_id: id })
-    post = (data as OgPost) ?? null
+    post = (data as unknown as OgPost) ?? null
   } catch {
     post = null
   }

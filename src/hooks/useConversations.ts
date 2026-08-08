@@ -27,7 +27,7 @@ export interface Message {
   client_temp_id?: string
   upload_progress?: number | null
   upload_error?: string | null
-  sender?: { username: string; full_name: string; avatar_url: string | null }
+  sender?: { username: string; full_name: string | null; avatar_url: string | null }
   reactions?: MessageReaction[]
   media?: MediaItem[]
 }
@@ -56,7 +56,7 @@ export interface MediaItem {
 export interface TypingUser {
   user_id: string
   username: string
-  full_name: string
+  full_name: string | null
 }
 
 export function useConversations() {
@@ -86,6 +86,7 @@ export function useConversations() {
     const lastRead = new Map(data.map(r => [r.conversation_id, r.last_read_at]))
     const acc: Record<string, number> = {}
     for (const m of unread || []) {
+      if (!m.conversation_id || !m.created_at) continue
       const lr = lastRead.get(m.conversation_id)
       if (lr && new Date(m.created_at).getTime() <= new Date(lr).getTime()) continue
       acc[m.conversation_id] = (acc[m.conversation_id] || 0) + 1
@@ -392,7 +393,7 @@ export function useMessages(conversationId: string | null) {
       p_content: content.trim(),
       p_message_type: messageType,
       p_metadata: { ...cleanMeta, client_temp_id: tempId },
-      p_reply_to: replyTo,
+      p_reply_to: replyTo || undefined,
     })
     if (error) {
       markPendingStatus(tempId, { status: 'failed' })
@@ -406,8 +407,9 @@ export function useMessages(conversationId: string | null) {
   const retryMessage = useCallback(async (tempId: string) => {
     const msg = messagesRef.current.find(m => m.client_temp_id === tempId)
     if (!msg) return
+    if (!conversationId) return
     markPendingStatus(tempId, { status: 'sending' })
-    const replyTo = msg.reply_to || null
+    const replyTo = msg.reply_to || undefined
     const { error } = await supabase.rpc('send_message', {
       p_conversation_id: conversationId,
       p_content: msg.content,
@@ -476,7 +478,6 @@ export function useMessages(conversationId: string | null) {
         p_content: messageType === 'image' ? '📷 Image' : '📎 File',
         p_message_type: messageType,
         p_metadata: { path, name: file.name, size: file.size, mime: file.type, client_temp_id: tempId },
-        p_reply_to: null,
       })
       if (error) throw new Error(error.message)
       markPendingStatus(tempId, { status: 'sent', metadata: { ...pending.metadata, path } })

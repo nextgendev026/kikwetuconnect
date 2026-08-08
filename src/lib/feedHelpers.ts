@@ -47,6 +47,7 @@ export interface Post {
   user_vote?: 1 | -1 | null
   user_saved?: boolean
   poll_options?: PollOption[]
+  poll_user_votes?: string[]
 }
 
 export type FeedRow =

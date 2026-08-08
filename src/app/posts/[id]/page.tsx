@@ -30,7 +30,7 @@ async function getPost(id: string): Promise<PostMeta | null> {
   try {
     const supabase = await createServerClient()
     const { data } = await supabase.rpc('get_post_by_id', { p_post_id: id })
-    return (data as PostMeta) ?? null
+    return (data as unknown as PostMeta) ?? null
   } catch {
     return null
   }

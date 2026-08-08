@@ -7,6 +7,19 @@ export const POST = withAuth(async (request, { supabase, user }) => {
     const body = await request.json()
     const { action } = body
 
+    // Only admins/moderators may touch business accounts, payouts, or C2B config.
+    const ADMIN_ONLY_ACTIONS = new Set(['b2c-payment', 'c2b-register', 'transaction-status', 'account-balance'])
+    if (ADMIN_ONLY_ACTIONS.has(action)) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (!profile || (profile.role !== 'admin' && profile.role !== 'moderator')) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
+
     // --- Wallet top-up (Lipa Na MPESA) ---
     if (action === 'topup') {
       const { amount, phone } = body

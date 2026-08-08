@@ -15,7 +15,7 @@ const walletTypes = ['tip', 'payout']
 
 interface Actor {
   id: string
-  full_name: string
+  full_name: string | null
   username: string
 }
 
@@ -23,11 +23,11 @@ interface Notification {
   id: string
   type: string
   actor_id: string | null
-  content: string
+  content: string | null
   target_id: string | null
   target_type: string | null
-  is_read: boolean
-  created_at: string
+  is_read: boolean | null
+  created_at: string | null
   profiles: Actor | null
 }
 
@@ -61,8 +61,8 @@ export default function NotificationsPage() {
         .order('created_at', { ascending: false })
         .limit(50)
 
-      setNotifications((data as Notification[]) || [])
-      setUnreadCount((data || []).filter((n: Notification) => !n.is_read).length)
+      setNotifications((data as unknown as Notification[]) || [])
+      setUnreadCount((data || []).filter((n) => !n.is_read).length)
     } catch (err) {
       console.error('Error fetching notifications:', err)
     } finally {
@@ -278,9 +278,9 @@ export default function NotificationsPage() {
                           </span>
                         ) : null}
                         {n.profiles?.full_name ? ' ' : ''}
-                        <span className="text-muted">{n.content}</span>
+                        <span className="text-muted">{n.content || ''}</span>
                       </p>
-                      <p className="text-xs text-muted mt-1">{formatTimeAgo(n.created_at)}</p>
+                      <p className="text-xs text-muted mt-1">{formatTimeAgo(n.created_at || '')}</p>
                     </div>
                     {!n.is_read && (
                       <div className="w-2 h-2 rounded-full bg-green flex-shrink-0 mt-2" />

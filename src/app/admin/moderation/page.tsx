@@ -1,11 +1,21 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useSupabase, toast } from '@/app/providers'
-import { useUser } from '@/app/providers'
+
+/** Call the server-side admin moderation API (role + admin id derived there). */
+async function adminCall(payload: Record<string, unknown>) {
+  const res = await fetch('/api/admin/moderation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`)
+  return data
+}
 
 export default function AdminModeration() {
   const supabase = useSupabase()
-  const { profile } = useUser()
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -43,14 +53,12 @@ export default function AdminModeration() {
   }
 
   const act = async (id: string, status: string) => {
-    const { error } = await supabase.rpc('admin_moderate_item', {
-      p_admin_id: profile?.id,
-      p_item_id: id,
-      p_status: status,
-      p_notes: notes || null,
-    })
-    if (error) { toast(error.message); return }
-    toast(`Item ${status}`)
+    try {
+      await adminCall({ action: 'moderate', item_id: id, status, notes: notes || null })
+      toast(`Item ${status}`)
+    } catch (e: any) {
+      toast(e.message); return
+    }
     setSelected(prev => { const n = new Set(prev); n.delete(id); return n })
     setNotes('')
     fetchItems()
@@ -59,13 +67,13 @@ export default function AdminModeration() {
   const bulkAct = async (status: string) => {
     const ids = Array.from(selected)
     if (ids.length === 0) { toast('Select items first'); return }
-    const { data: jobId, error } = await supabase.rpc('admin_bulk_moderate', {
-      p_admin_id: profile?.id,
-      p_item_ids: ids,
-      p_status: status,
-      p_notes: notes || null,
-    })
-    if (error) { toast(error.message); return }
+    let jobId: string
+    try {
+      const res = await adminCall({ action: 'bulk_moderate', item_ids: ids, status, notes: notes || null })
+      jobId = res.job_id
+    } catch (e: any) {
+      toast(e.message); return
+    }
     if (!jobId) { toast('Bulk action did not start'); return }
     setBulkJob({ id: jobId, status: 'running', processed: 0, total: ids.length, succeeded: 0, failed: 0 })
     setSelected(new Set())
@@ -78,16 +86,20 @@ export default function AdminModeration() {
     const poll = async () => {
       attempts += 1
       if (attempts > 40) { setBulkJob(null); toast('Timed out waiting for bulk action'); return }
-      const { data, error } = await supabase.rpc('get_admin_bulk_job', { p_job_id: jobId })
-      if (error || !data) { setBulkJob(null); toast(error?.message || 'Could not read bulk job'); return }
-      const job = data as { status: string; processed: number; total: number; succeeded: number; failed: number }
-      setBulkJob({ id: jobId, ...job })
-      if (job.status === 'completed' || job.processed >= job.total) {
-        setBulkJob(null)
-        if (job.failed > 0) toast(`${job.succeeded} succeeded, ${job.failed} failed`)
-        else toast(`${job.total} items ${actionStatus}`)
-        fetchItems()
-        return
+      try {
+        const res = await adminCall({ action: 'bulk_job', job_id: jobId })
+        const data = res.job as { status: string; processed: number; total: number; succeeded: number; failed: number }
+        if (!data) { setBulkJob(null); toast('Could not read bulk job'); return }
+        setBulkJob({ id: jobId, ...data })
+        if (data.status === 'completed' || data.processed >= total) {
+          setBulkJob(null)
+          if (data.failed > 0) toast(`${data.succeeded} succeeded, ${data.failed} failed`)
+          else toast(`${total} items ${actionStatus}`)
+          fetchItems()
+          return
+        }
+      } catch (e: any) {
+        setBulkJob(null); toast(e.message); return
       }
       setTimeout(poll, 800)
     }
@@ -100,12 +112,12 @@ export default function AdminModeration() {
       return
     }
     if (!confirm(`Delete this ${item.target_type} permanently?`)) return
-    const { error } = await supabase.rpc('admin_delete_content', {
-      p_item_type: item.target_type,
-      p_item_id: item.target_id,
-    })
-    if (error) { toast(error.message); return }
-    toast(`${item.target_type} deleted`)
+    try {
+      await adminCall({ action: 'delete_content', item_type: item.target_type, item_id: item.target_id })
+      toast(`${item.target_type} deleted`)
+    } catch (e: any) {
+      toast(e.message); return
+    }
     act(item.id, 'action_taken')
   }
 

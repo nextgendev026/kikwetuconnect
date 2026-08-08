@@ -128,7 +128,7 @@ export default function ProfilePage() {
       }),
       safeQuery(() => supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profile.id)),
       profile.featured_post_id
-        ? safeQuery(() => supabase.from('posts').select('*').eq('id', profile.featured_post_id).maybeSingle())
+        ? safeQuery(() => supabase.from('posts').select('*').eq('id', String(profile.featured_post_id)).maybeSingle())
         : Promise.resolve({ data: null }),
       safeQuery(() => supabase.from('heshima_earnings').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(10)),
       safeQuery(() => supabase.rpc('get_pending_follow_requests')),
@@ -194,7 +194,7 @@ export default function ProfilePage() {
         const last = page[page.length - 1]
         setPostsCursor(last.created_at)
       }
-      setAllPosts(prev => reset ? page : [...prev, ...page])
+      setAllPosts(prev => reset ? page as Post[] : [...prev, ...(page as Post[])])
     } catch {
       toast('Failed to load posts')
     } finally {

@@ -102,7 +102,10 @@ export function AuthProvider({ children, supabase }: { children: ReactNode; supa
     const onVisible = () => { if (document.visibilityState === 'visible') void checkSession() }
     window.addEventListener('focus', onVisible)
     document.addEventListener('visibilitychange', onVisible)
-    const id = setInterval(() => void checkSession(), 60_000)
+    const id = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+      void checkSession()
+    }, 60_000)
     return () => {
       window.removeEventListener('focus', onVisible)
       document.removeEventListener('visibilitychange', onVisible)

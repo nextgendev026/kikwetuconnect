@@ -13,6 +13,7 @@ export const POST = withAuth(async (request, { supabase, user }) => {
     const { folder = 'uploads', contentType = 'image/jpeg', fileSize } = body as {
       folder?: string; contentType?: string; fileSize?: number
     }
+    const safeFolder = folder.replace(/\\/g, '/').split('/').filter(s => s && s !== '.' && s !== '..').join('/') || 'uploads'
 
     const maxSize = 10 * 1024 * 1024
     if (fileSize && fileSize > maxSize) {
@@ -20,7 +21,7 @@ export const POST = withAuth(async (request, { supabase, user }) => {
     }
 
     const ext = (contentType || 'image/jpeg').split('/').pop() || 'jpg'
-    const fileName = `${folder}/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+    const fileName = `${safeFolder}/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
     const { data, error } = await supabase.storage
       .from('media')

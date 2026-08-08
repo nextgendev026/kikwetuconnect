@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Search, X } from 'lucide-react'
-import { searchContent } from '@/lib/search'
 
 interface SearchResult {
   id: string
@@ -27,11 +26,13 @@ export function SearchBar() {
 
     setIsLoading(true)
     try {
-      const searchResult = await searchContent(searchQuery, {}, 8)
+      const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`, { headers: { Accept: 'application/json' } })
+      if (!res.ok) throw new Error(`Search failed (${res.status})`)
+      const data = await res.json()
       const allResults: SearchResult[] = [
-        ...searchResult.posts.map((post: any) => ({ ...post, type: 'post' as const })),
-        ...searchResult.quizzes.map((quiz: any) => ({ ...quiz, type: 'quiz' as const })),
-        ...searchResult.users.map((user: any) => ({ ...user, type: 'user' as const })),
+        ...(data.posts || []).map((post: any) => ({ id: post.id, title: post.title || post.content?.slice(0, 80), type: 'post' as const })),
+        ...(data.profiles || []).map((profile: any) => ({ id: profile.id, title: profile.full_name || profile.username, username: profile.username, county: profile.county_hub, verified: profile.is_verified_expert, type: 'user' as const })),
+        ...(data.topics || []).map((topic: any) => ({ id: topic.id, title: topic.name, type: 'quiz' as const })),
       ]
       setResults(allResults)
     } catch (error) {
