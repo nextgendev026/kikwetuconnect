@@ -31,7 +31,7 @@ DECLARE
   group_record RECORD;
   member_record RECORD;
   notify_user_id uuid;
-  notify_ids uuid[] := '{}';
+  notified_ids uuid[] := '{}';
   notification_count integer := 0;
   rate_check jsonb;
   v_group_name text := 'Neighbourhood';
@@ -60,7 +60,7 @@ BEGIN
       SELECT user_id FROM public.nyumba_kumi_group_members
       WHERE group_id = p_group_id AND user_id != (select auth.uid())
     LOOP
-      IF notify_user_id <> ALL (notified_ids) THEN
+      IF NOT (notify_user_id = ANY (notified_ids)) THEN
         notified_ids := notified_ids || notify_user_id;
         INSERT INTO public.notifications (user_id, type, title, body, data)
         VALUES (notify_user_id, 'nyumba_alert', p_title, p_description,
