@@ -81,8 +81,13 @@ export default function FollowersPage() {
               <Link key={item.user_id} href={`/profile/${p.username || p.id}`}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 11, textDecoration: 'none', transition: 'background .15s' }}
                 className="hover:bg-night2">
-                <div className="w-9 h-9 rounded-full grid place-items-center text-xs font-bold flex-shrink-0" style={{ background: 'var(--earth)', color: 'var(--gold)' }}>
-                  {(p.full_name || p.username || '?')[0].toUpperCase()}
+                <div className="w-9 h-9 rounded-full grid place-items-center text-xs font-bold flex-shrink-0 relative overflow-hidden bg-night2" style={{ border: '1px solid var(--line)' }}>
+                  {p.avatar_url ? (
+                    <img src={p.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.pf-fb'); if (fb) (fb as HTMLElement).style.display = 'grid' }} />
+                  ) : null}
+                  <span className="pf-fb" style={{ position: 'absolute', inset: 0, display: p.avatar_url ? 'none' : 'grid', placeItems: 'center', background: 'var(--earth)', color: 'var(--gold)', fontWeight: 700 }}>
+                    {(p.full_name || p.username || '?')[0].toUpperCase()}
+                  </span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate" style={{ color: 'var(--ink)' }}>{p.full_name || p.username}</p>

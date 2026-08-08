@@ -380,22 +380,22 @@ export default function ProfileHeader({
           </div>
 
           {/* Stat Row */}
-          <div className="flex gap-4 pt-3" style={{ borderTop: '1px solid var(--line)' }}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3" style={{ borderTop: '1px solid var(--line)' }}>
             {[
               { label: 'Followers', value: profile.follower_count || 0, icon: Users },
               { label: 'Following', value: profile.following_count || 0, icon: Users },
               { label: 'Posts', value: postCount, icon: BookOpen },
-              { label: 'Heshima', value: profile.heshima_rating || 0, icon: Award },
+              { label: 'Heshima', value: profile.heshima_rating || 0, icon: Award, highlight: true },
             ].map(stat => (
               <button key={stat.label} style={{
-                flex: 1, padding: '8px 4px', borderRadius: 11,
-                background: 'var(--raised)', border: '1px solid var(--line)',
-                cursor: 'pointer', textAlign: 'center', transition: 'all .2s',
-                minWidth: 0,
+                padding: '10px 6px', borderRadius: 11,
+                background: stat.highlight ? 'linear-gradient(135deg, color-mix(in oklab, var(--gold) 22%, var(--raised)), var(--raised))' : 'var(--raised)',
+                border: stat.highlight ? '1px solid color-mix(in oklab, var(--gold) 40%, var(--line))' : '1px solid var(--line)',
+                cursor: 'pointer', textAlign: 'center', transition: 'all .2s', minWidth: 0,
               }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'var(--raised)' }}>
-                <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink)', lineHeight: 1.2 }}>
+                onMouseEnter={e => { e.currentTarget.style.background = stat.highlight ? 'linear-gradient(135deg, color-mix(in oklab, var(--gold) 32%, var(--raised)), var(--raised))' : 'var(--surface)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = stat.highlight ? 'linear-gradient(135deg, color-mix(in oklab, var(--gold) 22%, var(--raised)), var(--raised))' : 'var(--raised)' }}>
+                <div style={{ fontWeight: 800, fontSize: 16, color: stat.highlight ? 'var(--gold)' : 'var(--ink)', lineHeight: 1.2 }}>
                   {stat.value}
                 </div>
                 <div style={{ fontSize: 9, color: 'var(--muted)', marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>

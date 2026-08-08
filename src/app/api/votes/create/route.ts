@@ -13,7 +13,7 @@ export const POST = withAuth(async (request, { supabase, user }) => {
       )
     }
 
-    if (!['post', 'answer'].includes(targetType)) {
+    if (!['post', 'answer', 'comment'].includes(targetType)) {
       return NextResponse.json(
         { error: 'Invalid target type' },
         { status: 400 }

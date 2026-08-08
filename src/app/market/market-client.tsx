@@ -429,7 +429,15 @@ export default function MarketPage() {
                           <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {item.views_count || 0}</span>
                           {item.seller_rating > 0 && <span className="flex items-center gap-1"><Star className="w-3 h-3" style={{ color: 'var(--gold)' }} /> {item.seller_rating}</span>}
                         </div>
-                        {item.profiles && <p className="text-[10px] mt-1.5 truncate" style={{ color: 'var(--muted)' }}>by {item.profiles.full_name || item.profiles.username}</p>}
+                        {item.profiles && (
+                          <div className="flex items-center gap-1.5 mt-1.5 truncate" style={{ color: 'var(--muted)', fontSize: 10 }}>
+                            {item.profiles.avatar_url ? (
+                              <img src={item.profiles.avatar_url} alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" loading="lazy"
+                                onError={e => { (e.target as HTMLElement).style.display = 'none' }} />
+                            ) : null}
+                            <span className="truncate">by {item.profiles.full_name || item.profiles.username}</span>
+                          </div>
+                        )}
                         <div className="flex gap-2" style={{ marginTop: 10 }}>
                           <button onClick={e => { e.stopPropagation(); setBuyItem(item) }}
                             style={{ flex: 1, ...s.btn, ...s.primaryBtn, justifyContent: 'center', padding: '8px', fontSize: 11 }}>

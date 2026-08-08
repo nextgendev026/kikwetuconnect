@@ -262,8 +262,13 @@ export default function SpaceDetailPage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {members.map(m => (
                     <div key={m.user_id} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: 'var(--raised)' }}>
-                      <div className="w-7 h-7 rounded-full grid place-items-center text-[9px] font-bold flex-shrink-0" style={{ background: 'var(--earth)', color: 'var(--gold)' }}>
-                        {(m.profiles?.full_name || m.profiles?.username || '?')[0].toUpperCase()}
+                      <div className="w-7 h-7 rounded-full grid place-items-center text-[9px] font-bold flex-shrink-0 relative overflow-hidden" style={{ background: 'var(--earth)', color: 'var(--gold)', border: '1px solid var(--line)' }}>
+                        {m.profiles?.avatar_url ? (
+                          <img src={m.profiles.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.sp-fb'); if (fb) (fb as HTMLElement).style.display = 'grid' }} />
+                        ) : null}
+                        <span className="sp-fb" style={{ position: 'absolute', inset: 0, display: m.profiles?.avatar_url ? 'none' : 'grid', placeItems: 'center' }}>
+                          {(m.profiles?.full_name || m.profiles?.username || '?')[0].toUpperCase()}
+                        </span>
                       </div>
                       <div className="min-w-0">
                         <p className="text-[11px] font-medium truncate" style={{ color: 'var(--ink)' }}>{m.profiles?.full_name || m.profiles?.username || 'User'}</p>

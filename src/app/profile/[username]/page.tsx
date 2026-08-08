@@ -26,6 +26,7 @@ export default function UserProfilePage() {
   const [hasMorePosts, setHasMorePosts] = useState(true)
   const [loadingPosts, setLoadingPosts] = useState(false)
   const [heshimaEarnings, setHeshimaEarnings] = useState<any[]>([])
+  const [badges, setBadges] = useState<any[]>([])
   const [isFollowing, setIsFollowing] = useState(false)
   const [messaging, setMessaging] = useState(false)
   const { user } = useUser()
@@ -141,6 +142,17 @@ export default function UserProfilePage() {
       .order('created_at', { ascending: false })
       .limit(10)
       .then(({ data }: { data: any }) => { if (data) setHeshimaEarnings(data) })
+    supabase.from('user_badges')
+      .select('badge_id, awarded_at, badges:badge_id(id, name, description, icon)')
+      .eq('user_id', profile.id)
+      .then(({ data }: { data: any }) => {
+        if (data) setBadges((data as any[]).map((b: any) => ({
+          id: b.badges?.id || b.badge_id,
+          name: b.badges?.name || 'Unknown',
+          description: b.badges?.description || '',
+          icon: b.badges?.icon || '🏅',
+        })))
+      })
     fetchPosts(true)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, supabase])
@@ -179,8 +191,8 @@ export default function UserProfilePage() {
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'posts', label: 'Posts' },
-    { key: 'about', label: 'About' },
     { key: 'heshima', label: 'Heshima' },
+    { key: 'about', label: 'About' },
   ]
 
   if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -269,7 +281,7 @@ export default function UserProfilePage() {
                           <ThumbsUp className="w-3 h-3" /> {post.upvotes_count || 0}
                         </span>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <MessageSquare className="w-3 h-3" /> {post.answers_count || 0}
+                          <MessageSquare className="w-3 h-3" /> {post.post_type === 'inquiry' ? (post.answers_count || 0) : (post.comments_count || 0)}
                         </span>
                         <span>{formatTime(post.created_at)}</span>
                       </div>
@@ -364,6 +376,27 @@ export default function UserProfilePage() {
               <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Heshima Rating</p>
             </div>
           </div>
+
+          <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', margin: '0 0 8px 4px' }}>Badges</h3>
+          {badges.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '24px 20px', color: 'var(--muted)', fontSize: 12 }}>
+              No badges earned yet.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8, marginBottom: 16 }}>
+              {badges.map((badge: any) => (
+                <div key={badge.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', borderRadius: 10,
+                  background: 'var(--surface)', border: '1px solid var(--line)', minWidth: 0,
+                }}>
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>{badge.icon}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {badge.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
 
           <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--muted)', margin: '0 0 8px 4px' }}>Recent Activity</h3>
           {heshimaEarnings.length === 0 ? (

@@ -359,6 +359,57 @@ export type Database = {
           },
         ]
       }
+      comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          is_expert_solution: boolean | null
+          language: string | null
+          post_id: string
+          updated_at: string | null
+          upvotes_count: number | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          is_expert_solution?: boolean | null
+          language?: string | null
+          post_id: string
+          updated_at?: string | null
+          upvotes_count?: number | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_expert_solution?: boolean | null
+          language?: string | null
+          post_id?: string
+          updated_at?: string | null
+          upvotes_count?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_settings: {
         Row: {
           key: string
@@ -2474,6 +2525,7 @@ export type Database = {
           baraza_id: string | null
           bounty_tokens: number | null
           category: string
+          comments_count: number | null
           content: string
           county_tag: string | null
           created_at: string | null
@@ -2508,6 +2560,7 @@ export type Database = {
           baraza_id?: string | null
           bounty_tokens?: number | null
           category?: string
+          comments_count?: number | null
           content: string
           county_tag?: string | null
           created_at?: string | null
@@ -2542,6 +2595,7 @@ export type Database = {
           baraza_id?: string | null
           bounty_tokens?: number | null
           category?: string
+          comments_count?: number | null
           content?: string
           county_tag?: string | null
           created_at?: string | null

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 export const POST = withAuth(async (request, { supabase, user }) => {
   const { content_type, content_id, reason } = await request.json()
-  if (!['post', 'answer'].includes(content_type)) {
+  if (!['post', 'answer', 'comment'].includes(content_type)) {
     return NextResponse.json({ error: 'Invalid content type' }, { status: 400 })
   }
   if (!content_id || !reason) {

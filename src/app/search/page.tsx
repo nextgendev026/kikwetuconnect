@@ -116,8 +116,10 @@ function SearchContent() {
                       authorHandle={post.profiles.username}
                       authorHeshima={post.profiles.heshima_rating}
                       isVerifiedExpert={post.profiles.is_verified_expert}
+                      authorAvatar={post.profiles.avatar_url || undefined}
                       upvotesCount={post.upvotes_count}
                       answersCount={post.answers_count}
+                      commentsCount={post.comments_count ?? 0}
                       bountyTokens={post.bounty_tokens}
                       createdAt={post.created_at}
                     />

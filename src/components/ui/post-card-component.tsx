@@ -42,6 +42,7 @@ export function PostCard({
   isVerifiedExpert = false,
   upvotesCount,
   answersCount = 0,
+  commentsCount = 0,
   county,
   tags = [],
   bountyTokens = 0,
@@ -158,10 +159,10 @@ export function PostCard({
               <span>{upvotesCount} upvotes</span>
             </div>
           )}
-          {postType === 'inquiry' && answersCount > 0 && (
+          {(postType === 'inquiry' ? answersCount > 0 : (commentsCount ?? 0) > 0) && (
             <div className="flex items-center gap-1">
               <MessageCircle className="w-4 h-4" />
-              <span>{answersCount} answers</span>
+              <span>{postType === 'inquiry' ? `${answersCount} answers` : `${commentsCount} comments`}</span>
             </div>
           )}
         </div>
@@ -181,15 +182,13 @@ export function PostCard({
           <TrendingUp className="w-4 h-4" />
           {userVoted ? 'Upvoted' : 'Upvote'}
         </button>
-        {postType === 'inquiry' && (
-          <Link
-            href={`/posts/${id}`}
-            className="flex items-center gap-1 px-3 py-2 rounded-full text-sm font-medium text-muted hover:bg-surface transition-colors"
-          >
-            <MessageCircle className="w-4 h-4" />
-            Answer
-          </Link>
-        )}
+        <Link
+          href={`/posts/${id}`}
+          className="flex items-center gap-1 px-3 py-2 rounded-full text-sm font-medium text-muted hover:bg-surface transition-colors"
+        >
+          <MessageCircle className="w-4 h-4" />
+          {postType === 'inquiry' ? 'Answer' : 'Comment'}
+        </Link>
         <button className="flex items-center gap-1 px-3 py-2 rounded-full text-sm font-medium text-muted hover:bg-surface transition-colors" aria-label="Share post">
           <Share2 className="w-4 h-4" />
         </button>

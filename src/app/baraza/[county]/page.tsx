@@ -23,6 +23,7 @@ interface Post {
   user_id: string
   upvotes_count: number
   answers_count: number
+  comments_count?: number
   bounty_tokens: number
   is_hidden: boolean
   county_tag: string | null
@@ -269,8 +270,10 @@ export default function CountyHubPage() {
                   isHidden={post.is_hidden}
                   authorHeshima={post.profiles.heshima_rating}
                   isVerifiedExpert={post.profiles.is_verified_expert}
+                  authorAvatar={post.profiles.avatar_url || undefined}
                   upvotesCount={post.upvotes_count}
                   answersCount={post.answers_count}
+                  commentsCount={post.comments_count}
                   county={post.county_tag || undefined}
                   bountyTokens={post.bounty_tokens}
                   createdAt={post.created_at}

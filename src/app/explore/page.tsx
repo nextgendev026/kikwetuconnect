@@ -136,8 +136,13 @@ export default function ExplorePage() {
               return (
                 <Link key={pro.id} href={`/profile/${p.username}`} style={style.miniCard} className="card-hover block transition-colors">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: 'linear-gradient(135deg, var(--green), var(--gold))', color: 'var(--night)' }}>
-                      {getInitials(p.full_name || p.username)}
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, var(--green), var(--gold))', color: 'var(--night)' }}>
+                      {p.avatar_url ? (
+                        <img src={p.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy" onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.ex-fb'); if (fb) (fb as HTMLElement).style.display = 'flex' }} />
+                      ) : null}
+                      <span className="ex-fb" style={{ position: 'absolute', inset: 0, display: p.avatar_url ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {getInitials(p.full_name || p.username)}
+                      </span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">

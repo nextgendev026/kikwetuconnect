@@ -15,6 +15,7 @@ interface Profile {
   id: string
   full_name: string
   username: string
+  avatar_url: string | null
   heshima_rating: number
   is_verified_expert: boolean
 }
@@ -29,6 +30,7 @@ interface Post {
   media_type: string | null
   upvotes_count: number
   answers_count: number
+  comments_count: number
   bounty_tokens: number
   county_tag: string | null
   is_hidden: boolean
@@ -80,7 +82,7 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
       checkSaved()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [postId, profile])
+  }, [postId, profile, post?.post_type])
 
   const checkSaved = async () => {
     if (!profile) return
@@ -89,6 +91,8 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
   }
 
 
+
+  const isDiscussion = post?.post_type && post.post_type !== 'inquiry'
 
   const fetchPost = async () => {
     try {
@@ -113,7 +117,7 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
     try {
       const { data, error } = await supabase
         .from('posts')
-        .select('id, title, content, post_type, user_id, media_url, media_type, upvotes_count, answers_count, bounty_tokens, county_tag, is_hidden, created_at, profiles:user_id(id, full_name, username, heshima_rating, is_verified_expert)')
+        .select('id, title, content, post_type, user_id, media_url, media_type, upvotes_count, answers_count, comments_count, bounty_tokens, county_tag, is_hidden, created_at, profiles:user_id(id, full_name, username, avatar_url, heshima_rating, is_verified_expert)')
         .eq('id', postId)
         .maybeSingle()
 
@@ -133,21 +137,23 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
   }
 
   const fetchAnswers = async () => {
+    const table = isDiscussion ? 'comments' : 'answers'
     try {
       const { data, error } = await supabase
-        .from('answers')
+        .from(table)
         .select(`
           *,
           profiles:user_id (
             id,
             full_name,
             username,
+            avatar_url,
             heshima_rating,
             is_verified_expert
           )
         `)
         .eq('post_id', postId)
-        .order('is_expert_solution', { ascending: false })
+        .order(isDiscussion ? 'created_at' : 'is_expert_solution', { ascending: !isDiscussion })
         .order('upvotes_count', { ascending: false })
 
       if (error) throw error
@@ -155,7 +161,7 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
       setAnswers(list)
       if (profile) fetchUserVotes(list.map(a => a.id))
     } catch (err) {
-      console.error('Error fetching answers:', err)
+      console.error('Error fetching replies:', err)
     }
   }
 
@@ -184,16 +190,16 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
 
   const handleSubmitAnswer = async () => {
     if (!profile) {
-      setError('Please sign in to answer')
+      setError(`Please sign in to ${isDiscussion ? 'comment' : 'answer'}`)
       return
     }
 
     if (!answerContent.trim()) {
-      setError('Please write an answer')
+      setError(isDiscussion ? 'Please write a comment' : 'Please write an answer')
       return
     }
 
-    if (answerContent.trim().length < 10) {
+    if (!isDiscussion && answerContent.trim().length < 10) {
       setError('Answer must be at least 10 characters')
       return
     }
@@ -202,7 +208,8 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
     setError('')
 
     try {
-      const response = await fetch('/api/answers/create', {
+      const endpoint = isDiscussion ? '/api/comments/create' : '/api/answers/create'
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -217,6 +224,7 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
       }
 
       setAnswerContent('')
+      await fetchPost()
       await fetchAnswers()
     } catch (err: any) {
       setError(err.message)
@@ -237,7 +245,7 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           targetId,
-          targetType: targetId === postId ? 'post' : 'answer',
+          targetType: targetId === postId ? 'post' : (isDiscussion ? 'comment' : 'answer'),
           voteType,
         }),
       })
@@ -258,7 +266,7 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
       const res = await fetch('/api/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content_type: 'answer', content_id: answerId, reason: 'Reported by user' }),
+        body: JSON.stringify({ content_type: isDiscussion ? 'comment' : 'answer', content_id: answerId, reason: 'Reported by user' }),
       })
       if (res.ok) toast('Report submitted. Moderators will review.')
       else toast('Failed to submit report')
@@ -343,9 +351,18 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
       <div className="card section mb-6">
         {/* Header */}
         <div className="flex items-start gap-3 mb-4">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green to-gold flex items-center justify-center text-sm font-bold text-night flex-shrink-0">
-            {initials}
-          </div>
+          {author?.avatar_url ? (
+            <Link href={`/profile/${author.username}`} className="flex-shrink-0 block">
+              <img src={author.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover flex-shrink-0" loading="lazy"
+                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.innerHTML = `<div class="w-12 h-12 rounded-full bg-gradient-to-br from-green to-gold flex items-center justify-center text-sm font-bold text-night">${initials}</div>` }} />
+            </Link>
+          ) : (
+            <Link href={`/profile/${author?.username || ''}`} className="flex-shrink-0 block">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green to-gold flex items-center justify-center text-sm font-bold text-night flex-shrink-0">
+                {initials}
+              </div>
+            </Link>
+          )}
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <p className="font-bold text-sm">{author?.full_name || 'Anonymous'}</p>
@@ -426,10 +443,10 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
                 {post.upvotes_count} upvotes
               </span>
             )}
-            {post.answers_count > 0 && (
+            {isDiscussion ? (post.comments_count ?? 0) > 0 : post.answers_count > 0 && (
               <span className="flex items-center gap-1">
                 <MessageCircle className="w-4 h-4" />
-                {post.answers_count} answers
+                {isDiscussion ? post.comments_count : post.answers_count} {isDiscussion ? 'comments' : 'answers'}
               </span>
             )}
           </div>
@@ -499,14 +516,16 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
         )}
       </div>
 
-      {/* Answers Section */}
+      {/* Replies Section */}
       <div className="mb-6">
-        <h2 className="text-xl font-bold mb-4">{post.answers_count} Answers</h2>
+        <h2 className="text-xl font-bold mb-4">
+          {isDiscussion ? `${post.comments_count ?? 0} Comments` : `${post.answers_count} Answers`}
+        </h2>
 
         {answers.length === 0 ? (
           <div className="card section text-center py-8">
             <MessageCircle className="w-10 h-10 text-quiet mx-auto mb-3 opacity-50" />
-            <p className="text-muted">No answers yet. Be the first to answer!</p>
+            <p className="text-muted">{isDiscussion ? 'No comments yet. Be the first to comment!' : 'No answers yet. Be the first to answer!'}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -523,16 +542,25 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
                   {/* Answer Header */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue to-green flex items-center justify-center text-xs font-bold text-night flex-shrink-0">
-                        {answerInitials}
-                      </div>
+                      {answerAuthor?.avatar_url ? (
+                        <Link href={`/profile/${answerAuthor.username}`} className="flex-shrink-0 block">
+                          <img src={answerAuthor.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" loading="lazy"
+                            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.innerHTML = `<div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue to-green flex items-center justify-center text-xs font-bold text-night">${answerInitials}</div>` }} />
+                        </Link>
+                      ) : (
+                        <Link href={`/profile/${answerAuthor?.username || ''}`} className="flex-shrink-0 block">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue to-green flex items-center justify-center text-xs font-bold text-night flex-shrink-0">
+                            {answerInitials}
+                          </div>
+                        </Link>
+                      )}
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-bold text-sm">{answerAuthor?.full_name || 'Kikwetu Member'}</p>
                           {answerAuthor?.is_verified_expert && (
                             <Shield className="w-3 h-3 text-green" />
                           )}
-                          {answer.is_expert_solution && (
+                          {!isDiscussion && answer.is_expert_solution && (
                             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-bg text-green">
                               Best Answer
                             </span>
@@ -568,12 +596,12 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
                         <TrendingUp className="w-3 h-3" />
                         <span className="hidden sm:inline">Upvote</span>
                       </button>
-                      <ShareMenu compact url={`/posts/${post.id}`} title={`Answer on "${post.title || 'KikwetuConnect'}"`} />
-                      <button
-                        onClick={() => reportAnswer(answer.id)}
-                        className="min-h-[36px] px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 text-muted hover:bg-surface"
-                        aria-label="Report answer"
-                      >
+<ShareMenu compact url={`/posts/${post.id}`} title={`${isDiscussion ? 'Comment' : 'Answer'} on "${post.title || 'KikwetuConnect'}"`} />
+                        <button
+                          onClick={() => reportAnswer(answer.id)}
+                          className="min-h-[36px] px-3 py-1.5 rounded-full text-xs font-medium transition-colors flex items-center gap-1 text-muted hover:bg-surface"
+                          aria-label={`Report ${isDiscussion ? 'comment' : 'answer'}`}
+                        >
                         <Flag className="w-3 h-3" />
                         <span className="hidden sm:inline">Report</span>
                       </button>
@@ -586,12 +614,12 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
         )}
       </div>
 
-      {/* Answer Form */}
+      {/* Reply Form */}
       {profile ? (
         <div className="card section">
-          <h3 className="text-lg font-bold mb-4">Your Answer</h3>
+          <h3 className="text-lg font-bold mb-4">{isDiscussion ? 'Your Comment' : 'Your Answer'}</h3>
           <Textarea
-            placeholder="Share your answer... Be helpful and clear."
+            placeholder={isDiscussion ? 'Add a comment... Be kind and useful.' : 'Share your answer... Be helpful and clear.'}
             value={answerContent}
             onChange={(e) => setAnswerContent(e.target.value)}
             rows={5}
@@ -607,13 +635,13 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
               disabled={submittingAnswer}
               onClick={handleSubmitAnswer}
             >
-              Post Answer
+              {isDiscussion ? 'Post Comment' : 'Post Answer'}
             </Button>
           </div>
         </div>
       ) : (
         <div className="card section text-center py-8">
-          <p className="text-muted mb-4">Sign in to post an answer</p>
+          <p className="text-muted mb-4">Sign in to {isDiscussion ? 'comment' : 'post an answer'}</p>
           <Link href="/login" className="btn btn-primary">
             Sign in
           </Link>

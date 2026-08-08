@@ -39,6 +39,7 @@ export interface Post {
   bounty_tokens: number
   upvotes_count: number
   answers_count: number
+  comments_count?: number
   is_pinned: boolean
   is_hidden: boolean
   created_at: string

@@ -7,13 +7,14 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import CreateModal from '@/components/CreateModal'
 import NotificationTray from '@/components/NotificationTray'
+import FeedAd from '@/components/FeedAd'
 import { ToolbarProvider } from '@/lib/toolbar'
 import { trackActivity } from '@/lib/activity'
 import { usePresence } from '@/hooks/usePresence'
 import { useKeyboardViewport } from '@/hooks/useKeyboardViewport'
 import { playMessageSound, playNotificationSound } from '@/lib/sound'
 import { showNativeNotification, getSenderName } from '@/lib/browser-notify'
-import { Send, MessageSquare, Bell, Sun, Moon } from 'lucide-react'
+import { Send, MessageSquare, Bell, Sun, Moon, Award } from 'lucide-react'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { profile, loading } = useUser()
@@ -38,6 +39,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [showNotifTray, setShowNotifTray] = useState(false)
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
   const [followingUsers, setFollowingUsers] = useState<any[]>([])
+  const [suggestions, setSuggestions] = useState<any[]>([])
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<any[]>([])
@@ -47,21 +50,35 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   useKeyboardViewport()
 
+  // Auto-collapse the sidebar when the viewport narrows below the right-rail
+  // breakpoint, and auto-expand when there's room again. No manual toggle.
   useEffect(() => {
-    try {
-      if (typeof window !== 'undefined' && localStorage.getItem('kc-sidebar-collapsed') === '1') {
-        setSidebarCollapsed(true)
-      }
-    } catch { /* ignore storage errors */ }
+    const mq = window.matchMedia('(max-width: 1180px)')
+    const apply = () => setSidebarCollapsed(mq.matches)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
   }, [])
 
-  const toggleSidebar = () => {
-    setSidebarCollapsed(c => {
-      const next = !c
-      try { localStorage.setItem('kc-sidebar-collapsed', next ? '1' : '0') } catch { /* ignore */ }
-      return next
-    })
-  }
+  // Load suggested users for the right rail (region / interests / likes based)
+  useEffect(() => {
+    if (!profile || !supabase) return
+    let cancelled = false
+    setSuggestionsLoading(true)
+    ;(async () => {
+      try {
+        const { data } = await supabase.rpc('get_user_recommendations', { p_limit: 6 })
+        if (cancelled) return
+        const filtered = Array.isArray(data)
+          ? (data as any[]).filter(u => u && u.id !== profile.id && !followingIds.has(u.id)).slice(0, 6)
+          : []
+        setSuggestions(filtered)
+      } catch { if (!cancelled) setSuggestions([]) }
+      finally { if (!cancelled) setSuggestionsLoading(false) }
+    })()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, supabase, followingIds.size])
 
   // Close the search dropdown on outside click
   useEffect(() => {
@@ -277,7 +294,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const initials = (profile.full_name || profile.username || 'U').slice(0, 2).toUpperCase()
   const onlineIdSet = new Set(onlineUsers.map(u => u.id))
-  const onlineFollowing = followingUsers.filter(u => onlineIdSet.has(u.id)).length
   const noLayout = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/welcome'].includes(path) || path.startsWith('/auth')
   if (noLayout) return <>{children}</>
 
@@ -304,7 +320,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <ToolbarProvider>
         <div className={`app${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
           {/* Sidebar */}
-          <Sidebar initials={initials} profile={profile} following={followingUsers} onlineIds={onlineIdSet} collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+          <Sidebar initials={initials} profile={profile} following={followingUsers} onlineIds={onlineIdSet} collapsed={sidebarCollapsed} />
 
           {/* Main */}
           <main className="main">
@@ -431,33 +447,52 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {/* Right Panel */}
           <aside className="right-panel">
           <details className="side-section" open>
-            <summary>Following <span style={{ color: 'var(--green)', fontSize: 10, fontWeight: 400 }}>{onlineFollowing}/{followingUsers.length} online</span></summary>
+            <summary>Your Heshima</summary>
             <div className="side-body">
-              {followingUsers.length === 0 ? (
-                <small className="text-muted">Follow people to build your community</small>
-              ) : followingUsers.slice(0, 10).map((p) => {
-                const name = p.full_name || p.username || 'User'
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div className="avatar g" style={{ width: 46, height: 46, fontSize: 16 }}>
+                  <Award className="w-5 h-5" style={{ color: 'var(--green)' }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <strong style={{ display: 'block', fontWeight: 800, fontSize: 22, letterSpacing: '-.06em', fontFamily: 'var(--jakarta)', lineHeight: 1.1 }}>{profile.heshima_rating ?? 0}</strong>
+                  <small style={{ fontSize: 10, color: 'var(--muted)' }}>Heshima rating · streak {Number((profile as any).streak_days) || 0}d</small>
+                </div>
+              </div>
+              <Link href="/wallet" className="btn" style={{ background: 'var(--gold)', color: 'var(--night)', width: '100%', justifyContent: 'center', marginTop: 12 }}>View wallet &amp; rewards</Link>
+            </div>
+          </details>
+
+          <details className="side-section" open>
+            <summary>Suggested for you</summary>
+            <div className="side-body">
+              {suggestionsLoading ? (
+                <small className="text-muted">Finding people…</small>
+              ) : suggestions.length === 0 ? (
+                <small className="text-muted">No suggestions yet.</small>
+              ) : suggestions.map((u: any) => {
+                const isFollowing = followingIds.has(u.id)
+                const name = u.full_name || u.username || 'User'
                 const initials = name.slice(0, 2).toUpperCase()
-                const isOnline = onlineIdSet.has(p.id)
                 return (
-                  <div key={p.id} className="list-row" style={{ position: 'relative', cursor: 'pointer' }}
-                     onClick={() => window.location.href = `/profile/${p.username || p.id}`}>
+                  <div key={u.id} className="list-row" style={{ cursor: 'pointer' }}
+                    onClick={() => window.location.href = `/profile/${u.username || u.id}`}>
                     <span className="avatar" style={{ width: 32, height: 32, fontSize: 9, overflow: 'hidden', position: 'relative' }}>
-                      {p.avatar_url ? (
-                        <img src={p.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy"
+                      {u.avatar_url ? (
+                        <img src={u.avatar_url} alt="" className="w-full h-full object-cover" loading="lazy"
                           onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.textContent = initials }} />
                       ) : initials}
-                      <span style={{ position: 'absolute', bottom: 0, right: 0, width: 9, height: 9, borderRadius: '50%', background: isOnline ? 'var(--green)' : 'var(--faint)', border: '2px solid var(--surface)' }} />
+                      {u.is_verified_expert && (
+                        <span style={{ position: 'absolute', bottom: -1, right: -1, background: 'var(--green)', color: '#fff', borderRadius: '50%', width: 11, height: 11, fontSize: 7, display: 'grid', placeItems: 'center' }}>✓</span>
+                      )}
                     </span>
-                    <div className="side-copy"><b style={{ fontSize: 11 }}>{name}</b><small style={{ fontSize: 9, color: isOnline ? 'var(--green)' : 'var(--muted)' }}>{isOnline ? 'Online' : (p.county_hub || 'Offline')}</small></div>
-                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 2, flex: 'none' }} onClick={e => e.stopPropagation()}>
-                      <button onClick={async (e) => { e.stopPropagation(); const res = await fetch('/api/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'follow', target_user_id: p.id }) }); if (res.ok) { const d = await res.json(); setFollowingIds(prev => { const n = new Set(prev); if (d.following) n.add(p.id); else n.delete(p.id); return n }); setFollowingUsers(prev => d.following ? (prev.some(x => x.id === p.id) ? prev : [...prev, p]) : prev.filter(x => x.id !== p.id)) } }}
-                        style={{ width: 24, height: 24, borderRadius: 6, border: 0, background: followingIds.has(p.id) ? 'var(--gold)' : 'var(--raised)', color: followingIds.has(p.id) ? 'var(--night)' : 'var(--muted)', cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 12 }}
-                        title={followingIds.has(p.id) ? 'Unfollow' : 'Follow'}>{followingIds.has(p.id) ? '♥' : '♡'}</button>
-                      <button onClick={() => window.location.href = `/messages?user=${p.id}`}
-                        style={{ width: 24, height: 24, borderRadius: 6, border: 0, background: 'var(--raised)', color: 'var(--muted)', cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 9 }}
-                        title="Message">◍</button>
+                    <div className="side-copy">
+                      <b>{name}</b>
+                      <small>{u.county_hub || 'Kenya'}{u.is_verified_expert ? ' · Expert' : ''}</small>
                     </div>
+                    <button
+                      onClick={async (e) => { e.stopPropagation(); const res = await fetch('/api/profile', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'follow', target_user_id: u.id }) }); if (res.ok) { const d = await res.json(); if (d.following) { setFollowingIds(prev => new Set(prev).add(u.id)); setSuggestions(prev => prev.filter(x => x.id !== u.id)) } } }}
+                      style={{ flex: 'none', padding: '5px 12px', borderRadius: 8, border: 0, cursor: 'pointer', fontWeight: 700, fontSize: 10, background: 'var(--gold)', color: 'var(--night)' }}
+                      title="Follow">Follow</button>
                   </div>
                 )
               })}
@@ -484,14 +519,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </details>
 
-          <details className="side-section">
-            <summary>Your Heshima</summary>
-            <div className="side-body">
-              <small style={{ fontSize: 10, color: 'var(--muted)' }}>Heshima rating</small>
-              <strong style={{ display: 'block', fontWeight: 800, fontSize: 24, letterSpacing: '-.06em', fontFamily: 'var(--jakarta)', margin: '7px 0' }}>{profile.heshima_rating ?? 0}</strong>
-              <Link href="/wallet" className="btn" style={{ background: 'var(--night)', color: 'var(--gold)', width: '100%', justifyContent: 'center' }}>View details</Link>
-            </div>
-          </details>
+          <div id="right-rail-ad"><FeedAd placement="sidebar" compact /></div>
         </aside>
       </div>
       </ToolbarProvider>

@@ -254,7 +254,13 @@ function VerificationPage() {
               <div key={app.id} style={s.card()}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', gap: 12, minWidth: 220 }}>
-                    <div className="avatar" style={{ width: 34, height: 34, fontSize: 10, flexShrink: 0 }}>{(app.profiles?.full_name || app.profiles?.username || '?').slice(0, 2).toUpperCase()}</div>
+                    <div className="avatar" style={{ width: 34, height: 34, fontSize: 10, flexShrink: 0, position: 'relative', overflow: 'hidden' }}>
+                      {app.profiles?.avatar_url ? (
+                        <img src={app.profiles.avatar_url} alt="" className="w-full h-full object-cover" style={{ position: 'absolute', inset: 0 }} loading="lazy"
+                          onError={e => { (e.target as HTMLElement).style.display = 'none' }} />
+                      ) : null}
+                      {(app.profiles?.full_name || app.profiles?.username || '?').slice(0, 2).toUpperCase()}
+                    </div>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         <b style={{ color: 'var(--ink)', fontSize: 12 }}>{app.profiles?.full_name || app.profiles?.username}</b>
@@ -384,7 +390,13 @@ function UsersPage() {
             {users.map((u: any) => (
               <tr key={u.id} style={{ borderBottom: '1px solid var(--line)' }}>
                 <td style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div className="avatar" style={{ width: 28, height: 28, fontSize: 8, overflow: 'hidden' }}>{(u.full_name || u.username || '?').slice(0, 2).toUpperCase()}</div>
+                  <div className="avatar" style={{ width: 28, height: 28, fontSize: 8, overflow: 'hidden', position: 'relative' }}>
+                    {u.avatar_url ? (
+                      <img src={u.avatar_url} alt="" className="w-full h-full object-cover" style={{ position: 'absolute', inset: 0 }} loading="lazy"
+                        onError={e => { (e.target as HTMLElement).style.display = 'none' }} />
+                    ) : null}
+                    {(u.full_name || u.username || '?').slice(0, 2).toUpperCase()}
+                  </div>
                   <div><b style={{ color: 'var(--ink)', fontSize: 11 }}>{u.full_name || u.username}</b><small style={{ display: 'block', color: 'var(--muted)', fontSize: 9 }}>@{u.username}</small></div>
                 </td>
                 <td style={{ padding: '12px 14px' }}><span style={s.tag(u.role === ROLES.ADMIN)}>{u.role || 'general'}</span></td>

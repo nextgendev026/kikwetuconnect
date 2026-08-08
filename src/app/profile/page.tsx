@@ -19,7 +19,7 @@ interface Badge {
 
 interface Post {
   id: string; title: string | null; content: string; post_type: string
-  created_at: string; upvotes_count: number; answers_count: number
+  created_at: string; upvotes_count: number; answers_count: number; comments_count?: number
 }
 
 interface SavedItem {
@@ -265,7 +265,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex items-center gap-3 text-xs text-muted mt-1">
               <span className="flex items-center gap-1"><ThumbsUp className="w-3 h-3" />{post.upvotes_count}</span>
-              <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" />{post.answers_count}</span>
+              <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" />{post.post_type === 'inquiry' ? (post.answers_count || 0) : (post.comments_count || 0)}</span>
               <span>{formatTime(post.created_at)}</span>
             </div>
           </div>
@@ -311,10 +311,18 @@ export default function ProfilePage() {
         onCoverChange={handleCoverChange}
       />
 
-      {/* Heshima Points */}
+      {/* Reputation: Heshima + Badges combined */}
       <section className="card section mb-6">
-        <div className="flex items-start gap-6">
-          <div className="relative w-24 h-24 flex-shrink-0">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-sm flex items-center gap-2">
+            <Award className="w-4 h-4 text-gold" /> Reputation
+          </h2>
+          <Link href="/wallet" className="text-xs font-semibold text-gold hover:underline">View wallet →</Link>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-[auto_1fr] items-center">
+          {/* Heshima ring */}
+          <div className="relative w-28 h-28 mx-auto md:mx-0 flex-shrink-0">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="42" fill="none" stroke="var(--line)" strokeWidth="8" />
               <circle
@@ -324,28 +332,63 @@ export default function ProfilePage() {
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-xl font-bold text-green">{profile.heshima_rating || 0}</span>
+              <span className="text-2xl font-bold text-green">{profile.heshima_rating || 0}</span>
               <span className="text-[10px] text-muted">/ 5000</span>
             </div>
           </div>
-          <div className="flex-1">
-            <h2 className="font-bold text-sm">Heshima Points</h2>
-            <div className="flex items-center gap-3 mt-1">
-              <p className="text-xs text-muted">Balance: <strong className="text-green">{Number((profile as Record<string, unknown>).heshima_balance) || 0}</strong></p>
-              <p className="text-xs text-muted">Streak: <strong className="text-gold">{Number((profile as Record<string, unknown>).streak_days) || 0}d</strong></p>
+
+          <div className="min-w-0">
+            {/* Balance / streak / level */}
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="p-3 rounded-xl text-center" style={{ background: 'var(--raised)', border: '1px solid var(--line)' }}>
+                <div className="text-base font-bold text-green">{Number((profile as Record<string, unknown>).heshima_balance) || 0}</div>
+                <div className="text-[10px] text-muted mt-0.5">Balance</div>
+              </div>
+              <div className="p-3 rounded-xl text-center" style={{ background: 'var(--raised)', border: '1px solid var(--line)' }}>
+                <div className="text-base font-bold text-gold">{Number((profile as Record<string, unknown>).streak_days) || 0}d</div>
+                <div className="text-[10px] text-muted mt-0.5">Streak</div>
+              </div>
+              <div className="p-3 rounded-xl text-center" style={{ background: 'var(--raised)', border: '1px solid var(--line)' }}>
+                <div className="text-base font-bold" style={{ color: 'var(--ink)' }}>{stats.questions}</div>
+                <div className="text-[10px] text-muted mt-0.5">Questions</div>
+              </div>
             </div>
+
             {profile.heshima_rating >= 1000 && (
-              <div className="flex items-center gap-1.5 mt-2">
+              <div className="flex items-center gap-1.5 mb-2">
                 <Award className="w-4 h-4 text-gold" />
                 <span className="text-xs font-medium text-gold">Community Sage</span>
               </div>
             )}
             {Boolean((profile as Record<string, unknown>).is_expert) && (
-              <div className="flex items-center gap-1.5 mt-1">
+              <div className="flex items-center gap-1.5 mb-2">
                 <Shield className="w-4 h-4 text-green" />
                 <span className="text-xs font-medium text-green">
                   Verified Expert {String((profile as Record<string, unknown>).expert_since || '') ? `since ${new Date(String((profile as Record<string, unknown>).expert_since)).toLocaleDateString()}` : ''}
                 </span>
+              </div>
+            )}
+
+            {/* Badges inline */}
+            {badges.length > 0 && (
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">Earned Badges</span>
+                  {badges.length > 4 && (
+                    <button onClick={() => setActiveTab('badges')} className="text-[10px] font-semibold text-gold hover:underline">
+                      View all {badges.length} →
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {badges.slice(0, 4).map(badge => (
+                    <div key={badge.id} title={badge.name} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg"
+                      style={{ border: '1px solid color-mix(in oklab, var(--gold) 25%, var(--line))', background: 'linear-gradient(160deg, color-mix(in oklab, var(--gold) 18%, var(--surface)), color-mix(in oklab, var(--earth) 12%, var(--surface)))' }}>
+                      <span className="text-lg leading-none">{badge.icon}</span>
+                      <span className="text-[11px] font-medium">{badge.name}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -356,7 +399,7 @@ export default function ProfilePage() {
           <div className="mt-4 pt-4 border-t border-[var(--line)]">
             <h4 className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Recent Heshima</h4>
             <div className="space-y-1.5">
-              {recentEarnings.slice(0, 5).map((e: any) => (
+              {recentEarnings.slice(0, 4).map((e: any) => (
                 <div key={e.id} className="flex items-center justify-between py-1.5">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-[10px] font-medium" style={{
@@ -377,25 +420,6 @@ export default function ProfilePage() {
           </div>
         )}
       </section>
-
-      {/* Badges Display */}
-      {badges.length > 0 && (
-        <section className="card section mb-6">
-          <h3 className="font-bold text-sm mb-3">Badges</h3>
-          <div className="flex flex-wrap gap-3">
-            {badges.map(badge => (
-              <div key={badge.id} className="flex items-center gap-2 px-3 py-2 rounded-lg"
-                style={{ border: '1px solid color-mix(in oklab, var(--gold) 25%, var(--line))', background: 'linear-gradient(160deg, color-mix(in oklab, var(--gold) 18%, var(--surface)), color-mix(in oklab, var(--earth) 12%, var(--surface)))' }}>
-                <span className="text-xl">{badge.icon}</span>
-                <div>
-                  <p className="text-xs font-medium">{badge.name}</p>
-                  <p className="text-[10px] text-muted">{new Date(badge.awarded_at).toLocaleDateString()}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* Tabs */}
       <section className="card section mb-6">

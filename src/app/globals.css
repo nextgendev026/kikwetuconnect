@@ -83,7 +83,7 @@ button { border: 0; cursor: pointer; }
 button:active { transform: scale(0.97); }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 
-.app { display: grid; grid-template-columns: 248px minmax(0, 1fr) 294px; min-height: 100vh; max-width: 1600px; margin: 0 auto; }
+.app { display: grid; grid-template-columns: clamp(200px, 16vw, 280px) minmax(0, 1fr) clamp(248px, 19vw, 320px); min-height: 100vh; width: 100%; max-width: 100%; margin: 0 auto; overflow-x: clip; }
 
 .sidebar { background: linear-gradient(180deg, var(--night), color-mix(in oklab, var(--night) 94%, var(--gold))); color: var(--ink); padding: 24px 16px; display: flex; flex-direction: column; gap: 24px; position: sticky; top: 0; align-self: start; height: 100vh; overflow: auto; transition: background-color .35s var(--ease-in-out); box-shadow: inset -1px 0 0 var(--line); }
 .sidebar::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 20% 0%, color-mix(in oklab, var(--gold) 12%, transparent), transparent 55%); opacity: .6; }
@@ -91,8 +91,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .sidebar::-webkit-scrollbar { width: 3px; }
 .sidebar::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--line) 40%, transparent); border-radius: 3px; }
 
-/* Retractable sidebar: collapsed = icon-only rail */
-.app.sidebar-collapsed { grid-template-columns: 76px minmax(0, 1fr) 294px; }
+/* Retractable sidebar: collapsed = icon-only rail (driven by width matchMedia) */
+.app.sidebar-collapsed { grid-template-columns: 76px minmax(0, 1fr) clamp(200px, 16vw, 280px); }
 .app.sidebar-collapsed .sidebar { padding: 24px 8px; align-items: center; }
 .app.sidebar-collapsed .brand { justify-content: center; padding: 0; }
 .app.sidebar-collapsed .brand b,
@@ -181,7 +181,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .icon:hover { background: var(--raised); color: var(--ink); transform: translateY(-1px); }
 .icon:active { transform: translateY(0) scale(.96); }
 
-.page { display: none; width: 100%; max-width: clamp(760px, 72vw, 1080px); margin: auto; padding: clamp(18px, 2.5vw, 36px); }
+.page { display: none; width: 100%; max-width: min(100%, 1080px); margin: auto; padding: clamp(18px, 2.5vw, 36px); }
 .page.active { display: block; animation: rise .3s var(--ease); }
 
 /* Messages page: fills the remaining viewport and stays keyboard-safe.

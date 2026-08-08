@@ -368,10 +368,10 @@ export const PostCard = memo(function PostCard({
           <Link
             href={`/posts/${post.id}`}
             className="action-button feed-action-link"
-            aria-label={post.post_type === 'inquiry' ? `${post.answers_count || 0} answers` : `${post.answers_count || 0} comments`}
+            aria-label={post.post_type === 'inquiry' ? `${post.answers_count || 0} answers` : `${post.comments_count ?? post.answers_count ?? 0} comments`}
           >
             <MessageCircle className="w-4 h-4" aria-hidden="true" />
-            <span>{post.answers_count || 0}</span>
+            <span>{post.post_type === 'inquiry' ? (post.answers_count || 0) : (post.comments_count ?? post.answers_count ?? 0)}</span>
           </Link>
 
           <div className="relative">

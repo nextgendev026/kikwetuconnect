@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const [postsRes, profilesRes, topicsRes] = await Promise.all([
       supabase
         .from('posts')
-        .select('id, user_id, post_type, title, content, media_url, media_type, county_tag, bounty_tokens, upvotes_count, answers_count, is_pinned, is_hidden, created_at, profiles(full_name, username, heshima_rating, is_verified_expert)')
+        .select('id, user_id, post_type, title, content, media_url, media_type, county_tag, bounty_tokens, upvotes_count, answers_count, comments_count, is_pinned, is_hidden, created_at, profiles(full_name, username, avatar_url, heshima_rating, is_verified_expert)')
         .or(`title.ilike.${like},content.ilike.${like}`)
         .order('created_at', { ascending: false })
         .limit(limit),
