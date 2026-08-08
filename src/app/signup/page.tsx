@@ -225,6 +225,24 @@ function SignupForm() {
     }
   }
 
+  const handleOAuth = async (provider: 'google' | 'facebook') => {
+    if (loading) return
+    setLoading(true)
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${location.origin}/auth/callback?next=/welcome`,
+        },
+      })
+      if (error) toast(friendlySignupError(error.message || 'Something went wrong'))
+    } catch (err: any) {
+      toast(friendlySignupError(err.message || 'Something went wrong'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const stepDots = (s: number) => (
     <div className="flex gap-[6px] mb-[25px]">
       {[1, 2, 3].map(i => (
@@ -298,10 +316,16 @@ function SignupForm() {
                 <div style={{ padding: '12px 15px', borderRadius: 11, background: 'oklch(90% .16 28)', color: 'oklch(56% .16 28)', fontSize: 11, fontWeight: 700, marginBottom: 15 }}>{loginError}</div>
               )}
 
-              <button style={{ width: '100%', height: 46, background: 'oklch(99% .008 91)', border: '1px solid oklch(85% .035 91)', borderRadius: 11, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'oklch(10% .01 91)' }}
-                onClick={() => toast('Google sign-in flow opened')}>
-                ◉ &nbsp; Continue with Google
-              </button>
+              <div style={{ display: 'grid', gap: 9 }}>
+                <button disabled={loading} style={{ width: '100%', height: 46, background: 'oklch(99% .008 91)', border: '1px solid oklch(85% .035 91)', borderRadius: 11, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'oklch(10% .01 91)' }}
+                  onClick={() => handleOAuth('google')}>
+                  <span style={{ display: 'inline-grid', placeItems: 'center', fontSize: 12 }}>◉</span> Continue with Google
+                </button>
+                <button disabled={loading} style={{ width: '100%', height: 46, background: 'oklch(99% .008 91)', border: '1px solid oklch(85% .035 91)', borderRadius: 11, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'oklch(10% .01 91)' }}
+                  onClick={() => handleOAuth('facebook')}>
+                  <span style={{ display: 'inline-grid', placeItems: 'center', fontSize: 12, fontWeight: 800 }}>f</span> Continue with Facebook
+                </button>
+              </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'oklch(52% .035 151)', fontSize: 10, margin: '20px 0' }}>
                 <span style={{ height: 1, background: 'oklch(85% .035 91)', flex: 1 }} />
@@ -344,10 +368,30 @@ function SignupForm() {
 
               {stepDots(step)}
 
+              {step === 1 && (
+                <>
+                  <div style={{ display: 'grid', gap: 9, marginBottom: 20 }}>
+                    <button disabled={loading} style={{ width: '100%', height: 46, background: 'oklch(99% .008 91)', border: '1px solid oklch(85% .035 91)', borderRadius: 11, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'oklch(10% .01 91)' }}
+                      onClick={() => handleOAuth('google')}>
+                      <span style={{ display: 'inline-grid', placeItems: 'center', fontSize: 12 }}>◉</span> Continue with Google
+                    </button>
+                    <button disabled={loading} style={{ width: '100%', height: 46, background: 'oklch(99% .008 91)', border: '1px solid oklch(85% .035 91)', borderRadius: 11, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'oklch(10% .01 91)' }}
+                      onClick={() => handleOAuth('facebook')}>
+                      <span style={{ display: 'inline-grid', placeItems: 'center', fontSize: 12, fontWeight: 800 }}>f</span> Continue with Facebook
+                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'oklch(52% .035 151)', fontSize: 10, margin: '2px 0' }}>
+                      <span style={{ height: 1, background: 'oklch(85% .035 91)', flex: 1 }} />
+                      <span>or use email</span>
+                      <span style={{ height: 1, background: 'oklch(85% .035 91)', flex: 1 }} />
+                    </div>
+                  </div>
+                  <h3 style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-.03em', margin: '0 0 15px' }}>1. Your account</h3>
+                </>
+              )}
+
               {/* Step 1: Account */}
               {step === 1 && (
                 <div style={{ animation: 'rise .3s ease' }}>
-                  <h3 style={{ fontWeight: 800, fontSize: 16, letterSpacing: '-.03em', margin: '0 0 15px' }}>1. Your account</h3>
                   <div className="auth-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 13 }}>
                     <div style={{ display: 'grid', gap: 7, marginBottom: 14 }}>
                       <label style={{ fontSize: 11, color: 'oklch(52% .035 151)', fontWeight: 600 }}>First name *</label>

@@ -4159,6 +4159,7 @@ export type Database = {
         Returns: string
       }
       create_follow_request: { Args: { p_target_id: string }; Returns: Json }
+      toggle_follow: { Args: { p_target_id: string }; Returns: Json }
       create_notification: {
         Args: {
           p_actor_id?: string
