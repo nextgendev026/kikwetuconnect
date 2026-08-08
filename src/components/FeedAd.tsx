@@ -11,18 +11,22 @@ interface Ad {
   placement: string
 }
 
-export default function FeedAd() {
+export default function FeedAd({ placement = 'feed', fallback, compact = false }: { placement?: string; fallback?: React.ReactNode; compact?: boolean }) {
   const [ad, setAd] = useState<Ad | null>(null)
   const supabase = useSupabase()
   const { user } = useUser()
   const trackedRef = useRef(false)
 
   useEffect(() => {
-    supabase.from('ads').select('*').eq('is_active', true).eq('placement', 'feed')
-      .gte('ends_at', new Date().toISOString()).lte('starts_at', new Date().toISOString())
-      .order('created_at', { ascending: false }).limit(1)
-      .then(({ data }) => { if (data && data.length > 0) setAd(data[0] as Ad) })
-  }, [supabase])
+    (async () => {
+      try {
+        const { data } = await supabase.from('ads').select('*, impressions').eq('is_active', true).eq('placement', placement)
+          .gte('ends_at', new Date().toISOString()).lte('starts_at', new Date().toISOString())
+          .order('created_at', { ascending: false }).limit(1)
+        if (data && data.length > 0) setAd(data[0] as Ad)
+      } catch { /* ignore ad load errors */ }
+    })()
+  }, [supabase, placement])
 
   const track = async (type: 'impression' | 'click') => {
     if (!ad) return
@@ -41,16 +45,16 @@ export default function FeedAd() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ad])
 
-  if (!ad) return null
+  if (!ad) return fallback || null
 
   return (
     <a href={ad.link_url} target="_blank" rel="noopener noreferrer" onClick={() => track('click')}
       className="block rounded-2xl overflow-hidden mb-4 no-underline transition-transform hover:scale-[1.01]"
       style={{ border: '1px solid var(--line)', background: 'var(--surface)' }}>
-      {ad.image_url && <Image src={ad.image_url} alt="" width={640} height={140} className="w-full h-[140px] object-cover" loading="lazy" />}
-      <div className="p-3 flex items-center gap-2">
-        <div className="flex-1">
-          <strong className="text-sm block" style={{ color: 'var(--ink)' }}>{ad.title}</strong>
+      {ad.image_url && <Image src={ad.image_url} alt="" width={compact ? 320 : 640} height={compact ? 160 : 140} className={`${compact ? 'w-full h-[150px]' : 'w-full h-[140px]'} object-cover`} loading="lazy" />}
+      <div className={`${compact ? 'p-2.5' : 'p-3'} flex items-center gap-2`}>
+        <div className="flex-1 min-w-0">
+          <strong className={`${compact ? 'text-xs' : 'text-sm'} block truncate`} style={{ color: 'var(--ink)' }}>{ad.title}</strong>
           <span className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--gold)' }}>Sponsored</span>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--muted)' }}>

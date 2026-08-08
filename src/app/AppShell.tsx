@@ -39,6 +39,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [followingIds, setFollowingIds] = useState<Set<string>>(new Set())
   const [followingUsers, setFollowingUsers] = useState<any[]>([])
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchLoading, setSearchLoading] = useState(false)
+  const searchBoxRef = useRef<HTMLDivElement>(null)
 
   useKeyboardViewport()
 
@@ -56,6 +61,60 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       try { localStorage.setItem('kc-sidebar-collapsed', next ? '1' : '0') } catch { /* ignore */ }
       return next
     })
+  }
+
+  // Close the search dropdown on outside click
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target as Node)) setSearchOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [])
+
+  // Debounced live search against /api/search (posts, profiles, topics)
+  useEffect(() => {
+    const q = searchQuery.trim()
+    if (q.length < 2) {
+      setSearchResults([])
+      setSearchLoading(false)
+      setSearchOpen(false)
+      return
+    }
+    setSearchOpen(true)
+    setSearchLoading(true)
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
+        if (!res.ok) throw new Error('search failed')
+        const data = await res.json()
+        const items: any[] = [
+          ...(data.posts || []).map((p: any) => ({ ...p, _type: 'post', label: p.title || p.content?.slice(0, 60) })),
+          ...(data.profiles || []).map((p: any) => ({ ...p, _type: 'profile', label: p.full_name || p.username })),
+          ...(data.topics || []).map((t: any) => ({ ...t, _type: 'topic', label: t.name })),
+        ].slice(0, 8)
+        setSearchResults(items)
+      } catch {
+        setSearchResults([])
+      } finally {
+        setSearchLoading(false)
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  const submitSearch = () => {
+    const q = searchQuery.trim()
+    if (!q) return
+    setSearchOpen(false)
+    router.push(`/search?q=${encodeURIComponent(q)}`)
+  }
+
+  const goToResult = (r: any) => {
+    setSearchOpen(false)
+    if (r._type === 'post') router.push(`/posts/${r.id}`)
+    else if (r._type === 'profile') router.push(`/profile/${r.username || r.id}`)
+    else if (r._type === 'topic') router.push(`/topics/${r.slug || r.id}`)
   }
 
   // Recognize existing follow relationships so Community follow buttons reflect real state
@@ -254,9 +313,71 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="mark" style={{ width: 30, height: 30, fontSize: 15, transform: 'rotate(-4deg)' }}>k</span>
                 <span className="topbar-brand-text">kikwetu<span style={{ color: 'var(--gold)' }}>.</span></span>
               </Link>
-              <div className="search" id="global-search">
-                <button className="search-toggle" onClick={() => document.getElementById('global-search')?.classList.toggle('expanded')}>⌕</button>
-                <input aria-label="Search Baraza, spaces, people..." placeholder="Search Baraza, spaces, people..." />
+              <div className="search" id="global-search" ref={searchBoxRef}>
+                <button className="search-toggle" onClick={(e) => { e.currentTarget.closest('.search')?.classList.toggle('expanded'); (e.currentTarget.closest('.search')?.querySelector('input') as HTMLInputElement)?.focus() }} aria-label="Search">⌕</button>
+                <input
+                  aria-label="Search Baraza, spaces, people..."
+                  placeholder="Search posts, people, topics..."
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); e.currentTarget.closest('.search')?.classList.add('expanded') }}
+                  onFocus={(e) => { e.currentTarget.closest('.search')?.classList.add('expanded'); if (searchQuery.trim().length >= 2) setSearchOpen(true) }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') submitSearch()
+                    if (e.key === 'Escape') { setSearchOpen(false); }
+                  }}
+                />
+                {searchOpen && searchQuery.trim().length >= 2 && (
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, zIndex: 50,
+                    background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14,
+                    boxShadow: '0 12px 32px color-mix(in oklab, var(--night) 18%, transparent)',
+                    overflow: 'hidden',
+                  }}>
+                    {searchLoading ? (
+                      <div style={{ padding: '14px 18px', fontSize: 12, color: 'var(--muted)' }}>Searching…</div>
+                    ) : searchResults.length === 0 ? (
+                      <div style={{ padding: '14px 18px', fontSize: 12, color: 'var(--muted)' }}>
+                        No results for “{searchQuery.trim()}”. <span style={{ color: 'var(--gold)', cursor: 'pointer' }} onClick={submitSearch}>View all →</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                          {searchResults.map((r, i) => (
+                            <button key={`${r._type}-${r.id}-${i}`} onClick={() => goToResult(r)}
+                              onMouseEnter={e => (e.currentTarget.style.background = 'var(--raised)')}
+                              onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                              style={{
+                                width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px',
+                                background: 'none', border: 0, cursor: 'pointer', textAlign: 'left', transition: 'background .15s',
+                              }}>
+                              <span style={{
+                                flex: 'none', width: 30, height: 30, borderRadius: 9, display: 'grid', placeItems: 'center',
+                                fontSize: 11, fontWeight: 700,
+                                background: r._type === 'profile' ? 'color-mix(in oklab, var(--blue) 18%, var(--surface))' : r._type === 'topic' ? 'color-mix(in oklab, var(--gold) 18%, var(--surface))' : 'color-mix(in oklab, var(--green) 18%, var(--surface))',
+                                color: r._type === 'profile' ? 'var(--blue)' : r._type === 'topic' ? 'var(--gold)' : 'var(--green)',
+                              }}>
+                                {r._type === 'profile' ? (r.full_name || r.username || '?').slice(0, 1).toUpperCase() : r._type === 'topic' ? '#' : 'P'}
+                              </span>
+                              <span style={{ flex: 1, minWidth: 0 }}>
+                                <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {r._type === 'profile' ? (r.full_name || `@${r.username}`) : r.label}
+                                </span>
+                                <span style={{ display: 'block', fontSize: 10.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {r._type === 'profile' ? `@${r.username}${r.county_hub ? ` · ${r.county_hub}` : ''}${r.is_verified_expert ? ' · ✓ Expert' : ''}` : r._type === 'post' ? (r.content ? r.content.slice(0, 60) : 'Post') : `${r.follower_count ?? 0} followers`}
+                                </span>
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                        <button onClick={submitSearch} style={{
+                          width: '100%', padding: '12px 16px', border: 0, borderTop: '1px solid var(--line)',
+                          background: 'color-mix(in oklab, var(--gold) 8%, var(--surface))', color: 'var(--gold)',
+                          fontSize: 12, fontWeight: 700, cursor: 'pointer', textAlign: 'center',
+                        }}>View all results for “{searchQuery.trim()}”</button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="top-actions">
                 <button onClick={toggleTheme} className="icon" aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>

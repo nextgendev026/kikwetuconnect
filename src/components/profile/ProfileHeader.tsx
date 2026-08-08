@@ -1,7 +1,7 @@
 'use client'
-import { useState, useRef, useCallback, DragEvent } from 'react'
+import { useState, useRef, useCallback, useEffect, DragEvent } from 'react'
 import Link from 'next/link'
-import { Edit3, Settings, MapPin, Globe, MessageCircle, Heart, Users, BookOpen, Award, Calendar, Camera, Check, Upload } from 'lucide-react'
+import { Edit3, Settings, MapPin, Globe, MessageCircle, Heart, Users, BookOpen, Award, Calendar, Camera, Check, Upload, Trophy } from 'lucide-react'
 import { toast } from '@/app/providers'
 import MediaEditor from '@/components/MediaEditor'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -60,6 +60,30 @@ export default function ProfileHeader({
   const [avatarDragOver, setAvatarDragOver] = useState(false)
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
+  const [userBadges, setUserBadges] = useState<{ id: string; icon: string; name: string; awarded_at: string }[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    if (!profile?.id) return
+    ;(async () => {
+      try {
+        const { data } = await supabase
+          .from('user_badges')
+          .select('awarded_at, badges:badge_id(id, name, icon)')
+          .eq('user_id', profile.id)
+          .order('awarded_at', { ascending: false })
+          .limit(8)
+        if (cancelled) return
+        setUserBadges((data || []).map((b: any) => ({
+          id: b.badges?.id,
+          icon: b.badges?.icon || '🏅',
+          name: b.badges?.name || '',
+          awarded_at: b.awarded_at,
+        })).filter(b => b.id))
+      } catch { /* ignore badge load errors */ }
+    })()
+    return () => { cancelled = true }
+  }, [supabase, profile?.id])
 
   const handleDragOver = useCallback((e: DragEvent, setter: (v: boolean) => void) => {
     e.preventDefault(); e.stopPropagation(); setter(true)
@@ -381,6 +405,32 @@ export default function ProfileHeader({
               </button>
             ))}
           </div>
+
+          {/* Earned Badges */}
+          {userBadges.length > 0 && (
+            <div className="flex items-center gap-2 pt-3 mt-3 flex-wrap" style={{ borderTop: '1px solid var(--line)' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--muted)', fontSize: 10, fontWeight: 700 }}>
+                <Trophy className="w-3.5 h-3.5" style={{ color: 'var(--gold)' }} /> Badges
+              </span>
+              {userBadges.slice(0, 6).map(b => (
+                <span key={b.id} title={b.name} style={{
+                  width: 34, height: 34, borderRadius: 10, display: 'grid', placeItems: 'center',
+                  background: 'var(--raised)', border: '1px solid var(--line)', fontSize: 17,
+                  cursor: 'default', transition: 'transform .15s',
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.12)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)' }}>
+                  {b.icon}
+                </span>
+              ))}
+              {isOwn && (
+                <Link href="/profile/badges"
+                  style={{ fontSize: 10, fontWeight: 700, color: 'var(--gold)', textDecoration: 'none', padding: '6px 10px', borderRadius: 8, background: 'color-mix(in oklab, var(--gold) 10%, var(--surface))' }}>
+                  View all →
+                </Link>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
