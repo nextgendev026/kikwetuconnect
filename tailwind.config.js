@@ -29,6 +29,9 @@ module.exports = {
         'text': 'var(--ink)',
         'green-bg': 'color-mix(in oklab, var(--green) 15%, var(--surface))',
         'red-bg': 'color-mix(in oklab, var(--red) 15%, var(--surface))',
+        'gold-bg': 'color-mix(in oklab, var(--gold) 18%, var(--surface))',
+        'blue-bg': 'color-mix(in oklab, var(--blue) 15%, var(--surface))',
+        'earth-bg': 'color-mix(in oklab, var(--earth) 15%, var(--surface))',
       },
       fontFamily: {
         sans: ['Plus Jakarta Sans', 'DM Sans', 'system-ui', 'sans-serif'],

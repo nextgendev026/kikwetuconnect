@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/server-supabase'
-import { sendPushToUser } from '@/lib/push-notifications'
+import { sendPushToUser, sendPushToMultipleUsers } from '@/lib/push-notifications'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -29,6 +29,43 @@ export async function POST(request: Request) {
 
     if (body.type === 'ping') {
       return NextResponse.json({ ok: true })
+    }
+
+    if (body.type === 'nyumba_alert') {
+      const alertId: string = body.alert_id
+      if (!UUID_RE.test(alertId)) {
+        return NextResponse.json({ error: 'Bad id' }, { status: 400 })
+      }
+
+      const { data: alert } = await supabase
+        .from('nyumba_kumi_alerts')
+        .select('title, severity, approximate_location, group_id, user_id')
+        .eq('id', alertId)
+        .maybeSingle()
+
+      if (!alert) return NextResponse.json({ ok: true, sent: 0 })
+
+      // Recipients are the rows the alert RPC wrote to notifications, so we
+      // reuse exactly the same audience as in-app (group + county + trusted).
+      const { data: recipients } = await supabase
+        .from('notifications')
+        .select('user_id')
+        .eq('data->>alert_id', alertId)
+        .neq('user_id', alert.user_id)
+
+      const userIds = [...new Set((recipients || []).map(r => r.user_id))]
+      if (!userIds.length) return NextResponse.json({ ok: true, sent: 0 })
+
+      const severityLabel = alert.severity === 'critical' ? '🚨 Critical' : alert.severity === 'high' ? '⚠️ High' : 'Nyumba Kumi'
+      const sent = await sendPushToMultipleUsers(userIds, {
+        title: severityLabel,
+        body: (alert.title || 'New neighbourhood alert').slice(0, 140),
+        data: { url: `/nyumba?alert_id=${alertId}` },
+        tag: `nyumba-alert-${alertId}`,
+        requireInteraction: alert.severity === 'critical' || alert.severity === 'high',
+      })
+
+      return NextResponse.json({ ok: true, sent })
     }
 
     if (body.type === 'message') {

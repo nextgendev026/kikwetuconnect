@@ -7,7 +7,7 @@ export interface PostCardProps {
   id: string
   title?: string
   content: string
-  postType: 'baraza' | 'inquiry' | 'article'
+  postType: 'baraza' | 'inquiry' | 'article' | 'poll' | 'post'
   authorName: string
   authorHandle: string
   authorId?: string
@@ -69,9 +69,19 @@ export function PostCard({
     baraza: { bg: 'bg-green-bg', text: 'text-green' },
     inquiry: { bg: 'bg-blue-bg', text: 'text-blue' },
     article: { bg: 'bg-gold-bg', text: 'text-gold' },
+    poll: { bg: 'bg-earth-bg', text: 'text-earth' },
+    post: { bg: 'bg-green-bg', text: 'text-green' },
   }
 
-  const typeColor = postTypeColors[postType]
+  const postTypeLabels: Record<string, string> = {
+    baraza: 'Post',
+    inquiry: 'Question',
+    article: 'Article',
+    poll: 'Poll',
+    post: 'Post',
+  }
+
+  const typeColor = postTypeColors[postType] || postTypeColors.baraza
 
   return (
     <div className="card section mb-4">
@@ -136,7 +146,7 @@ export function PostCard({
       {/* Tags & Metadata */}
       <div className="flex flex-wrap gap-2 mb-4">
         <span className={clsx('text-xs font-semibold px-2 py-1 rounded-full', typeColor.bg, typeColor.text)}>
-          {postType.charAt(0).toUpperCase() + postType.slice(1)}
+          {postTypeLabels[postType] || postType.charAt(0).toUpperCase() + postType.slice(1)}
         </span>
         {bountyTokens > 0 && (
           <span className="text-xs font-semibold px-2 py-1 rounded-full bg-gold-bg text-gold">

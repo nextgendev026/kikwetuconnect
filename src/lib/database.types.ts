@@ -1801,6 +1801,7 @@ export type Database = {
           county: string
           created_at: string | null
           description: string
+          group_id: string | null
           id: string
           is_urgent: boolean | null
           severity: string | null
@@ -1816,6 +1817,7 @@ export type Database = {
           county: string
           created_at?: string | null
           description: string
+          group_id?: string | null
           id?: string
           is_urgent?: boolean | null
           severity?: string | null
@@ -1831,6 +1833,7 @@ export type Database = {
           county?: string
           created_at?: string | null
           description?: string
+          group_id?: string | null
           id?: string
           is_urgent?: boolean | null
           severity?: string | null
@@ -1846,6 +1849,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nyumba_kumi_alerts_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "nyumba_kumi_groups"
             referencedColumns: ["id"]
           },
         ]

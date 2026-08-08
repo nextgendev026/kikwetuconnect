@@ -7,7 +7,9 @@ import { AlertTriangle, AlertCircle, Droplets, Zap, Users, Shield, Share2, Bookm
 
 interface Alert {
   id: string; type: string; title: string; description: string; approximate_location: string | null; county: string; severity: string | null; confirmations: number | null; created_at: string | null; user_id: string
+  group_id: string | null
   profiles: { id: string; full_name: string; username: string; avatar_url: string | null } | null
+  groups?: { id: string; name: string } | null
 }
 
 interface Group {
@@ -52,7 +54,7 @@ export default function NyumbaPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [showTrusted, setShowTrusted] = useState(false)
   const [trustedNeighbours, setTrustedNeighbours] = useState<any[]>([])
-  const [formData, setFormData] = useState({ alert_type: 'safety', title: '', description: '', location: '', severity: 'medium' })
+  const [formData, setFormData] = useState({ alert_type: 'safety', title: '', description: '', location: '', severity: 'medium', group_id: '' })
   const [submitting, setSubmitting] = useState(false)
   const [rateLimitRemaining, setRateLimitRemaining] = useState<number | null>(null)
   const [translations, setTranslations] = useState<Record<string, string>>({})
@@ -93,7 +95,7 @@ export default function NyumbaPage() {
       .channel('nyumba-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'nyumba_kumi_alerts' }, (payload: any) => {
         const newAlert = payload.new as any
-        supabase.from('nyumba_kumi_alerts').select(`*, profiles:user_id (id, full_name, username, avatar_url)`).eq('id', newAlert.id).maybeSingle().then((result: any) => { const data = result.data
+        supabase.from('nyumba_kumi_alerts').select(`*, profiles:user_id (id, full_name, username, avatar_url), groups:group_id (id, name)`).eq('id', newAlert.id).maybeSingle().then((result: any) => { const data = result.data
           if (data) setAlerts(prev => {
             if (prev.some(a => a.id === data.id)) return prev
             return [data as Alert, ...prev]
@@ -107,7 +109,7 @@ export default function NyumbaPage() {
   const fetchAlerts = async () => {
     setLoading(true)
     try {
-      const { data } = await supabase.from('nyumba_kumi_alerts').select(`*, profiles:user_id (id, full_name, username, avatar_url)`).order('created_at', { ascending: false }).limit(50)
+      const { data } = await supabase.from('nyumba_kumi_alerts').select(`*, profiles:user_id (id, full_name, username, avatar_url), groups:group_id (id, name)`).order('created_at', { ascending: false }).limit(50)
       setAlerts((data as Alert[]) || [])
     } catch (err) { console.error(err) }
     finally { setLoading(false) }
@@ -191,6 +193,7 @@ export default function NyumbaPage() {
 
     setSubmitting(true)
     const location = formData.location.trim() || profile.county_hub || 'Unknown'
+    const groupId = formData.group_id || null
 
     try {
       // Use RPC for rate-limited, logged alert creation
@@ -201,15 +204,17 @@ export default function NyumbaPage() {
         p_description: formData.description.trim(),
         p_location: location,
         p_severity: formData.severity,
+        p_group_id: groupId,
       })
 
       if (error) throw error
-      const result = (data as { error?: string; notifications_sent?: number } | null) || {}
+      const result = (data as { error?: string; notifications_sent?: number; group_name?: string } | null) || {}
       if (result.error) { toast(result.error); setSubmitting(false); return }
 
       const notifCount = result.notifications_sent || 0
-      toast(`Alert created! Notified ${notifCount} neighbour${notifCount !== 1 ? 's' : ''}. Stay safe.`)
-      setFormData({ alert_type: 'safety', title: '', description: '', location: '', severity: 'medium' })
+      const groupName = result.group_name || (groupId ? 'your group' : null)
+      toast(groupName ? `Alert created in ${groupName}! Notified ${notifCount} neighbour${notifCount !== 1 ? 's' : ''}.` : `Alert created! Notified ${notifCount} neighbour${notifCount !== 1 ? 's' : ''}. Stay safe.`)
+      setFormData({ alert_type: 'safety', title: '', description: '', location: '', severity: 'medium', group_id: '' })
       setShowCreateForm(false)
       checkRateLimit()
       fetchAlerts()
@@ -369,6 +374,7 @@ export default function NyumbaPage() {
           {translations[alert.id] && <span className="text-[9px] ml-1 opacity-60">(SW)</span>}
         </p>
         <div className="flex flex-wrap items-center gap-3 text-[10px] mb-3" style={{ color: 'var(--muted)' }}>
+          {alert.groups?.name && <span className="flex items-center gap-1 text-[9px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'color-mix(in oklab, var(--blue) 15%, transparent)', color: 'var(--blue)' }}><Users className="w-3 h-3" /> {alert.groups.name}</span>}
           {alert.approximate_location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {alert.approximate_location}</span>}
           <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {formatRelativeTime(alert.created_at || '')}</span>
           <span className="flex items-center gap-1"><ThumbsUp className="w-3 h-3" /> {alert.confirmations || 0} confirmed</span>
@@ -500,6 +506,16 @@ export default function NyumbaPage() {
                 <option value="critical">Critical</option>
               </select>
             </div>
+          </div>
+          <div className="mb-4">
+            <label className="text-[10px] font-semibold block mb-1.5" style={{ color: 'var(--muted)' }}>Notify group (optional)</label>
+            <select value={formData.group_id} onChange={e => setFormData(prev => ({ ...prev, group_id: e.target.value }))} style={s.input}>
+              <option value="">Broadcast to my area (all neighbours)</option>
+              {groups.filter(g => myGroupIds.has(g.id)).map(g => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+            <p className="text-[9px] mt-1" style={{ color: 'var(--faint)' }}>Group alerts notify members of that group on their devices.</p>
           </div>
           <button onClick={handleCreateAlert} disabled={submitting} style={{ ...s.btn, ...s.primaryBtn, width: '100%', justifyContent: 'center' }}>
             {submitting ? 'Posting...' : 'Post Alert'}

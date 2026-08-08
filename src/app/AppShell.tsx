@@ -378,8 +378,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                                 <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {r._type === 'profile' ? (r.full_name || `@${r.username}`) : r.label}
                                 </span>
-                                <span style={{ display: 'block', fontSize: 10.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {r._type === 'profile' ? `@${r.username}${r.county_hub ? ` · ${r.county_hub}` : ''}${r.is_verified_expert ? ' · ✓ Expert' : ''}` : r._type === 'post' ? (r.content ? r.content.slice(0, 60) : 'Post') : `${r.follower_count ?? 0} followers`}
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                                  {r._type === 'post' && (
+                                    <span style={{
+                                      flex: 'none', fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 6,
+                                      color: 'var(--gold)', border: '1px solid color-mix(in oklab, var(--gold) 40%, var(--line))',
+                                    }}>
+                                      {r.post_type === 'article' ? 'Article' : r.post_type === 'poll' ? 'Poll' : r.post_type === 'inquiry' ? 'Question' : 'Post'}
+                                    </span>
+                                  )}
+                                  <span style={{ fontSize: 10.5, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {r._type === 'profile' ? `@${r.username}${r.county_hub ? ` · ${r.county_hub}` : ''}${r.is_verified_expert ? ' · ✓ Expert' : ''}` : r._type === 'post' ? (r.content ? r.content.slice(0, 60) : 'Post') : `${r.follower_count ?? 0} followers`}
+                                  </span>
                                 </span>
                               </span>
                             </button>

@@ -127,7 +127,7 @@ export function Textarea({
       <textarea
         rows={rows}
         className={clsx(
-          'input resize-y min-h-[100px]',
+          'input textarea-input resize-y min-h-[100px]',
           error && 'border-red focus:border-red focus:ring-red/20',
           className
         )}
