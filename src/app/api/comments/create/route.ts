@@ -1,4 +1,4 @@
-import { withAuth } from '@/lib/server-supabase'
+import { withAuth, createServiceClient } from '@/lib/server-supabase'
 import { dispatchPushForNotification } from '@/lib/push-notifications'
 import { NextResponse } from 'next/server'
 
@@ -35,7 +35,8 @@ export const POST = withAuth(async (request, { supabase, user }) => {
     const { data: commentedPost } = await supabase
       .from('posts').select('user_id, title').eq('id', postId).maybeSingle()
     if (commentedPost && commentedPost.user_id !== user.id) {
-      const { data: notifRow } = await supabase.from('notifications').insert({
+      const svc = createServiceClient()
+      const { data: notifRow } = await svc.from('notifications').insert({
         user_id: commentedPost.user_id,
         actor_id: user.id,
         type: 'new_comment',
