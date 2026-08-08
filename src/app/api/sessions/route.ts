@@ -1,9 +1,10 @@
-import { withAuth } from '@/lib/server-supabase'
+import { withAuth, createServiceClient } from '@/lib/server-supabase'
 import { dispatchPushForNotification } from '@/lib/push-notifications'
 import { NextResponse } from 'next/server'
 
 export const POST = withAuth(async (request, { supabase, user }) => {
   try {
+    const svc = createServiceClient()
     const { request_id } = await request.json()
     if (!request_id) return NextResponse.json({ error: 'Missing request_id' }, { status: 400 })
 
@@ -13,19 +14,26 @@ export const POST = withAuth(async (request, { supabase, user }) => {
     if (helpReq.status !== 'open') return NextResponse.json({ error: 'Request is no longer open' }, { status: 400 })
     if (helpReq.student_id === user.id) return NextResponse.json({ error: 'Cannot help yourself' }, { status: 400 })
 
-    const { error: updateReqErr } = await supabase
-      .from('student_help_requests').update({ assigned_to: user.id, status: 'assigned' }).eq('id', request_id)
+    // These tables have no client INSERT/UPDATE policies (server-only writes),
+    // so the privileged client is used after the checks above. Race-guard:
+    // only one expert may claim an open request.
+    const { data: claimed, error: updateReqErr } = await svc
+      .from('student_help_requests').update({ assigned_to: user.id, status: 'assigned' })
+      .eq('id', request_id).eq('status', 'open').select('id')
     if (updateReqErr) return NextResponse.json({ error: updateReqErr.message }, { status: 400 })
+    if (!claimed || claimed.length === 0) {
+      return NextResponse.json({ error: 'Request was just claimed by someone else' }, { status: 409 })
+    }
 
-    const { data: session, error: sErr } = await supabase
+    const { data: session, error: sErr } = await svc
       .from('student_sessions').insert({
         request_id, expert_id: user.id, student_id: helpReq.student_id,
         status: 'active', started_at: new Date().toISOString(),
       }).select().single()
     if (sErr) return NextResponse.json({ error: sErr.message }, { status: 400 })
 
-    // Notify student
-    const { data: assignedNotif } = await supabase.from('notifications').insert({
+    // Notify student (service client: notification targets another user)
+    const { data: assignedNotif } = await svc.from('notifications').insert({
       user_id: helpReq.student_id, actor_id: user.id,
       type: 'session_assigned', target_id: session.id, target_type: 'session',
       content: 'An expert has started a session for your help request',
@@ -42,6 +50,7 @@ export const POST = withAuth(async (request, { supabase, user }) => {
 
 export const PATCH = withAuth(async (request, { supabase, user }) => {
   try {
+    const svc = createServiceClient()
     const { session_id, notes } = await request.json()
     if (!session_id) return NextResponse.json({ error: 'Missing session_id' }, { status: 400 })
 
@@ -61,14 +70,15 @@ export const PATCH = withAuth(async (request, { supabase, user }) => {
     }
     if (notes && session.expert_id === user.id) updateData.expert_notes = notes
 
-    const { data: updated, error: updateErr } = await supabase
+    // No client UPDATE policy on student_sessions (server-only writes).
+    const { data: updated, error: updateErr } = await svc
       .from('student_sessions').update(updateData).eq('id', session_id).select().single()
     if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 400 })
 
-    // Notify both participants
+    // Notify both participants (service client: notification targets the other user)
     const sessionParticipants = [session.expert_id, session.student_id].filter(id => id !== user.id)
     if (sessionParticipants.length > 0) {
-      const { data: endNotifs } = await supabase.from('notifications').insert(
+      const { data: endNotifs } = await svc.from('notifications').insert(
         sessionParticipants.map(uid => ({
           user_id: uid, actor_id: user.id,
           type: 'session_ended', target_id: session_id, target_type: 'session',

@@ -238,10 +238,15 @@ export default function StudentsPage() {
                       <span>{new Date(r.created_at).toLocaleDateString()}</span>
                     </div>
                     {profile && profile.id !== r.student_id && (
-                      <button onClick={() => handleAssign(r.id)} disabled={assigning === r.id}
-                        style={{ ...s.btn, padding: '6px 14px', fontSize: 10, marginTop: 8, ...s.primary }}>
-                        {assigning === r.id ? '...' : <><Zap className="w-3 h-3" /> Help Student</>}
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2 mt-3">
+                        <button onClick={() => handleAssign(r.id)} disabled={assigning === r.id}
+                          style={{ ...s.btn, padding: '6px 14px', fontSize: 10, ...s.primary }}>
+                          {assigning === r.id ? '...' : <><Zap className="w-3 h-3" /> Help Student</>}
+                        </button>
+                        <Link href={`/messages?user=${r.student_id}`} style={{ ...s.btn, padding: '6px 14px', fontSize: 10, ...s.secondary, textDecoration: 'none' }}>
+                          <MessageCircle className="w-3 h-3" /> Message
+                        </Link>
+                      </div>
                     )}
                   </div>
                 </div>
