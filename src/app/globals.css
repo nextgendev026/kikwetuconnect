@@ -69,6 +69,7 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; background: var(--bg); }
+@media (max-width: 760px) { html { scroll-behavior: auto; } }
 body { margin: 0; color: var(--ink); font: 380 clamp(16px, 1rem + 0.12vw, 18px)/1.65 var(--dm); background: var(--bg); background-image: var(--bg-pattern); background-attachment: fixed; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; transition: background-color .35s var(--ease-in-out), color .35s var(--ease-in-out); }
 h1, h2, h3, h4, .page-title, .post-body h3 { text-wrap: balance; }
 p { text-wrap: pretty; }
@@ -710,10 +711,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
      that traps position:fixed modals (modal-center-scroll) inside these animated
      page wrappers. Fixed overlays are promoted by the compositor during animation. */
   .animate-rise, .animate-fade-in-up, .animate-slide-in-right { will-change: auto; }
-  [style*="backdrop-filter"] { will-change: backdrop-filter; }
+  [style*="backdrop-filter"] { will-change: auto; }
   img, video { content-visibility: auto; }
   .post, .card, .panel, .side-section { content-visibility: auto; contain-intrinsic-size: 200px; }
   body, .main, .right-panel { background-attachment: scroll; }
+  /* Cheaper sticky bars: blur + background repaint on every scroll frame stalls
+     the refresh rate on GPUs without solid layered compositing. Use small blur and
+     a much more opaque fill so the backdrop rarely needs recompositing. */
+  .topbar { background: color-mix(in oklab, var(--bg) 98%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .bottom { background: color-mix(in oklab, var(--surface) 99%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-top: 1px solid color-mix(in oklab, var(--line) 70%, transparent); }
 
   /* Mobile: show the notification/social area inline below the feed
      (mirrors the profile image edit / pop-out viewpoint behaviour) */
