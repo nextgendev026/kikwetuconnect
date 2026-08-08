@@ -1079,7 +1079,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .sav-bird-two { top: 18%; left: 46%; transform: scale(.7); animation-delay: -6s; }
 @keyframes sav-fly { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(20px, -8px); } }
 
-.sav-header { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 22px clamp(18px, 5vw, 68px); }
+.sav-header { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 15px; max-width: 1240px; margin: 0 auto; padding: 22px clamp(18px, 5vw, 68px); }
 .sav-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--cream-sav, oklch(96% .025 94)); text-decoration: none; font-weight: 800; letter-spacing: -.06em; }
 .sav-mark { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 12px 12px 12px 4px; background: oklch(43% .12 158); color: var(--cream-sav, oklch(96% .025 94)); font-family: Fraunces, Georgia, serif; font-size: 1.3rem; box-shadow: 4px 5px 0 oklch(75% .15 78); transform: rotate(-4deg); }
 .sav-brand-name { font-size: 1.12rem; }
@@ -1090,7 +1090,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .sav-nav-button { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 0 12px; border: 1px solid oklch(97% .02 94 / .2); border-radius: 99px; color: var(--cream-sav, oklch(96% .025 94)); background: oklch(20% .05 158 / .24); font-size: .72rem; font-weight: 800; text-decoration: none; transition: background .18s var(--ease); }
 .sav-nav-button:hover { background: oklch(20% .05 158 / .42); }
 
-.sav-hero { display: grid; grid-template-columns: minmax(0, 640px) minmax(260px, 360px); align-items: center; gap: clamp(24px, 6vw, 92px); max-width: 1180px; min-height: calc(100vh - 82px); margin: 0 auto; padding: 36px clamp(18px, 5vw, 68px) 116px; position: relative; }
+.sav-hero { display: grid; grid-template-columns: minmax(0, 640px) minmax(260px, 360px); align-items: center; justify-content: space-between; gap: clamp(24px, 6vw, 92px); max-width: 1240px; min-height: calc(100vh - 82px); margin: 0 auto; padding: 36px clamp(18px, 5vw, 68px) 116px; position: relative; }
 .sav-copy { animation: sav-rise .8s var(--ease) both; }
 .sav-copy h1 { max-width: 11ch; margin-top: 13px; font-size: clamp(3.35rem, 8vw, 7.7rem); line-height: .9; color: var(--cream-sav, oklch(96% .025 94)); }
 .sav-copy h1 span { color: oklch(75% .15 78); }
