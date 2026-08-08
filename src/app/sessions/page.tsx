@@ -294,9 +294,9 @@ export default function SessionsPage() {
                       <div className="flex items-start gap-3 flex-1">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--green)] to-[var(--gold)] flex items-center justify-center text-xs font-bold text-[var(--night)] flex-shrink-0 relative">
                           {otherUser?.avatar_url ? (
-                            <img src={otherUser.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-s'); if (fb) fb.classList.remove('hidden') }} />
+                            <img src={otherUser.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-s'); if (fb) (fb as HTMLElement).style.display = 'flex' }} />
                           ) : null}
-                          <span className={`af-s ${otherUser?.avatar_url ? 'hidden' : ''}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>{getInitials(otherUser?.full_name || otherUser?.username || '?')}</span>
+                          <span className="af-s" style={{ position: 'absolute', inset: 0, display: otherUser?.avatar_url ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>{getInitials(otherUser?.full_name || otherUser?.username || '?')}</span>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">

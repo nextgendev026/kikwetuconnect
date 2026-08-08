@@ -214,9 +214,9 @@ export default function ProfileHeader({
                  {(profile.avatar_url) ? (
                    <img src={profile.avatar_url} alt={`${profile.full_name || profile.username}'s avatar`}
                      className="w-full h-full object-cover"
-                     onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-ph'); if (fb) fb.classList.remove('hidden') }} />
+                     onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-ph'); if (fb) (fb as HTMLElement).style.display = 'flex' }} />
                  ) : null}
-                 <span className={`af-ph ${profile.avatar_url ? 'hidden' : ''}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: 'var(--gold)' }}>{initials}</span>
+                 <span className="af-ph" style={{ position: 'absolute', inset: 0, display: profile.avatar_url ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: 'var(--gold)' }}>{initials}</span>
               </div>
               {isOwn && (
                 <label style={{

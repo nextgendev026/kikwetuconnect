@@ -61,10 +61,10 @@ export function Avatar({
           src={src}
           alt={alt || name || 'Avatar'}
           className="w-full h-full rounded-full object-cover"
-          onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-av'); if (fb) fb.classList.remove('hidden') }}
+          onError={e => { e.currentTarget.style.display = 'none'; const fb = e.currentTarget.parentElement!.querySelector('.af-av'); if (fb) (fb as HTMLElement).style.display = 'flex' }}
         />
       ) : null}
-      <span className={`af-av ${src ? 'hidden' : ''}`} style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{getInitials(name)}</span>
+      <span className="af-av" style={{ position: 'absolute', inset: 0, display: src ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center' }}>{getInitials(name)}</span>
       {verified && (
         <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green rounded-full flex items-center justify-center">
           <svg
