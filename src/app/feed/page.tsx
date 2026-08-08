@@ -183,6 +183,10 @@ export default function FeedPage() {
     // Reactions stored locally; could sync to DB later
   }
 
+  const handlePollVote = (_postId: string, _optionId: string) => {
+    queryClient.invalidateQueries({ queryKey: ['feed'] })
+  }
+
   if (userLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -398,6 +402,7 @@ export default function FeedPage() {
                   onVote={handleVote}
                   onSave={handleSave}
                   onReact={handleReact}
+                  onPollVote={handlePollVote}
                 />
           }
         />

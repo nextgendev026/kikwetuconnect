@@ -14,7 +14,6 @@ export const POST = withAuth(async (request, { supabase, user }) => {
     }
 
     const { error: voteError } = await supabase.rpc('vote_on_poll_option', {
-      p_user_id: user.id,
       p_post_id: postId,
       p_option_id: optionId,
     })

@@ -41,7 +41,7 @@ export const PostCard = memo(function PostCard({
   const [deleting, setDeleting] = useState(false)
   const [hidden, setHidden] = useState(post.is_hidden)
   const [userPollVotes, setUserPollVotes] = useState<Set<string>>(new Set())
-  const [localPollOptions, setLocalPollOptions] = useState(post.poll_options || [])
+  const [localPollOptions, setLocalPollOptions] = useState<any[]>([])
   const [voting, setVoting] = useState<string | null>(null)
   const supabase = useSupabase()
 
@@ -57,6 +57,25 @@ export const PostCard = memo(function PostCard({
         })
     }
   }, [post.id, currentUserId, supabase])
+
+  // Poll options live in the normalized poll_options table (id + option_text).
+  // The feed also carries a legacy JSONB copy ({ text, votes }) without ids, so
+  // we always fetch the authoritative table rows here.
+  useEffect(() => {
+    if (post.post_type !== 'poll') return
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase
+        .from('poll_options')
+        .select('id, option_text, votes')
+        .eq('post_id', post.id)
+        .order('created_at')
+      if (cancelled) return
+      if (data && data.length > 0) setLocalPollOptions(data as any[])
+      else if (Array.isArray(post.poll_options) && (post.poll_options as any[]).length > 0) setLocalPollOptions(post.poll_options as any[])
+    })()
+    return () => { cancelled = true }
+  }, [post.id, post.post_type, post.poll_options, supabase])
   const handleEditSave = async () => {
     const res = await fetch(`/api/posts/${post.id}`, {
       method: 'PATCH',
@@ -133,6 +152,33 @@ export const PostCard = memo(function PostCard({
       if (res.ok) toast('Report submitted. Moderators will review.')
       else toast('Failed to submit report')
     } catch { toast('Report failed') }
+  }
+
+  const handlePollVote = async (opt: any) => {
+    if (voting) return
+    if (!currentUserId) { toast('Sign in to vote'); return }
+    if (!opt.id) { toast('This poll is not votable'); return }
+    setVoting(opt.id)
+    try {
+      const res = await fetch('/api/poll-vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: post.id, optionId: opt.id }),
+      })
+      const j = await res.json()
+      if (!res.ok) throw new Error(j.error || 'Failed to vote')
+      const [{ data: opts }, { data: votes }] = await Promise.all([
+        supabase.from('poll_options').select('id, option_text, votes').eq('post_id', post.id).order('created_at'),
+        supabase.from('poll_votes').select('option_id').eq('user_id', currentUserId).eq('post_id', post.id),
+      ])
+      if (opts) setLocalPollOptions(opts as any[])
+      if (votes) setUserPollVotes(new Set(votes.map((v: any) => v.option_id)))
+      onPollVote?.(post.id, opt.id)
+    } catch (err: any) {
+      toast(err.message || 'Failed to vote')
+    } finally {
+      setVoting(null)
+    }
   }
 
   const modalBackdrop = { position: 'fixed' as const, inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }
@@ -248,52 +294,49 @@ export const PostCard = memo(function PostCard({
 
       {/* Poll Options */}
       {post.post_type === 'poll' && localPollOptions.length > 0 && (
-        <div className="mb-[14px] space-y-[6px]">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold" style={{ color: 'var(--ink)' }}>Community Poll</span>
-            <span className="text-[10px] font-medium" style={{ color: 'var(--muted)' }}>{localPollOptions.reduce((a, b) => a + (b.votes || 0), 0)} votes</span>
+        <div className="mb-[14px]">
+          <div className="flex items-center justify-between mb-[8px]">
+            <span className="text-[11px] font-semibold uppercase tracking-wide flex items-center gap-[6px]" style={{ color: 'var(--muted)' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+              Community Poll
+            </span>
+            <span className="text-[10px] font-medium tabular-nums" style={{ color: 'var(--muted)' }}>{localPollOptions.reduce((a, b) => a + (b.votes || 0), 0)} votes</span>
           </div>
           {localPollOptions.map((opt) => {
             const totalVotes = localPollOptions.reduce((a, b) => a + (b.votes || 0), 0)
             const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0
             const hasVoted = userPollVotes.has(opt.id)
+            const label = opt.option_text || opt.text
             return (
               <button
-                key={opt.id}
-                onClick={async (e) => {
-                  e.preventDefault(); e.stopPropagation()
-                  if (voting) return
-                  setVoting(opt.id)
-                  try {
-                    const res = await fetch('/api/poll-vote', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ postId: post.id, optionId: opt.id }),
-                    })
-                    const j = await res.json()
-                    if (!res.ok) throw new Error(j.error || 'Failed to vote')
-                    setLocalPollOptions(prev => prev.map(o => o.id === opt.id ? { ...o, votes: o.votes + 1 } : o))
-                    setUserPollVotes(prev => new Set([...prev, opt.id]))
-                    onPollVote?.(post.id, opt.id)
-                  } catch (err: any) {
-                    toast(err.message || 'Failed to vote')
-                  } finally {
-                    setVoting(null)
-                  }
-                }}
+                key={opt.id || opt.text}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handlePollVote(opt) }}
                 disabled={voting !== null}
-                className="w-full flex items-center gap-2 p-2 rounded-[10px] text-left transition-all"
+                className="relative w-full mb-[6px] rounded-[10px] overflow-hidden text-left transition-all"
                 style={{
-                  background: hasVoted ? 'color-mix(in oklab, var(--gold) 15%, var(--raised))' : 'var(--raised)',
-                  border: hasVoted ? '1px solid var(--gold)' : '1px solid var(--line)',
+                  background: hasVoted ? 'color-mix(in oklab, var(--gold) 10%, var(--raised))' : 'var(--raised)',
+                  border: hasVoted ? '1px solid color-mix(in oklab, var(--gold) 55%, transparent)' : '1px solid var(--line)',
                   cursor: voting ? 'wait' : 'pointer',
                 }}
-                aria-label={hasVoted ? `${opt.option_text}, you voted (${opt.votes} votes)` : `${opt.option_text}, ${opt.votes} votes`}
+                aria-label={hasVoted ? `${label}, you voted (${opt.votes} votes)` : `${label}, ${opt.votes} votes`}
               >
-                <span className="flex-1 text-[12px] text-cream truncate">{opt.option_text}</span>
-                {totalVotes > 0 && (
-                  <span className="text-[10px] font-medium tabular-nums" style={{ color: 'var(--muted)' }}>{pct}%</span>
-                )}
+                <span
+                  className="absolute inset-y-0 left-0 transition-[width] duration-500 ease-out"
+                  style={{ width: `${pct}%`, background: 'color-mix(in oklab, var(--gold) 12%, transparent)' }}
+                  aria-hidden="true"
+                />
+                <span className="relative flex items-center gap-2 px-3 py-[10px] min-h-[40px]">
+                  <span
+                    className="w-[16px] h-[16px] flex-shrink-0 rounded-full grid place-items-center border transition-colors"
+                    style={{ borderColor: hasVoted ? 'var(--gold)' : 'var(--line)', background: hasVoted ? 'var(--gold)' : 'transparent' }}
+                  >
+                    {hasVoted && <span className="w-[6px] h-[6px] rounded-full" style={{ background: 'var(--night)' }} />}
+                  </span>
+                  <span className="flex-1 text-[12.5px] truncate" style={{ color: 'var(--ink)' }}>{label}</span>
+                  {totalVotes > 0 && (
+                    <span className="text-[11px] font-semibold tabular-nums flex-shrink-0" style={{ color: hasVoted ? 'var(--gold)' : 'var(--muted)' }}>{pct}%</span>
+                  )}
+                </span>
               </button>
             )
           })}
