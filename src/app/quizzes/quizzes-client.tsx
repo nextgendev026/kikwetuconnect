@@ -211,7 +211,7 @@ export default function QuizzesPage() {
     const correct = questions.reduce((c, q, i) => c + (selectedAnswers[i] === q.correct_index ? 1 : 0), 0)
     setScore(correct); setQuizComplete(true)
     const { error } = await supabase.from('quiz_attempts').insert({
-      user_id: user.id, quiz_id: selectedQuiz?.id || 'random', score: correct, total_questions: questions.length,
+      user_id: user.id, quiz_id: null, score: correct, total_questions: questions.length,
       answers: selectedAnswers.map((a: any, i: number) => ({ question: questions[i]?.question, selected: a, correct: questions[i]?.correct_index })),
     })
     if (error) { console.error('Quiz submission error:', error); toast('Failed to save results') }
