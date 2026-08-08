@@ -414,9 +414,9 @@ function MessagesInner() {
             </div>
           ) : (
             <button key={c.id} onClick={() => { setConvId(c.id); setSidebarOpen(false) }}
-              className="w-full flex items-center gap-3 p-3 rounded-xl text-left border-0 cursor-pointer mb-0.5 transition-colors"
+              className={`conv-item w-full flex items-center gap-3 p-3 rounded-xl text-left border-0 cursor-pointer mb-0.5 ${convId === c.id ? 'active' : ''}`}
               style={{ background: convId === c.id ? 'var(--raised)' : 'none' }}>
-              <div className="w-[48px] h-[48px] rounded-full flex-shrink-0 grid place-items-center text-sm font-bold overflow-hidden relative" style={{ background: avatar?.avatar_url ? 'none' : 'var(--gold)', color: avatar?.avatar_url ? 'none' : 'var(--night)' }}>
+              <div className="w-[48px] h-[48px] rounded-full flex-shrink-0 grid place-items-center text-sm font-bold overflow-hidden relative conv-avatar" style={{ background: avatar?.avatar_url ? 'none' : 'var(--gold)', color: avatar?.avatar_url ? 'none' : 'var(--night)' }}>
                 {avatar?.avatar_url ? <img src={avatar.avatar_url} alt="" className="w-full h-full object-cover" /> : (avatar?.full_name?.[0] || '?')}
                 {isOnline && <span className="absolute bottom-0 right-0 w-[11px] h-[11px] rounded-full" style={{ background: 'var(--green)', border: '2px solid var(--surface)' }} />}
               </div>
@@ -440,20 +440,23 @@ function MessagesInner() {
       <div className={`${!sidebarOpen ? 'flex' : 'hidden'} md:flex flex-1 flex-col h-full`}>
         {!convId ? (
           <div className="flex-1 flex items-center justify-center flex-col gap-4" style={{ background: 'var(--surface)' }}>
-            <div className="text-6xl mb-2">💬</div>
+            <div className="relative flex items-center justify-center">
+              <div className="absolute w-[120px] h-[120px] rounded-full" style={{ background: 'radial-gradient(circle, color-mix(in oklab, var(--gold) 22%, transparent), transparent 70%)' }} />
+              <div className="text-6xl mb-0 relative animate-float" style={{ filter: 'drop-shadow(0 6px 16px color-mix(in oklab, var(--gold) 35%, transparent))' }}>💬</div>
+            </div>
             <h2 className="font-extrabold text-2xl m-0" style={{ color: 'var(--ink)' }}>KikwetuChat</h2>
-            <p className="text-sm" style={{ color: 'var(--muted)' }}>Select a conversation or start a new one</p>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setShowNewChat(true)} className="px-6 h-[42px] rounded-[10px] text-sm font-bold border-0 cursor-pointer" style={{ background: 'var(--gold)', color: 'var(--night)' }}>New message</button>
+            <p className="text-sm m-0" style={{ color: 'var(--muted)' }}>Select a conversation or start a new one</p>
+            <div className="flex items-center gap-2 mt-1">
+              <button onClick={() => setShowNewChat(true)} className="px-6 h-[42px] rounded-[10px] text-sm font-bold border-0 cursor-pointer transition-all" style={{ background: 'var(--gold)', color: 'var(--night)', boxShadow: '0 4px 14px color-mix(in oklab, var(--gold) 30%, transparent)' }}>New message</button>
               <button onClick={() => router.push('/feed')} className="px-6 h-[42px] rounded-[10px] text-sm font-bold border-0 cursor-pointer" style={{ background: 'var(--raised)', color: 'var(--ink)', border: '1px solid var(--line)' }}>Browse the feed</button>
             </div>
           </div>
         ) : (
           <>
             {/* Chat header */}
-            <div className="flex items-center gap-3 px-4 h-[60px] border-b flex-shrink-0" style={{ borderColor: 'var(--line)', background: 'var(--surface)' }}>
+            <div className="chat-header-bar flex items-center gap-3 px-4 h-[60px] border-b flex-shrink-0" style={{ borderColor: 'var(--line)' }}>
               <button onClick={() => setSidebarOpen(true)} aria-label="Back to conversations" className="md:hidden bg-none border-0 text-xl cursor-pointer" style={{ color: 'var(--ink)' }}>←</button>
-              <div className="w-[46px] h-[46px] rounded-full flex-shrink-0 grid place-items-center text-sm font-bold overflow-hidden" style={{ background: convAvatar?.avatar_url ? 'none' : 'var(--gold)', color: convAvatar?.avatar_url ? 'none' : 'var(--night)' }}>
+              <div className="w-[46px] h-[46px] rounded-full flex-shrink-0 grid place-items-center text-sm font-bold overflow-hidden conv-avatar" style={{ background: convAvatar?.avatar_url ? 'none' : 'var(--gold)', color: convAvatar?.avatar_url ? 'none' : 'var(--night)' }}>
                 {convAvatar?.avatar_url ? <img src={convAvatar.avatar_url} alt="" className="w-full h-full object-cover" /> : (convAvatar?.full_name?.[0] || '?')}
               </div>
               <div className="flex-1 min-w-0">
@@ -511,7 +514,7 @@ function MessagesInner() {
                     if (row.kind === 'date') {
                       return (
                         <div className="flex justify-center my-3">
-                          <span className="text-[9px] px-3 py-1 rounded-full" style={{ background: 'var(--raised)', color: 'var(--muted)' }}>{formatDateSeparator(row.date)}</span>
+                          <span className="msg-date-pill text-[9px] px-3 py-1 rounded-full">{formatDateSeparator(row.date)}</span>
                         </div>
                       )
                     }
