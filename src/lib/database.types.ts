@@ -272,6 +272,42 @@ export type Database = {
           },
         ]
       }
+      analytics_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          event_properties: Json
+          id: number
+          page_path: string | null
+          referrer: string | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          event_properties?: Json
+          id?: never
+          page_path?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          event_properties?: Json
+          id?: never
+          page_path?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       answers: {
         Row: {
           content: string
@@ -4215,6 +4251,7 @@ export type Database = {
       }
       get_admin_bulk_job: { Args: { p_job_id: string }; Returns: Json }
       get_admin_stats: { Args: never; Returns: Json }
+      get_analytics_overview: { Args: { p_days?: number }; Returns: Json }
       get_barazas: {
         Args: {
           p_category?: string

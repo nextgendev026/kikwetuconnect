@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Search, X } from 'lucide-react'
+import { track } from '@/lib/analytics'
 
 interface SearchResult {
   id: string
@@ -23,6 +24,8 @@ export function SearchBar() {
       setResults([])
       return
     }
+
+    track('search', { query: searchQuery.trim() })
 
     setIsLoading(true)
     try {

@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from 'react'
 import { createBrowserClient } from '@/lib/supabase'
 import { getJwtSessionId } from '@/lib/session'
+import { track } from '@/lib/analytics'
 import { toast } from './toast-provider'
 
 type SupabaseClient = ReturnType<typeof createBrowserClient>
@@ -121,6 +122,8 @@ export function AuthProvider({ children, supabase }: { children: ReactNode; supa
       if (cancelled) return
       activeUserIdRef.current = session?.user?.id ?? null
       setUser(session?.user ?? null)
+      if (event === 'SIGNED_IN') track('sign_in')
+      if (event === 'SIGNED_OUT') track('sign_out')
       if (session?.user) {
         const sid = getJwtSessionId(session.access_token)
         sessionIdRef.current = sid

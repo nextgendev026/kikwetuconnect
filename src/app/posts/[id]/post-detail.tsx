@@ -9,6 +9,7 @@ import { useUser, useSupabase, toast } from '@/app/providers'
 import ShareMenu from '@/components/ShareMenu'
 import RichText from '@/components/RichText'
 import { isVideoType } from '@/lib/utils'
+import { track } from '@/lib/analytics'
 
 interface Profile {
   id: string
@@ -100,6 +101,7 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
       if (data) {
         setPost(data as unknown as Post)
         setLoading(false)
+        track('post_view', { post_id: postId, post_type: (data as unknown as Post).post_type || 'post' })
         return
       }
     } catch (err: any) {
@@ -121,6 +123,7 @@ export default function PostDetail({ postId: propPostId, initialPost = null }: P
         return
       }
       setPost((data as unknown as Post) || null)
+      if (data) track('post_view', { post_id: postId, post_type: (data as unknown as Post).post_type || 'post' })
     } catch (err: any) {
       console.error('Error fetching post:', err?.message || err)
       setPost(null)

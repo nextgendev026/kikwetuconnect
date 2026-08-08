@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSupabase, useUser, toast } from '@/app/providers'
+import { track } from '@/lib/analytics'
 
 export interface Conversation {
   id: string
@@ -388,6 +389,7 @@ export function useMessages(conversationId: string | null) {
       sender: profile ? { username: profile.username, full_name: profile.full_name || '', avatar_url: profile.avatar_url } : undefined,
     }
     persistPending(pending)
+    track('message_sent', { message_type: messageType })
     const { error } = await supabase.rpc('send_message', {
       p_conversation_id: conversationId,
       p_content: content.trim(),
